@@ -1,5 +1,11 @@
 # @noxify/gitlab-ci-builder
 
+## 0.0.4
+
+### Patch Changes
+
+- 52a0098: update workflow
+
 ## 0.0.3
 
 ### Patch Changes
