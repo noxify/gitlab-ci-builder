@@ -1,5 +1,11 @@
 # @noxify/gitlab-ci-builder
 
+## 0.0.6
+
+### Patch Changes
+
+- 651d7a1: support `!reference` tag
+
 ## 0.0.5
 
 ### Patch Changes
