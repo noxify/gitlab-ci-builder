@@ -19,7 +19,7 @@ build-job:
 
       const ts = fromYaml(yaml)
 
-      expect(ts).toContain('import { Config } from "gitlab-ci-builder"')
+      expect(ts).toContain('import { Config } from "@noxify/gitlab-ci-builder"')
       expect(ts).toContain('config.stages("build", "test")')
       expect(ts).toContain('config.job("build-job",')
       expect(ts).toContain('stage: "build"')
@@ -237,7 +237,7 @@ build:
       const result = await importYamlFile(testYamlPath)
 
       expect(fs.readFile).toHaveBeenCalledWith(testYamlPath, "utf-8")
-      expect(result).toContain('import { Config } from "gitlab-ci-builder"')
+      expect(result).toContain('import { Config } from "@noxify/gitlab-ci-builder"')
       expect(result).toContain('config.stages("build")')
     })
 
@@ -246,7 +246,7 @@ build:
 
       expect(fs.writeFile).toHaveBeenCalledWith(
         testOutputPath,
-        expect.stringContaining('import { Config } from "gitlab-ci-builder"'),
+        expect.stringContaining('import { Config } from "@noxify/gitlab-ci-builder"'),
         "utf-8",
       )
     })

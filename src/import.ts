@@ -23,7 +23,7 @@ export function fromYaml(yamlContent: string): string {
   const parsed = yaml.load(yamlContent, { schema: CUSTOM_SCHEMA }) as Record<string, unknown>
 
   const lines: string[] = []
-  lines.push('import { Config } from "gitlab-ci-builder"')
+  lines.push('import { Config } from "@noxify/gitlab-ci-builder"')
   lines.push("")
   lines.push("const config = new Config()")
   lines.push("")
