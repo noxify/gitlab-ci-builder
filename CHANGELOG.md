@@ -1,5 +1,11 @@
 # @noxify/gitlab-ci-builder
 
+## 0.0.3
+
+### Patch Changes
+
+- fd05add: npm trusted publish
+
 ## 0.0.2
 
 ### Patch Changes
