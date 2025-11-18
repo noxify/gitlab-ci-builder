@@ -4,9 +4,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "target": "ES2022",
-    "lib": [
-      "ES2022"
-    ],
+    "lib": ["ES2022"],
     "allowJs": true,
     "resolveJsonModule": true,
     "moduleDetection": "force",
@@ -21,12 +19,5 @@
     "noEmit": true,
     "tsBuildInfoFile": "${configDir}/.cache/tsbuildinfo.json"
   },
-  "exclude": [
-    "node_modules",
-    "build",
-    "dist",
-    ".next",
-    ".expo",
-    "coverage"
-  ]
+  "exclude": ["node_modules", "build", "dist", ".next", ".expo", "coverage"]
 }
