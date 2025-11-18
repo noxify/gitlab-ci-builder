@@ -32,5 +32,6 @@ jobs:
         with:
           version: pnpm ci:version
           publish: pnpm ci:publish
+          registry-url: "https://registry.npmjs.org"
         env:
           GITHUB_TOKEN: ${{ secrets.CHANGESETS_TOKEN }}
