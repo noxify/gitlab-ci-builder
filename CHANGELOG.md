@@ -1,5 +1,12 @@
 # @noxify/gitlab-ci-builder
 
+## 0.0.5
+
+### Patch Changes
+
+- 1a6f848: update readme
+- 1a6f848: fix ci:version and ci:publish
+
 ## 0.0.4
 
 ### Patch Changes
