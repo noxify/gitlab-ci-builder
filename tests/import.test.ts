@@ -263,4 +263,79 @@ build:
       await expect(importYamlFile(testYamlPath)).rejects.toThrow("File not found")
     })
   })
+
+  describe("complex examples", () => {
+    it("should handle a complex GitLab CI YAML", () => {
+      const yaml = `
+.tags_test: &tags_test
+  - test1
+  - test2
+
+download_node_modules:
+  stage: init
+  tags: *tags_test
+  image: $NODE_ALPINE_IMAGE
+  script:
+    - !reference [.pnpm_install_template, script]
+  cache:
+    - key: \${NPM_CACHE_KEY}
+      paths:
+        - /node_modules
+        - /.pnpm-store
+      policy: pull-push
+  variables:
+    APP_DIR: "."
+    NPM_CACHE_KEY: default
+
+deploy-job:
+  stage: deploy
+  script:
+    - echo "Deploying..."
+  environment:
+    name: production
+    url: https://example.com
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: always
+`
+
+      const ts = fromYaml(yaml)
+      expect(ts).toContain('"!reference [.pnpm_install_template, script]"')
+    })
+
+    it("should handle anchors", () => {
+      const yaml = `
+.job_template: &job_configuration
+  script:
+    - test project
+  tags:
+    - dev
+
+.postgres_services:
+  services: &postgres_configuration
+    - postgres
+    - ruby
+
+.mysql_services:
+  services: &mysql_configuration
+    - mysql
+    - ruby
+
+test:postgres:
+  <<: *job_configuration
+  services: *postgres_configuration
+  tags:
+    - postgres
+
+test:mysql:
+  <<: *job_configuration
+  services: *mysql_configuration
+  `
+
+      const ts = fromYaml(yaml)
+
+      expect(ts).toContain('services: ["postgres", "ruby"]')
+      expect(ts).toContain('services: ["mysql", "ruby"]')
+    })
+  })
 })

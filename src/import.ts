@@ -1,6 +1,18 @@
 import fs from "fs/promises"
 import yaml from "js-yaml"
 
+// Custom GitLab CI tag: !reference [.template, script]
+// js-yaml does not know this tag by default, so we map it to a string literal
+// so that downstream formatting treats it like a regular script line.
+const referenceTag = new yaml.Type("!reference", {
+  kind: "sequence",
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  construct: (data: unknown[]) => `!reference [${(data || []).join(", ")}]`,
+})
+
+// Extend default schema to include the custom tag while retaining standard types.
+const CUSTOM_SCHEMA = yaml.DEFAULT_SCHEMA.extend({ explicit: [referenceTag] })
+
 /**
  * Convert a GitLab CI YAML string to TypeScript Config builder code.
  *
@@ -8,7 +20,7 @@ import yaml from "js-yaml"
  * @returns TypeScript code as a string that uses the Config builder API.
  */
 export function fromYaml(yamlContent: string): string {
-  const parsed = yaml.load(yamlContent) as Record<string, unknown>
+  const parsed = yaml.load(yamlContent, { schema: CUSTOM_SCHEMA }) as Record<string, unknown>
 
   const lines: string[] = []
   lines.push('import { Config } from "gitlab-ci-builder"')
