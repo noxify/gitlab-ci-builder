@@ -1,5 +1,11 @@
 # @noxify/gitlab-ci-builder
 
+## 0.0.2
+
+### Patch Changes
+
+- 3b23c22: update publish config
+
 ## 0.0.1
 
 ### Patch Changes
