@@ -1,14 +1,7 @@
 {
-  "name": "gitlab-ci-builder",
+  "name": "@noxify/gitlab-ci-builder",
   "version": "0.0.0",
   "description": "Create GitLab CI pipelines with TypeScript.",
-  "scripts": {
-    "dev": "tsdown --watch",
-    "format": "prettier --check . --ignore-path ./.gitignore --ignore-path ./.prettierignore",
-    "lint": "eslint .",
-    "test": "vitest",
-    "typecheck": "tsc --noEmit"
-  },
   "keywords": [
     "gitlab",
     "gitlab-ci",
@@ -21,24 +14,56 @@
     "url": "git+https://gitlab.com/noxiy/gitlab-ci-builder.git"
   },
   "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "ci:publish": "changeset publish",
+    "ci:version": "changeset version",
+    "cs": "changeset",
+    "dev": "tsdown --watch",
+    "format": "prettier --check . --ignore-path ./.gitignore --ignore-path ./.prettierignore",
+    "format:fix": "prettier --write . --ignore-path ./.gitignore --ignore-path ./.prettierignore",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest --run",
+    "test:coverage": "vitest --coverage",
+    "test:ui": "vitest --ui",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
   "prettier": "./prettier.config.mjs",
   "dependencies": {
-    "deepmerge": "4.3.1"
+    "deepmerge": "4.3.1",
+    "js-yaml": "4.1.1",
+    "tinyglobby": "0.2.15"
   },
   "devDependencies": {
-    "@types/node": "22.19.1",
+    "@changesets/cli": "2.29.7",
     "@eslint/compat": "2.0.0",
+    "@eslint/js": "9.39.1",
+    "@ianvs/prettier-plugin-sort-imports": "4.7.0",
+    "@types/js-yaml": "4.0.9",
+    "@types/node": "22.19.1",
+    "@vitest/coverage-v8": "4.0.10",
+    "eslint": "9.39.1",
     "eslint-config-turbo": "2.6.1",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-package-json": "0.79.0",
     "jsonc-eslint-parser": "2.4.1",
-    "typescript-eslint": "8.47.0",
-    "@eslint/js": "9.39.1",
-    "eslint": "9.39.1",
-    "tsdown": "0.16.5",
-    "@ianvs/prettier-plugin-sort-imports": "4.7.0",
     "prettier": "3.6.2",
+    "tsdown": "0.16.5",
     "typescript": "5.9.3",
+    "typescript-eslint": "8.47.0",
     "vitest": "4.0.10"
   },
   "packageManager": "pnpm@10.22.0",

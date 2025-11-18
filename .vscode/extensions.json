@@ -1,9 +1,12 @@
 {
-    "recommendations": [
-        "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint",
-        "steoates.autoimport",
-        "stringham.move-ts",
-        "streetsidesoftware.code-spell-checker"
-    ]
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "yoavbls.pretty-ts-errors",
+    "vitest.explorer",
+    "vercel.turbo-vsc",
+    "foxundermoon.shell-format",
+    "bierner.comment-tagged-templates"
+  ]
 }

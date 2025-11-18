@@ -1,5 +1,3 @@
-/// <reference types="./types/eslint.d.ts" />
-
 import * as path from "node:path"
 import { includeIgnoreFile } from "@eslint/compat"
 import eslint from "@eslint/js"
@@ -34,7 +32,7 @@ export const restrictEnvAccess = tseslint.config({
 
 export default tseslint.config(
   // Ignore files not tracked by VCS and any config files
-  includeIgnoreFile(path.join(import.meta.dirname, "../../.gitignore")),
+  includeIgnoreFile(path.join(import.meta.dirname, "./.gitignore")),
   {
     // Globally ignored files
     ignores: ["**/*.config.*"],
@@ -58,7 +56,6 @@ export default tseslint.config(
       ...tseslint.configs.stylisticTypeChecked,
     ],
     rules: {
-
       "no-console": "error",
 
       "@typescript-eslint/no-unused-vars": [

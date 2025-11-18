@@ -1,33 +1,40 @@
 {
-    "eslint.enable": true,
-    "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
-    "editor.useTabStops": false,
-    "editor.formatOnSave": false,
-    "editor.tabSize": 4,
-    "files.exclude": {
-        "**/.git": true,
-        "**/.svn": true,
-        "**/.hg": true,
-        "**/CVS": true,
-        "**/.DS_Store": true
-    },
-    "[typescript]": {
-        "editor.formatOnSave": true
-    },
-    "[typescriptreact]": {
-        "editor.formatOnSave": true
-    },
-    "[javascript]": {
-        "editor.formatOnSave": true
-    },
-    "[jsonc]": {
-        "editor.formatOnSave": true
-    },
-    "[markdown]": {
-        "editor.formatOnSave": true
-    },
-    "[json]": {
-        "editor.formatOnSave": true
-    },
-    "cSpell.enabled": true
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "eslint.rules.customizations": [
+    {
+      "rule": "*",
+      "severity": "warn"
+    }
+  ],
+  "eslint.workingDirectories": [
+    {
+      "pattern": "*/"
+    }
+  ],
+  "prettier.ignorePath": ".gitignore",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.preferences.autoImportFileExcludePatterns": [
+    "next/router.d.ts",
+    "next/dist/client/router.d.ts"
+  ],
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "vitest.nodeEnv": {
+    "npm_lifecycle_event": "test"
+  },
+  "[shellscript]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format"
+  },
+  "[dotenv]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format"
+  },
+  "[sql]": {
+    "editor.defaultFormatter": "mtxr.sqltools"
+  },
+  "files.associations": {
+    "*.css": "tailwindcss"
+  }
 }
