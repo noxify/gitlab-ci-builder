@@ -23,9 +23,8 @@ test:
       echo "step3"
 `
     const result = fromYaml(yaml)
-    expect(result).toContain(
-      'script: [["echo \\"step1\\"", "echo \\"step2\\"", "echo \\"step3\\""]]',
-    )
+    expect(result).toContain('script: ["echo \\"step1\\"", "echo \\"step2\\"", "echo \\"step3\\""]')
+    expect(result).not.toContain("script: [[")
   })
 
   it("should preserve line continuation with backslash as template literal", () => {
@@ -105,8 +104,9 @@ test:
 `
     const result = fromYaml(yaml)
     expect(result).toContain('script: ["echo \\"simple\\"",')
-    expect(result).toContain('["echo \\"multi1\\"", "echo \\"multi2\\""]')
+    expect(result).toContain('"echo \\"multi1\\"", "echo \\"multi2\\""')
     expect(result).toContain("`complex")
+    expect(result).not.toContain("script: [[")
   })
 
   it("should handle before_script with shell operators", () => {
@@ -120,7 +120,9 @@ test:
 `
     const result = fromYaml(yaml)
     expect(result).toContain("before_script:")
-    expect(result).toContain('["mkdir ~/.npm-global", "export PATH=$PATH:~/.npm-global/bin"')
+    expect(result).toContain(
+      '"mkdir ~/.npm-global", "export PATH=$PATH:~/.npm-global/bin", "npm i -g pnpm@10.22.0"',
+    )
   })
 
   it("should handle after_script with continuations", () => {

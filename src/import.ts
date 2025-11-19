@@ -234,10 +234,59 @@ function formatValue(value: unknown, indentLevel: number): string {
       // Special handling for script-related properties
       const scriptProperties = ["script", "before_script", "after_script"]
       if (scriptProperties.includes(k)) {
-        // For script arrays, format each element intelligently
+        // For script arrays, format each element intelligently and FLATTEN
         if (Array.isArray(v)) {
-          const formattedScripts = v.map((item) => formatScriptValue(item))
-          return `${indent}${key}: [${formattedScripts.join(", ")}]`
+          const flattened: string[] = []
+          for (const item of v) {
+            if (typeof item === "string") {
+              // Detect simple multi-line string without shell operators and split into lines
+              const hasNewline = item.includes("\n")
+              if (hasNewline) {
+                const shellOperatorPatterns = [
+                  /\\\n/, // Line continuation
+                  /<</, // Heredoc
+                  /(?<!\|)\|(?!\|)/, // Pipe (but not ||)
+                  />>?/, // Redirect output
+                  /2>/, // Redirect stderr
+                  /&>/, // Redirect both
+                  /(?<!<)<(?!<)/, // Redirect input (but not <<)
+                ]
+                const hasShellOperators = shellOperatorPatterns.some((p) => p.test(item))
+                if (!hasShellOperators) {
+                  const linesSplit = item
+                    .split("\n")
+                    .map((l) => l.trim())
+                    .filter((l) => l.length > 0)
+                  if (linesSplit.length > 0) {
+                    for (const line of linesSplit) {
+                      flattened.push(JSON.stringify(line))
+                    }
+                    continue
+                  }
+                }
+              }
+            }
+            const formatted = formatScriptValue(item)
+            // If formatted result itself looks like an array literal ["..."] we should expand it
+            if (/^\[(?:.|\n)*\]$/.test(formatted)) {
+              // Attempt to parse safely by wrapping in JSON (replace single backticks/template etc.)
+              try {
+                // Replace trailing commas if any and parse as JSON after ensuring double quotes
+                const jsonCandidate = formatted
+                const parsed = JSON.parse(jsonCandidate)
+                if (Array.isArray(parsed)) {
+                  for (const inner of parsed) {
+                    flattened.push(JSON.stringify(inner))
+                  }
+                  continue
+                }
+              } catch {
+                // Fallback: just push formatted string literal as is
+              }
+            }
+            flattened.push(formatted)
+          }
+          return `${indent}${key}: [${flattened.join(", ")}]`
         }
         return `${indent}${key}: ${formatScriptValue(v)}`
       }
