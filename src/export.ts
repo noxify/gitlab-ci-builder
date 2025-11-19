@@ -1,7 +1,7 @@
 import fs from "fs/promises"
 import yaml from "js-yaml"
 
-import type { GitLabCi } from "."
+import type { GitLabCi } from "./"
 
 /**
  * Convert a plain `GitLabCi` object to a YAML string.

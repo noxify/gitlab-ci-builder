@@ -540,11 +540,11 @@ export class Config {
     for (const key of jobIds) {
       const job = pipeline.jobs[key] as JobDefinitionExtends
 
-      // Check if this job has resolveExtends disabled - if so, keep extends but normalize
+      // Check if this job has resolveExtends disabled - if so, keep original extends (local or remote)
       const jobOpts = this.jobOptionsMap[key]
       if (jobOpts?.resolveExtends === false) {
         delete job.needsExtends
-        // Normalize single-element extends array to string for cleaner output
+        // Normalize single-element array to string for cleaner output, but do not filter
         if (Array.isArray(job.extends) && job.extends.length === 1) {
           job.extends = job.extends[0]
         }

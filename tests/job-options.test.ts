@@ -27,6 +27,7 @@ describe("Job Options", () => {
         extends: ".base",
         stage: "test",
       })
+      expect(result.jobs?.child?.extends).toBe(".base")
       expect(result.jobs?.child?.script).toBeUndefined()
     })
 
@@ -41,6 +42,7 @@ describe("Job Options", () => {
         extends: ".base",
         stage: "test",
       })
+      expect(result.jobs?.child?.extends).toBe(".base")
       expect(result.jobs?.child?.script).toBeUndefined()
     })
 
@@ -58,6 +60,7 @@ describe("Job Options", () => {
         extends: ".base",
         stage: "test",
       })
+      expect(result.jobs?.disabled?.extends).toBe(".base")
       expect(result.jobs?.disabled?.script).toBeUndefined()
 
       // enabled should resolve extends
@@ -170,6 +173,7 @@ describe("Job Options", () => {
         extends: ".base",
         stage: "test",
       })
+      expect(result.jobs?.test?.extends).toBe(".base")
       expect(result.jobs?.test?.script).toBeUndefined()
     })
 
