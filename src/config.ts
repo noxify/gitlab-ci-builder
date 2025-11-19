@@ -563,6 +563,7 @@ export class Config {
           // Keep as string if only one extends remains (preserves original format)
           job.extends = filtered[0]
         } else {
+          delete job.needsExtends
           job.extends = filtered
         }
       }
