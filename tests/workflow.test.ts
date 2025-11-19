@@ -43,4 +43,15 @@ describe("Config - workflow", () => {
     const result = config.workflow({ rules: [] })
     expect(result).toBe(config)
   })
+
+  it("should set workflow name", () => {
+    config.workflow({
+      name: "Pipeline for $CI_COMMIT_BRANCH",
+      rules: [{ if: "$CI_COMMIT_BRANCH", when: "always" }],
+    })
+    const result = config.getPlainObject()
+
+    expect(result.workflow?.name).toBe("Pipeline for $CI_COMMIT_BRANCH")
+    expect(result.workflow?.rules).toHaveLength(1)
+  })
 })

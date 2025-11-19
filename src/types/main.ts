@@ -24,9 +24,16 @@ interface GitLabCi {
   include?: IncludeOutputDefinition[]
   variables?: VariablesDefinition
   /**
-   * @see https://docs.gitlab.com/ee/ci/yaml/#workflowrules
+   * @see https://docs.gitlab.com/ee/ci/yaml/#workflow
    */
   workflow?: {
+    /**
+     * @see https://docs.gitlab.com/ee/ci/yaml/#workflowname
+     */
+    name?: string
+    /**
+     * @see https://docs.gitlab.com/ee/ci/yaml/#workflowrules
+     */
     rules: RulesDefinition<"always" | "never">
   }
   /**
