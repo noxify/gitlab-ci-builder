@@ -2,4 +2,4 @@
 "@noxify/gitlab-ci-builder": patch
 ---
 
-fixed issue in the generated ts code for the importer
+Fix import code generation to properly handle single-element arrays for properties like `extends`, optimizing output format for better code readability.

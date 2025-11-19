@@ -2,4 +2,4 @@
 "@noxify/gitlab-ci-builder": patch
 ---
 
-support `string` and `string[]` in `artifacts.reports.dotenv`
+Add support for `artifacts.reports.dotenv` property with `string | string[]` type. Import now intelligently normalizes single-element arrays to strings for cleaner generated code.

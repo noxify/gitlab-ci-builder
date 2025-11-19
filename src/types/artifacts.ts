@@ -39,6 +39,10 @@ interface ArtifactsDefinition {
      */
     dotenv?: string | string[]
     /**
+     * @see https://docs.gitlab.com/ee/ci/yaml/artifacts_reports.html#artifactsreportsannotations
+     */
+    annotations?: string | string[]
+    /**
      * @see https://docs.gitlab.com/ee/ci/pipelines/job_artifacts.html#artifactsreportscobertura
      */
     cobertura?: string

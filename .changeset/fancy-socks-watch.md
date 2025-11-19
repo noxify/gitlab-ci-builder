@@ -2,4 +2,4 @@
 "@noxify/gitlab-ci-builder": patch
 ---
 
-string support for `extends`
+Add support for `extends` as both `string` and `string[]`. Single extends are optimized to string format in generated code for better readability.

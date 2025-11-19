@@ -2,4 +2,4 @@
 "@noxify/gitlab-ci-builder": patch
 ---
 
-add missing `optional` prop for `needs:`
+Add missing `optional` property to `needs` definitions (both job and pipeline needs) to match GitLab CI specification.

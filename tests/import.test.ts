@@ -426,5 +426,44 @@ deploy:
       expect(ts).toContain("optional: true")
       expect(ts).toContain('job: "unit_tests"')
     })
+
+    it("should handle artifacts.reports.annotations as single string", () => {
+      const yaml = `
+test:
+  script:
+    - npm test
+  artifacts:
+    reports:
+      annotations:
+        - branding.json
+`
+
+      const ts = fromYaml(yaml)
+
+      expect(ts).toContain('config.job("test",')
+      expect(ts).toContain("artifacts:")
+      expect(ts).toContain("reports:")
+      expect(ts).toContain('annotations: "branding.json"')
+    })
+
+    it("should handle artifacts.reports.annotations as array", () => {
+      const yaml = `
+test:
+  script:
+    - npm test
+  artifacts:
+    reports:
+      annotations:
+        - file1.json
+        - file2.json
+`
+
+      const ts = fromYaml(yaml)
+
+      expect(ts).toContain('config.job("test",')
+      expect(ts).toContain("artifacts:")
+      expect(ts).toContain("reports:")
+      expect(ts).toContain('annotations: ["file1.json", "file2.json"]')
+    })
   })
 })
