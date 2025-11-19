@@ -220,6 +220,141 @@ config.job("build", {
 
 **Recommendation:** Use GitLab's `extends` keyword instead of YAML merge operators to maintain clearer relationships in the generated TypeScript code.
 
+### Dynamic TypeScript Includes
+
+The `dynamicInclude` method allows you to modularize your GitLab CI configuration by splitting it across multiple TypeScript files. Each included file can export a configuration function that receives the main `Config` instance.
+
+#### Basic Usage
+
+```ts
+import { Config } from "./src"
+
+const config = new Config()
+
+// Include all config files from a directory
+await config.dynamicInclude(process.cwd(), ["configs/**/*.ts"])
+
+console.log(config.getPlainObject())
+```
+
+#### Creating Included Config Files
+
+Included files can use either a **default export** (preferred) or a **named `extendConfig` export**. The exported function receives the `Config` instance, mutates it, and returns it for consistency with the fluent API.
+
+**Option 1: Default Export (Recommended)**
+
+````ts
+**Option 1: Default Export (Recommended)**
+
+```ts
+// configs/build-jobs.ts
+import type { Config } from "gitlab-ci-builder"
+
+export default function (config: Config) {
+  // Mutate the config instance directly
+  config.stages("build")
+
+  config.template(".node-base", {
+    image: "node:22",
+    before_script: ["npm ci"],
+  })
+
+  config.extends(".node-base", "build", {
+    stage: "build",
+    script: ["npm run build"],
+  })
+
+  return config
+}
+````
+
+**Option 2: Named Export**
+
+```ts
+// configs/test-jobs.ts
+import type { Config } from "gitlab-ci-builder"
+
+export function extendConfig(config: Config) {
+  config.stages("test")
+
+  config.job("unit-test", {
+    stage: "test",
+    script: ["npm run test:unit"],
+  })
+
+  config.job("integration-test", {
+    stage: "test",
+    script: ["npm run test:integration"],
+  })
+
+  return config
+}
+```
+
+#### Complete Example
+
+**Main configuration file:**
+
+```ts
+// build-pipeline.ts
+import { Config, writeYamlFile } from "./src"
+
+async function main() {
+  const config = new Config()
+
+  // Set up base configuration
+  config.stages("prepare", "build", "test", "deploy")
+  config.variable("DOCKER_DRIVER", "overlay2")
+
+  // Include additional configurations from separate files
+  await config.dynamicInclude(process.cwd(), [
+    "configs/build-jobs.ts",
+    "configs/test-jobs.ts",
+    "configs/deploy-jobs.ts",
+  ])
+
+  // Write the final pipeline configuration
+  await writeYamlFile(".gitlab-ci.yml", config.getPlainObject())
+}
+
+main()
+```
+
+**Separate config files:**
+
+```ts
+// configs/deploy-jobs.ts
+import type { Config } from "gitlab-ci-builder"
+
+export default function (config: Config) {
+  config.job("deploy-staging", {
+    stage: "deploy",
+    script: ["kubectl apply -f k8s/staging/"],
+    environment: { name: "staging" },
+    only: { refs: ["develop"] },
+  })
+
+  config.job("deploy-production", {
+    stage: "deploy",
+    script: ["kubectl apply -f k8s/production/"],
+    environment: { name: "production" },
+    only: { refs: ["main"] },
+    when: "manual",
+  })
+
+  return config
+}
+```
+
+#### Benefits
+
+- **Modularity**: Split large pipelines into focused, manageable files
+- **Reusability**: Share common job configurations across multiple pipelines
+- **Team collaboration**: Different teams can maintain their own config files
+- **Type safety**: Full TypeScript support with autocomplete and type checking
+
+**Note:** If both default and named exports are present, the default export takes precedence.
+
 ## API Reference
 
 This reference summarizes the primary `Config` API surface. Method signatures reflect

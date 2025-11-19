@@ -52,6 +52,7 @@ describe("Config - include", () => {
   it("should call extendConfig for each matched file", async () => {
     const mockExtendConfig = vi.fn((cfg: Config) => {
       cfg.job("included-job", { script: ["echo included"] })
+      return cfg
     })
 
     vi.mocked(globSync).mockReturnValue(["/fake/file1.ts", "/fake/file2.ts"])
@@ -127,6 +128,7 @@ describe("Config - include", () => {
   it("should support default export", async () => {
     const mockExtendConfig = vi.fn((cfg: Config) => {
       cfg.job("default-job", { script: ["echo default"] })
+      return cfg
     })
 
     vi.mocked(globSync).mockReturnValue(["/fake/default.ts"])

@@ -20,7 +20,7 @@ export type MacroArgs = unknown
 // async work and return a Promise.
 export type MaybeAsync<T> = T | Promise<T>
 
-export type ExtendConfigFunction = (config: Config) => MaybeAsync<void>
+export type ExtendConfigFunction = (config: Config) => MaybeAsync<Config>
 
 /**
  * A global OOP-style GitLab CI configurator.
@@ -365,6 +365,8 @@ export class Config {
           throw new Error(`The exported function is not a function!`)
         }
 
+        // Call the function and await the result (Config instance is returned but not used)
+        // The function mutates `this` Config instance directly
         await extendFn(this)
       }
     }
