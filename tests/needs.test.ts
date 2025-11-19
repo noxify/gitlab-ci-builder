@@ -115,9 +115,7 @@ describe("needs", () => {
 
     const plain = cfg.getPlainObject()
 
-    expect(plain.jobs?.deploy?.needs).toEqual([
-      { job: "build", artifacts: true, optional: true },
-    ])
+    expect(plain.jobs?.deploy?.needs).toEqual([{ job: "build", artifacts: true, optional: true }])
   })
 
   it("should support pipeline needs with optional", () => {
