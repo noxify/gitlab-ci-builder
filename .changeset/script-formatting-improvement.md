@@ -1,5 +1,5 @@
 ---
-"@noxify/gitlab-ci-builder": patch
+"@noxify/gitlab-ci-builder": minor
 ---
 
 Improve script formatting in YAML import with intelligent detection of shell operators.
