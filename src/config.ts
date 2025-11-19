@@ -415,8 +415,6 @@ export class Config {
       })
 
       for (const file of files) {
-        // eslint-disable-next-line no-console
-        console.log(`Include file "${file}..."`)
         const exported = (await import(file)) as
           | { default?: ExtendConfigFunction; extendConfig?: ExtendConfigFunction }
           | undefined
