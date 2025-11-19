@@ -27,7 +27,7 @@ describe("Config - jobs", () => {
     })
 
     it("should add hidden job with dot prefix", () => {
-      config.job("template", { script: ["echo template"] }, true)
+      config.job("template", { script: ["echo template"] }, { hidden: true })
       const result = config.getPlainObject()
       if (!result.jobs) throw new Error("Expected jobs to be present")
       const jobs = result.jobs
@@ -37,7 +37,7 @@ describe("Config - jobs", () => {
     })
 
     it("should not add dot prefix if name already starts with dot", () => {
-      config.job(".template", { script: ["echo template"] }, true)
+      config.job(".template", { script: ["echo template"] }, { hidden: true })
       const result = config.getPlainObject()
       if (!result.jobs) throw new Error("Expected jobs to be present")
       const jobs = result.jobs
@@ -62,18 +62,17 @@ describe("Config - jobs", () => {
 
     it("should not merge when mergeExisting is false", () => {
       config.job("test", { stage: "test", script: ["echo first"] })
-      config.job("test", { tags: ["docker"] }, false, { mergeExisting: false })
+      config.job("test", { tags: ["docker"] }, { mergeExisting: false })
       const result = config.getPlainObject()
       if (!result.jobs) throw new Error("Expected jobs to be present")
       const jobs = result.jobs
 
-      // Should keep original job unchanged
+      // Should have replaced original job
       expect(jobs.test).toMatchObject({
-        stage: "test",
-        script: ["echo first"],
+        tags: ["docker"],
       })
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      expect(jobs.test!.tags).toBeUndefined()
+      expect(jobs.test!.stage).toBeUndefined()
     })
 
     it("should return this for chaining", () => {
@@ -96,7 +95,7 @@ describe("Config - jobs", () => {
     })
 
     it("should get hidden job by name with dot", () => {
-      config.job("template", { script: ["echo template"] }, true)
+      config.job("template", { script: ["echo template"] }, { hidden: true })
       const job = config.getJob(".template")
 
       expect(job).toBeDefined()

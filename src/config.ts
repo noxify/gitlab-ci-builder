@@ -23,6 +23,28 @@ export type MaybeAsync<T> = T | Promise<T>
 export type ExtendConfigFunction = (config: Config) => MaybeAsync<Config>
 
 /**
+ * Options for job and template definitions.
+ */
+export interface JobOptions {
+  /** If false, extends from parent templates/jobs will not be resolved. Default: true */
+  resolveExtends?: boolean
+  /** If true, merge with existing job/template of same name. Default: true */
+  mergeExisting?: boolean
+  /** If true, treat as hidden template (prefix with dot). Default: false */
+  hidden?: boolean
+}
+
+/**
+ * Global options that apply to all jobs unless overridden at job level.
+ */
+export interface GlobalOptions {
+  /** If false, extends resolution is disabled globally. Job-level setting overrides. Default: true */
+  resolveExtends?: boolean
+  /** If true, jobs with same name are merged by default. Job-level setting overrides. Default: true */
+  mergeExisting?: boolean
+}
+
+/**
  * A global OOP-style GitLab CI configurator.
  */
 export class Config {
@@ -36,6 +58,8 @@ export class Config {
   private macros: Record<string, (config: Config, args: MacroArgs) => void> = {}
   private patchers: ((plain: GitLabCi) => void)[] = []
   private includeValue: IncludeOutputDefinition[] = []
+  private globalOptionsValue: GlobalOptions = { resolveExtends: true, mergeExisting: true }
+  private jobOptionsMap: Record<string, JobOptions> = {}
 
   /**
    * Define pipeline stages.
@@ -58,6 +82,20 @@ export class Config {
   /** Add a single stage ensuring uniqueness */
   public addStage(stage: string) {
     return this.stages(stage)
+  }
+
+  /**
+   * Set global options that apply to all jobs and templates.
+   *
+   * These options can be overridden at the job level. Useful for controlling
+   * extends resolution behavior across the entire pipeline.
+   *
+   * @param options - Global options object.
+   * @returns The same `Config` instance (fluent API).
+   */
+  public globalOptions(options: GlobalOptions) {
+    this.globalOptionsValue = { ...this.globalOptionsValue, ...options }
+    return this
   }
 
   /**
@@ -153,23 +191,35 @@ export class Config {
    *
    * @param name - Template name (may be provided without leading `.`).
    * @param definition - Job definition object for the template.
-   * @param options - Options; `mergeExisting` controls deep-merge behavior.
+   * @param options - Job options (mergeExisting, resolveExtends, hidden).
    * @returns The same `Config` instance (fluent API).
    * @see https://docs.gitlab.com/ee/ci/yaml/#hide-jobs
    */
-  public template(
-    name: string,
-    definition: JobDefinition,
-    options: { mergeExisting?: boolean } = { mergeExisting: true },
-  ) {
+  public template(name: string, definition: JobDefinition, options: JobOptions = {}) {
     // Ensure the name starts with a dot
     const templateName = name.startsWith(".") ? name : `.${name}`
 
-    if (!this.templatesValue[templateName]) {
-      this.templatesValue[templateName] = definition
-    } else if (options.mergeExisting) {
-      this.templatesValue[templateName] = merge(this.templatesValue[templateName], definition)
+    // Merge with global options, job-level options override
+    const mergedOptions: JobOptions = {
+      ...this.globalOptionsValue,
+      ...options,
     }
+
+    const templateExists = !!this.templatesValue[templateName]
+
+    if (!templateExists) {
+      this.templatesValue[templateName] = definition
+    } else if (mergedOptions.mergeExisting !== false) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      this.templatesValue[templateName] = merge(this.templatesValue[templateName]!, definition)
+    } else {
+      // mergeExisting is explicitly false and template exists - replace
+      this.templatesValue[templateName] = definition
+    }
+
+    // Store options for this template for later extends resolution
+    this.jobOptionsMap[templateName] = mergedOptions
+
     return this
   }
 
@@ -231,7 +281,7 @@ export class Config {
    *
    * Behavior:
    * - If `name` starts with `.` it is treated as a template and delegated to `template()`.
-   * - If `hidden` is truthy, the name is ensured to be stored as a template name (prefixed
+   * - If `options.hidden` is true, the name is ensured to be stored as a template name (prefixed
    *   with a single `.`) and delegated to `template()`.
    * - Otherwise the job is added or, if an existing job exists and `options.mergeExisting`
    *   is true, merged via deep-merge.
@@ -241,33 +291,45 @@ export class Config {
    *
    * @param name - Job name (or template name with leading dot).
    * @param definition - Job definition object.
-   * @param hidden - If true, the job will be stored as a template (leading dot added if missing).
-   * @param options - Merge options; `mergeExisting` controls deep-merge behavior.
+   * @param options - Job options (hidden, mergeExisting, resolveExtends).
    * @returns The same `Config` instance (fluent API).
    * @see https://docs.gitlab.com/ee/ci/yaml/#configuration-parameters
    */
-  public job(
-    name: string,
-    definition: JobDefinition,
-    hidden = false,
-    options: { mergeExisting?: boolean } = { mergeExisting: true },
-  ) {
+  public job(name: string, definition: JobDefinition, options: JobOptions = {}) {
+    const normalizedOptions: JobOptions = options
+
     // Normalize extends to always be an array
     const normalizedDef = this.normalizeExtends(definition)
 
     // If name starts with a dot, treat it as a template. If `hidden` is true,
     // ensure the name is prefixed with a single dot; do not add an extra dot
     // when the provided name already starts with one.
-    if (name.startsWith(".") || hidden) {
+    if (name.startsWith(".") || normalizedOptions.hidden) {
       const useName = name.startsWith(".") ? name : `.${name}`
-      return this.template(useName, normalizedDef, options)
+      return this.template(useName, normalizedDef, normalizedOptions)
     }
 
-    if (!this.jobsValue[name]) {
-      this.jobsValue[name] = normalizedDef
-    } else if (options.mergeExisting) {
-      this.jobsValue[name] = merge(this.jobsValue[name], normalizedDef)
+    // Merge with global options, job-level options override
+    const mergedOptions: JobOptions = {
+      ...this.globalOptionsValue,
+      ...normalizedOptions,
     }
+
+    const jobExists = !!this.jobsValue[name]
+
+    if (!jobExists) {
+      this.jobsValue[name] = normalizedDef
+    } else if (mergedOptions.mergeExisting !== false) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      this.jobsValue[name] = merge(this.jobsValue[name]!, normalizedDef)
+    } else {
+      // mergeExisting is explicitly false and job exists - replace
+      this.jobsValue[name] = normalizedDef
+    }
+
+    // Store options for this job for later extends resolution
+    this.jobOptionsMap[name] = mergedOptions
+
     return this
   }
 
@@ -318,13 +380,18 @@ export class Config {
    * @param fromName - Template or job name(s) to extend from (may include leading `.`).
    * @param name - Name of the new job.
    * @param job - Optional job definition to merge on top of the resolved extends.
-   * @param hidden - If true, the created job will be stored as a template (leading dot added).
+   * @param options - Job options (hidden, mergeExisting, resolveExtends).
    */
-  public extends(fromName: string | string[], name: string, job?: JobDefinition, hidden = false) {
+  public extends(
+    fromName: string | string[],
+    name: string,
+    job?: JobDefinition,
+    options: JobOptions = {},
+  ) {
     this.job(
       name,
       merge(job ?? {}, { extends: Array.isArray(fromName) ? fromName : [fromName] }),
-      hidden,
+      options,
     )
   }
 
@@ -420,6 +487,8 @@ export class Config {
    * resolved templates in the correct order. Templates (keys starting with `.`)
    * are not themselves resolved here.
    *
+   * Jobs with `resolveExtends: false` will skip extends resolution.
+   *
    * @param pipeline - A copy of the pipeline object to resolve (modified in place).
    */
   private resolveExtends(pipeline: GitLabCi) {
@@ -429,6 +498,12 @@ export class Config {
     for (const key of jobIds) {
       const job = pipeline.jobs[key]
       if (!job || !job.extends || key.startsWith(".")) continue
+
+      // Check if this job has resolveExtends disabled
+      const jobOpts = this.jobOptionsMap[key]
+      if (jobOpts?.resolveExtends === false) {
+        continue
+      }
 
       this.recursivelyExtend(pipeline, job)
 
@@ -455,6 +530,8 @@ export class Config {
    * final serialized output does not contain the internal `extends` helper),
    * and also removes the helper `needsExtends` property.
    *
+   * Jobs with `resolveExtends: false` keep their extends references.
+   *
    * @param pipeline - The pipeline object being prepared for output.
    */
   private clear(pipeline: GitLabCi) {
@@ -464,6 +541,18 @@ export class Config {
     const jobIds = Object.keys(pipeline.jobs)
     for (const key of jobIds) {
       const job = pipeline.jobs[key] as JobDefinitionExtends
+
+      // Check if this job has resolveExtends disabled - if so, keep extends but normalize
+      const jobOpts = this.jobOptionsMap[key]
+      if (jobOpts?.resolveExtends === false) {
+        delete job.needsExtends
+        // Normalize single-element extends array to string for cleaner output
+        if (Array.isArray(job.extends) && job.extends.length === 1) {
+          job.extends = job.extends[0]
+        }
+        continue
+      }
+
       if (job.extends) {
         // Normalize to array for filtering
         const extendsArray = Array.isArray(job.extends) ? job.extends : [job.extends]

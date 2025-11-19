@@ -61,21 +61,19 @@ describe("Config - edge cases and branches", () => {
   })
 
   it("template respects mergeExisting=false and does not deep-merge when disabled", () => {
-    // First define a template with a property
-    cfg.template("base", { image: "node:22", variables: { FOO: "1" } })
+    const c = new Config()
+    c.template(".base", { image: "node:22", variables: { FOO: "1" } })
+    // Second call with mergeExisting:false should replace
+    c.template(".base", { variables: { BAR: "2" } }, { mergeExisting: false })
 
-    // Attempt to redefine with mergeExisting: false — this should NOT merge into existing
-    cfg.template("base", { variables: { BAR: "2" } }, { mergeExisting: false })
-
-    const out = cfg.getPlainObject()
+    const out = c.getPlainObject()
     if (!out.jobs) throw new Error("Expected jobs to be present")
-
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const tmpl = out.jobs[".base"]!
-    // Since mergeExisting was false on the second call, we expect the original properties to remain
-    expect(tmpl.image).toBe("node:22")
-    // The second call should not have merged BAR into variables
-    expect(tmpl.variables).toEqual({ FOO: "1" })
+    // Since mergeExisting was false on the second call, we expect replacement
+    expect(tmpl.image).toBeUndefined()
+    // The second call should have replaced FOO with BAR
+    expect(tmpl.variables).toEqual({ BAR: "2" })
   })
 
   it("invokes patchers registered with patch() before returning plain object", () => {

@@ -75,10 +75,10 @@ describe("Config - template", () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const template = result.jobs[".base"]!
 
-      // Should keep original since mergeExisting is false
-      expect(template.image).toBe("node:20")
-      expect(template.before_script).toEqual(["npm install"])
-      expect(template.tags).toBeUndefined()
+      // Should have replaced since mergeExisting is false
+      expect(template.tags).toEqual(["docker"])
+      expect(template.image).toBeUndefined()
+      expect(template.before_script).toBeUndefined()
     })
 
     it("should be chainable", () => {
@@ -114,7 +114,7 @@ describe("Config - template", () => {
         {
           image: "node:22",
         },
-        true,
+        { hidden: true },
       )
 
       const result = config.getPlainObject()
@@ -176,6 +176,23 @@ describe("Config - template", () => {
       expect(buildJob.image).toBe("node:22")
       expect(buildJob.tags).toEqual(["docker"])
       expect(buildJob.script).toEqual(["npm run build"])
+    })
+
+    it("should merge scripts from template when extending multiple templates", () => {
+      config.template("base", { image: "node:22", script: ["npm i -g pnpm"] })
+      config.job(".docker", { tags: ["docker"] })
+
+      config.extends([".base", ".docker"], "build", {
+        script: ["npm run build"],
+      })
+
+      const result = config.getPlainObject()
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const buildJob = result.jobs!.build!
+      expect(buildJob.image).toBe("node:22")
+      expect(buildJob.tags).toEqual(["docker"])
+      expect(buildJob.script).toEqual(["npm i -g pnpm", "npm run build"])
     })
   })
 

@@ -273,6 +273,7 @@ function formatValue(value: unknown, indentLevel: number): string {
               try {
                 // Replace trailing commas if any and parse as JSON after ensuring double quotes
                 const jsonCandidate = formatted
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 const parsed = JSON.parse(jsonCandidate)
                 if (Array.isArray(parsed)) {
                   for (const inner of parsed) {

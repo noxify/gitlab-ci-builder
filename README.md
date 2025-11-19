@@ -38,13 +38,13 @@ const cfg = new Config()
   .include("./common.yml")
 
 // Template job (hidden)
-cfg.template("base", { image: "node:18" })
-// same as
-// cfg.job("base", { image: "node:18" }, true)
-// or
-// cfg.job(".base", { image: "node:18" })
+config.template("base", { image: "node:18" })
+// Or using job() with options:
+// config.job("base", { image: "node:18" }, { hidden: true })
+// Or with dot prefix:
+// config.job(".base", { image: "node:18" })
 
-cfg.extends(".base", "unittest", {
+config.extends(".base", "unittest", {
   stage: "test",
   script: ["npm run test"],
 })
@@ -355,6 +355,67 @@ export default function (config: Config) {
 
 **Note:** If both default and named exports are present, the default export takes precedence.
 
+## Job Options & Global Settings
+
+### Job Options
+
+The `job()`, `template()`, and `extends()` methods accept an optional `JobOptions` parameter for fine-grained control:
+
+```ts
+interface JobOptions {
+  hidden?: boolean // Mark as template (prefix with dot)
+  mergeExisting?: boolean // Merge with existing job/template (default: true)
+  resolveExtends?: boolean // Resolve parent extends (default: true)
+}
+```
+
+**Example:**
+
+```ts
+const config = new Config()
+
+// Create a hidden template
+config.job("base", { image: "node:22" }, { hidden: true })
+// Same as: config.template(".base", { image: "node:22" })
+
+// Replace instead of merge
+config.job("build", { stage: "build", script: ["npm run build"] })
+config.job("build", { script: ["npm run build:prod"] }, { mergeExisting: false })
+// Result: { script: ["npm run build:prod"] } (stage removed)
+
+// Keep extends reference (don't resolve parent)
+config.template(".base", { script: ["base command"] })
+config.job("child", { extends: ".base" }, { resolveExtends: false })
+// Output keeps: extends: ".base"
+```
+
+### Global Options
+
+Set default behavior for all jobs using `globalOptions()`. Job-level options override global settings:
+
+```ts
+const config = new Config()
+
+// Disable extends resolution globally
+config.globalOptions({ resolveExtends: false })
+
+config.template(".base", { script: ["base"] })
+
+// This job keeps extends (global setting)
+config.job("job1", { extends: ".base" })
+// Output: { extends: ".base" }
+
+// This job resolves extends (local override)
+config.job("job2", { extends: ".base" }, { resolveExtends: true })
+// Output: { script: ["base"] }
+```
+
+**Use Cases:**
+
+- **Preserve extends in output**: Set `resolveExtends: false` to keep GitLab CI's native extends instead of inlining parent properties
+- **Strict replacement**: Set `mergeExisting: false` globally to prevent accidental job merging
+- **Conditional resolution**: Disable extends resolution globally, then selectively enable it for specific jobs
+
 ## API Reference
 
 This reference summarizes the primary `Config` API surface. Method signatures reflect
@@ -368,6 +429,11 @@ the runtime builder and are derived from the JSDoc on the source `Config` class.
 
 - `addStage(stage: string): Config`
   - Convenience wrapper for adding a single stage.
+
+- `globalOptions(options: GlobalOptions): Config`
+  - Set global options that apply to all jobs and templates.
+  - Options: `{ resolveExtends?: boolean, mergeExisting?: boolean }`
+  - Job-level options override global settings.
 
 - `workflow(workflow: GitLabCi["workflow"]): Config`
   - Set or deep-merge the top-level `workflow` configuration (typically `rules`).
@@ -387,16 +453,18 @@ the runtime builder and are derived from the JSDoc on the source `Config` class.
 - `getJob(name: string): JobDefinition | undefined`
   - Look up a job or template definition by name (templates start with `.`).
 
-- `template(name: string, definition: JobDefinition, options?: { mergeExisting?: boolean }): Config`
+- `template(name: string, definition: JobDefinition, options?: JobOptions): Config`
   - Define or deep-merge a hidden template job. The stored template name will have a leading `.`.
+  - Options: `{ mergeExisting?: boolean, resolveExtends?: boolean, hidden?: boolean }`
 
 - `include(item: IncludeDefinition | IncludeDefinition[]): Config`
   - Add include entries. Accepts strings, objects or arrays and normalizes strings to
     `{ local: "..." }` or `{ remote: "https://..." }` depending on the value.
 
-- `job(name: string, definition: JobDefinition, hidden?: boolean, options?: { mergeExisting?: boolean }): Config`
-  - Create or merge a job. If `name` starts with `.` or `hidden` is true, the call delegates
+- `job(name: string, definition: JobDefinition, options?: JobOptions): Config`
+  - Create or merge a job. If `name` starts with `.` or `options.hidden` is true, the call delegates
     to `template()` and ensures a single leading `.` on the stored template name.
+  - Options: `{ hidden?: boolean, mergeExisting?: boolean, resolveExtends?: boolean }`
 
 - `macro<T extends MacroArgs>(key: string, callback: (config: Config, args: T) => void): void`
   - Register a macro function for programmatic job generation.
@@ -404,8 +472,9 @@ the runtime builder and are derived from the JSDoc on the source `Config` class.
 - `from<T extends MacroArgs>(key: string, args: T): void`
   - Invoke a previously registered macro.
 
-- `extends(fromName: string | string[], name: string, job?: JobDefinition, hidden?: boolean): void`
+- `extends(fromName: string | string[], name: string, job?: JobDefinition, options?: JobOptions): void`
   - Create a job that will extend one or more templates/jobs (injects an `extends` property).
+  - Options: `{ hidden?: boolean, mergeExisting?: boolean, resolveExtends?: boolean }`
 
 - `dynamicInclude(cwd: string, globs: string[]): Promise<void>`
   - Import TypeScript modules matched by the provided globs and call their exported `extendConfig`.

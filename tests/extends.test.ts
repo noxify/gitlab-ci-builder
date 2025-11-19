@@ -59,11 +59,8 @@ describe("Config - extends", () => {
   })
 
   it("should create hidden job when hidden parameter is true", () => {
-    config.job(".template", {
-      image: "node:22",
-    })
-
-    config.extends(".template", "base-job", { script: ["test"] }, true)
+    config.template(".base", { script: ["base script"] })
+    config.extends(".base", "base-job", { stage: "test" }, { hidden: true })
 
     const result = config.getPlainObject()
     if (!result.jobs) throw new Error("Expected jobs to be present")
