@@ -17,7 +17,7 @@ type RulesDefinition<T = WhenOptions> = {
   /**
    * @see https://docs.gitlab.com/ci/yaml/#rulesexists
    */
-  exists?: string
+  exists?: string | string[]
   /**
    * @see https://docs.gitlab.com/ci/yaml/#ruleswhen
    */
