@@ -1,5 +1,5 @@
 ---
-"gitlab-ci-builder": patch
+"@noxify/gitlab-ci-builder": patch
 ---
 
 ensure `needsExtends` is always removed from final output
