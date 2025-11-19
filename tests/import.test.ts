@@ -398,5 +398,33 @@ build:
       expect(ts).toContain('config.job("build",')
       expect(ts).toContain('extends: [".base1", ".base2"]')
     })
+
+    it("should handle needs with optional property", () => {
+      const yaml = `
+generate_version:
+  script:
+    - echo version
+
+unit_tests:
+  script:
+    - npm test
+
+deploy:
+  script:
+    - echo deploying
+  needs:
+    - job: generate_version
+      optional: true
+    - job: unit_tests
+`
+
+      const ts = fromYaml(yaml)
+
+      expect(ts).toContain('config.job("deploy",')
+      expect(ts).toContain("needs:")
+      expect(ts).toContain('job: "generate_version"')
+      expect(ts).toContain("optional: true")
+      expect(ts).toContain('job: "unit_tests"')
+    })
   })
 })

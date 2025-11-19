@@ -251,5 +251,35 @@ describe("export", () => {
         "Write failed",
       )
     })
+
+    it("should export needs with optional property", () => {
+      const config = new Config()
+      config.job("generate_version", {
+        script: ["echo version"],
+      })
+      config.job("unit_tests", {
+        script: ["npm test"],
+      })
+      config.job("deploy", {
+        script: ["echo deploying"],
+        needs: [
+          {
+            job: "generate_version",
+            optional: true,
+          },
+          {
+            job: "unit_tests",
+          },
+        ],
+      })
+
+      const yaml = toYaml(config.getPlainObject())
+
+      expect(yaml).toContain("deploy:")
+      expect(yaml).toContain("needs:")
+      expect(yaml).toContain("- job: generate_version")
+      expect(yaml).toContain("optional: true")
+      expect(yaml).toContain("- job: unit_tests")
+    })
   })
 })
