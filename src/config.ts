@@ -558,15 +558,16 @@ export class Config {
 
         if (filtered.length === 0) {
           delete job.extends
-          delete job.needsExtends
         } else if (filtered.length === 1) {
           // Keep as string if only one extends remains (preserves original format)
           job.extends = filtered[0]
         } else {
-          delete job.needsExtends
           job.extends = filtered
         }
       }
+
+      // Always delete needsExtends as it's internal metadata
+      delete job.needsExtends
     }
   }
 
