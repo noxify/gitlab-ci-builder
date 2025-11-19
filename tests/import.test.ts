@@ -305,6 +305,10 @@ deploy-job:
 
     it("should handle anchors", () => {
       const yaml = `
+.tags_test: &tags_test
+  - test1
+  - test2
+
 .job_template: &job_configuration
   script:
     - test project
@@ -334,8 +338,22 @@ test:mysql:
 
       const ts = fromYaml(yaml)
 
+      // Anchor-only definitions (.tags_test) should be ignored
+      expect(ts).not.toContain('config.template(".tags_test"')
+
+      // Templates with actual job definitions should be included
+      expect(ts).toContain('config.template(".postgres_services"')
+      expect(ts).toContain('config.template(".mysql_services"')
+      expect(ts).toContain('config.template(".job_template"')
+
+      // Jobs should reference the merged anchor values
+      expect(ts).toContain('config.job("test:postgres"')
+      expect(ts).toContain('config.job("test:mysql"')
       expect(ts).toContain('services: ["postgres", "ruby"]')
       expect(ts).toContain('services: ["mysql", "ruby"]')
+
+      // Merged script from anchor should be present
+      expect(ts).toContain('"test project"')
     })
   })
 })

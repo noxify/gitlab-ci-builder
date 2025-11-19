@@ -91,8 +91,17 @@ export function fromYaml(yamlContent: string): string {
   }
 
   // Jobs (separate templates and regular jobs)
-  const templateKeys = Object.keys(jobs).filter((k) => k.startsWith("."))
-  const jobKeys = Object.keys(jobs).filter((k) => !k.startsWith("."))
+  // Filter out anchor-only definitions (non-object values like arrays or strings)
+  const isValidJobDefinition = (value: unknown): value is Record<string, unknown> => {
+    return typeof value === "object" && value !== null && !Array.isArray(value)
+  }
+
+  const templateKeys = Object.keys(jobs).filter(
+    (k) => k.startsWith(".") && isValidJobDefinition(jobs[k]),
+  )
+  const jobKeys = Object.keys(jobs).filter(
+    (k) => !k.startsWith(".") && isValidJobDefinition(jobs[k]),
+  )
 
   // Templates first
   for (const key of templateKeys) {

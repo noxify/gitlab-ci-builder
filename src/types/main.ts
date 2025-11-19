@@ -47,7 +47,7 @@ interface GitLabCi {
      * @see https://docs.gitlab.com/ee/ci/yaml/#tags
      */
     tags?: string[]
-    cache?: CacheDefinition
+    cache?: CacheDefinition | CacheDefinition[]
     artifacts?: ArtifactsDefinition
     retry?: RetryDefinition
     /**

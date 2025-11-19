@@ -137,6 +137,89 @@ await importYamlFile(".gitlab-ci.yml", "gitlab-ci.config.ts")
 
 This enables easy migration from YAML to TypeScript-based configurations.
 
+#### YAML Anchor Handling & Extends
+
+The import functionality handles both GitLab CI's native `extends` keyword and YAML anchors/aliases:
+
+##### Using `extends` (Recommended)
+
+When your YAML uses GitLab's `extends` keyword, the import preserves the reference:
+
+```yaml
+.base:
+  image: node:22
+  tags:
+    - docker
+
+build:
+  extends: .base # GitLab CI extends
+  script:
+    - npm run build
+```
+
+Generated output uses `extends` property:
+
+```ts
+config.template(".base", {
+  image: "node:22",
+  tags: ["docker"],
+})
+
+config.job("build", {
+  extends: ".base", // Preserved!
+  script: ["npm run build"],
+})
+
+// Or use the extends() helper method:
+config.extends(".base", "build", {
+  script: ["npm run build"],
+})
+```
+
+Both approaches produce equivalent output. The `extends()` helper is more concise when you want to explicitly show the inheritance relationship.
+
+##### Using YAML Anchors & Merges
+
+When using YAML merge operators (`<<: *anchor`), values are resolved and inlined:
+
+- **Anchor definitions** (`&anchor_name`) containing only primitive values (arrays, strings) are filtered out
+- **References** (`*anchor_name`) and **merges** (`<<: *anchor_name`) are resolved by the YAML parser and inlined
+- Only anchor definitions that are valid job/template objects are included as templates
+
+```yaml
+.tags_test: &tags_test # Filtered out (array-only anchor)
+  - test1
+  - test2
+
+.base: &base_config # Included (valid template)
+  image: node:22
+  tags:
+    - docker
+
+build:
+  <<: *base_config # Values merged inline
+  tags: *tags_test # Reference resolved
+  script:
+    - npm run build
+```
+
+Generated output has resolved values:
+
+```ts
+config.template(".base", {
+  image: "node:22",
+  tags: ["docker"],
+})
+
+config.job("build", {
+  image: "node:22", // Inlined from .base
+  tags: ["test1", "test2"], // Resolved from .tags_test
+  script: ["npm run build"],
+})
+```
+
+**Recommendation:** Use GitLab's `extends` keyword instead of YAML merge operators to maintain clearer relationships in the generated TypeScript code.
+
 ## API Reference
 
 This reference summarizes the primary `Config` API surface. Method signatures reflect

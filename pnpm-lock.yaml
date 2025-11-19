@@ -38,7 +38,7 @@ importers:
         version: 22.19.1
       '@vitest/coverage-v8':
         specifier: 4.0.10
-        version: 4.0.10(vitest@4.0.10(@types/node@22.19.1))
+        version: 4.0.10(vitest@4.0.10(@types/node@22.19.1)(yaml@2.8.1))
       eslint:
         specifier: 9.39.1
         version: 9.39.1
@@ -68,7 +68,7 @@ importers:
         version: 8.47.0(eslint@9.39.1)(typescript@5.9.3)
       vitest:
         specifier: 4.0.10
-        version: 4.0.10(@types/node@22.19.1)
+        version: 4.0.10(@types/node@22.19.1)(yaml@2.8.1)
 
 packages:
 
@@ -2324,6 +2324,11 @@ packages:
     resolution: {integrity: sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==}
     engines: {node: '>=10'}
 
+  yaml@2.8.1:
+    resolution: {integrity: sha512-lcYcMxX2PO9XMGvAJkJ3OsNMw+/7FKes7/hgerGUYWIoWu5j/+YQqcZr5JnPZWzOsEBgMbSbiSTn/dv/69Mkpw==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
   yargs-parser@22.0.0:
     resolution: {integrity: sha512-rwu/ClNdSMpkSrUb+d6BRsSkLUq1fmfsY6TOpYzTwvwkg1/NRG85KBy3kq++A8LKQwX6lsu+aWad+2khvuXrqw==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=23}
@@ -3006,7 +3011,7 @@ snapshots:
       '@typescript-eslint/types': 8.47.0
       eslint-visitor-keys: 4.2.1
 
-  '@vitest/coverage-v8@4.0.10(vitest@4.0.10(@types/node@22.19.1))':
+  '@vitest/coverage-v8@4.0.10(vitest@4.0.10(@types/node@22.19.1)(yaml@2.8.1))':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
       '@vitest/utils': 4.0.10
@@ -3019,7 +3024,7 @@ snapshots:
       magicast: 0.5.1
       std-env: 3.10.0
       tinyrainbow: 3.0.3
-      vitest: 4.0.10(@types/node@22.19.1)
+      vitest: 4.0.10(@types/node@22.19.1)(yaml@2.8.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -3032,13 +3037,13 @@ snapshots:
       chai: 6.2.1
       tinyrainbow: 3.0.3
 
-  '@vitest/mocker@4.0.10(vite@7.2.2(@types/node@22.19.1))':
+  '@vitest/mocker@4.0.10(vite@7.2.2(@types/node@22.19.1)(yaml@2.8.1))':
     dependencies:
       '@vitest/spy': 4.0.10
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.2.2(@types/node@22.19.1)
+      vite: 7.2.2(@types/node@22.19.1)(yaml@2.8.1)
 
   '@vitest/pretty-format@4.0.10':
     dependencies:
@@ -4631,7 +4636,7 @@ snapshots:
 
   validate-npm-package-name@7.0.0: {}
 
-  vite@7.2.2(@types/node@22.19.1):
+  vite@7.2.2(@types/node@22.19.1)(yaml@2.8.1):
     dependencies:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.3)
@@ -4642,11 +4647,12 @@ snapshots:
     optionalDependencies:
       '@types/node': 22.19.1
       fsevents: 2.3.3
+      yaml: 2.8.1
 
-  vitest@4.0.10(@types/node@22.19.1):
+  vitest@4.0.10(@types/node@22.19.1)(yaml@2.8.1):
     dependencies:
       '@vitest/expect': 4.0.10
-      '@vitest/mocker': 4.0.10(vite@7.2.2(@types/node@22.19.1))
+      '@vitest/mocker': 4.0.10(vite@7.2.2(@types/node@22.19.1)(yaml@2.8.1))
       '@vitest/pretty-format': 4.0.10
       '@vitest/runner': 4.0.10
       '@vitest/snapshot': 4.0.10
@@ -4663,7 +4669,7 @@ snapshots:
       tinyexec: 0.3.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 7.2.2(@types/node@22.19.1)
+      vite: 7.2.2(@types/node@22.19.1)(yaml@2.8.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.19.1
@@ -4740,6 +4746,9 @@ snapshots:
       strip-ansi: 7.1.2
 
   y18n@5.0.8: {}
+
+  yaml@2.8.1:
+    optional: true
 
   yargs-parser@22.0.0: {}
 
