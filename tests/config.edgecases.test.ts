@@ -14,7 +14,7 @@ describe("Config - edge cases and branches", () => {
     const fixtures = new URL("./fixtures", import.meta.url).pathname
 
     await expect(cfg.dynamicInclude(fixtures, ["no-export.mjs"])).rejects.toThrow(
-      /Please export a function extendConfig/i,
+      /Please export a default function or a named "extendConfig" function!/i,
     )
   })
 
@@ -22,7 +22,7 @@ describe("Config - edge cases and branches", () => {
     const fixtures = new URL("./fixtures", import.meta.url).pathname
 
     await expect(cfg.dynamicInclude(fixtures, ["extend-not-fn.mjs"])).rejects.toThrow(
-      /The exported extendConfig is not a function/i,
+      /The exported function is not a function!/i,
     )
   })
 

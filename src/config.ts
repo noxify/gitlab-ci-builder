@@ -332,9 +332,9 @@ export class Config {
    * Dynamically include other TypeScript configuration modules by glob.
    *
    * For every file matched by `globs` (resolved relative to `cwd`), this method
-   * will `import()` the file and call its exported `extendConfig` function with
-   * this `Config` instance. The imported file must export an `extendConfig`
-   * function; otherwise an error is thrown.
+   * will `import()` the file and call its exported function with this `Config`
+   * instance. The imported file must export either a default export function or
+   * a named `extendConfig` function; otherwise an error is thrown.
    *
    * @param cwd - Base directory for the globs (use `process.cwd()` normally).
    * @param globs - Glob patterns to match files (tinyglobby semantics).
@@ -350,16 +350,22 @@ export class Config {
       for (const file of files) {
         // eslint-disable-next-line no-console
         console.log(`Include file "${file}..."`)
-        const exported = (await import(file)) as { extendConfig?: ExtendConfigFunction } | undefined
-        if (!exported?.extendConfig) {
-          throw new Error(`Please export a function extendConfig which returns a Config instance!`)
+        const exported = (await import(file)) as
+          | { default?: ExtendConfigFunction; extendConfig?: ExtendConfigFunction }
+          | undefined
+
+        // Prefer default export, fallback to named extendConfig
+        const extendFn = exported?.default ?? exported?.extendConfig
+
+        if (!extendFn) {
+          throw new Error(`Please export a default function or a named "extendConfig" function!`)
         }
 
-        if (!(exported.extendConfig instanceof Function)) {
-          throw new Error(`The exported extendConfig is not a function!`)
+        if (!(extendFn instanceof Function)) {
+          throw new Error(`The exported function is not a function!`)
         }
 
-        await exported.extendConfig(this)
+        await extendFn(this)
       }
     }
   }
