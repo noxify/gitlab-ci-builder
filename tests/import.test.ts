@@ -274,6 +274,70 @@ build:
       expect(ts).toContain('"npm run build"')
       expect(ts).toContain('echo \\"Done\\"')
     })
+
+    it("should preserve shell control structures (if/then/else/fi)", () => {
+      const yaml = `
+deploy:
+  script:
+    - |
+      if [ "$MANUAL_PROD_DEPLOYMENT" = "true" ]; then
+        echo "🚨 MANUAL PRODUCTION DEPLOYMENT TRIGGERED 🚨"
+      else
+        echo "📦 Automated production deployment via changeset release"
+      fi
+`
+
+      const ts = fromYaml(yaml)
+
+      expect(ts).toContain('config.job("deploy",')
+      // Should be preserved as a template literal, not split into array
+      expect(ts).toContain("if [")
+      expect(ts).toContain("then")
+      expect(ts).toContain("else")
+      expect(ts).toContain("fi")
+      // Should be in a single script item (template literal in array)
+      expect(ts).toMatch(/script: \[`[\s\S]*if \[[\s\S]*then[\s\S]*else[\s\S]*fi[\s\S]*`\]/)
+    })
+
+    it("should preserve shell for loops", () => {
+      const yaml = `
+job:
+  script:
+    - |
+      for i in 1 2 3; do
+        echo "Item $i"
+      done
+`
+
+      const ts = fromYaml(yaml)
+
+      expect(ts).toContain("for i in")
+      expect(ts).toContain("do")
+      expect(ts).toContain("done")
+      expect(ts).toMatch(/script: \[`[\s\S]*for[\s\S]*do[\s\S]*done[\s\S]*`\]/)
+    })
+
+    it("should preserve shell case statements", () => {
+      const yaml = `
+job:
+  script:
+    - |
+      case $ENV in
+        prod)
+          echo "Production"
+          ;;
+        dev)
+          echo "Development"
+          ;;
+      esac
+`
+
+      const ts = fromYaml(yaml)
+
+      expect(ts).toContain("case")
+      expect(ts).toContain("esac")
+      expect(ts).toMatch(/script: \[`[\s\S]*case[\s\S]*esac[\s\S]*`\]/)
+    })
   })
 
   describe("importYamlFile()", () => {

@@ -213,9 +213,19 @@ function formatScriptValue(value: unknown): string {
     /(?<!<)<(?!<)/, // Redirect input (but not <<) - negative lookbehind and lookahead
   ]
 
-  const hasShellOperators = shellOperatorPatterns.some((pattern) => pattern.test(value))
+  // Check for shell control structures (if/then/else/fi, case/esac, for/do/done, while/do/done)
+  const shellControlStructures = [
+    /\bif\b.*\bthen\b/s, // if-then
+    /\bcase\b.*\besac\b/s, // case-esac
+    /\bfor\b.*\bdo\b/s, // for-do
+    /\bwhile\b.*\bdo\b/s, // while-do
+    /\buntil\b.*\bdo\b/s, // until-do
+  ]
 
-  if (hasShellOperators) {
+  const hasShellOperators = shellOperatorPatterns.some((pattern) => pattern.test(value))
+  const hasControlStructure = shellControlStructures.some((pattern) => pattern.test(value))
+
+  if (hasShellOperators || hasControlStructure) {
     // Keep as template literal to preserve exact formatting
     // Escape backticks and ${} in the string
     const escaped = value.replace(/`/g, "\\`").replace(/\$\{/g, "\\${")
@@ -311,8 +321,16 @@ function formatValue(value: unknown, indentLevel: number, addExtraIndent = false
                   /&>/, // Redirect both
                   /(?<!<)<(?!<)/, // Redirect input (but not <<)
                 ]
+                const shellControlStructures = [
+                  /\bif\b.*\bthen\b/s, // if-then
+                  /\bcase\b.*\besac\b/s, // case-esac
+                  /\bfor\b.*\bdo\b/s, // for-do
+                  /\bwhile\b.*\bdo\b/s, // while-do
+                  /\buntil\b.*\bdo\b/s, // until-do
+                ]
                 const hasShellOperators = shellOperatorPatterns.some((p) => p.test(item))
-                if (!hasShellOperators) {
+                const hasControlStructure = shellControlStructures.some((p) => p.test(item))
+                if (!hasShellOperators && !hasControlStructure) {
                   const linesSplit = item
                     .split("\n")
                     .map((l) => l.trim())
