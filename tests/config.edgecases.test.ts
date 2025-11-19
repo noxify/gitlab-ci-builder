@@ -40,7 +40,8 @@ describe("Config - edge cases and branches", () => {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const job = out.jobs.build!
     expect(job).toBeDefined()
-    expect(job.extends).toEqual(["non-existent"])
+    // Single extends is optimized to string format
+    expect(job.extends).toEqual("non-existent")
   })
 
   it("removes local extends entries during clear() but keeps external ones", () => {
@@ -55,7 +56,8 @@ describe("Config - edge cases and branches", () => {
     const consumer = out.jobs.consumer!
     // Local `.local` should be removed from extends (because it refers to a local template),
     // while `external` remains since it does not match any local job id.
-    expect(consumer.extends).toEqual(["external"])
+    // Single extends is optimized to string format
+    expect(consumer.extends).toEqual("external")
   })
 
   it("template respects mergeExisting=false and does not deep-merge when disabled", () => {

@@ -177,6 +177,12 @@ function formatValue(value: unknown, indentLevel: number): string {
     // Format as multi-line object
     const props = entries.map(([k, v]) => {
       const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k) ? k : JSON.stringify(k)
+
+      // Special handling for extends: if it's an array with single element, format as string
+      if (k === "extends" && Array.isArray(v) && v.length === 1) {
+        return `${indent}${key}: ${formatValue(v[0], indentLevel + 1)}`
+      }
+
       return `${indent}${key}: ${formatValue(v, indentLevel + 1)}`
     })
 

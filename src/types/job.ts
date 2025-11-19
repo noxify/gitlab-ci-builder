@@ -28,7 +28,7 @@ type JobDefinition = GitLabCi["default"] & {
   /**
    * @see https://docs.gitlab.com/ee/ci/yaml/#extends
    */
-  extends?: string[]
+  extends?: string | string[]
   rules?: RulesDefinition
   variables?: VariablesDefinition
   script?: ScriptDefinition

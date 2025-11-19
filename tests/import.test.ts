@@ -355,5 +355,48 @@ test:mysql:
       // Merged script from anchor should be present
       expect(ts).toContain('"test project"')
     })
+
+    it("should handle extends with strings", () => {
+      const yaml = `
+.base:
+  image: node:22
+
+build:
+  extends: .base
+  script:
+    - npm run build
+`
+
+      const ts = fromYaml(yaml)
+
+      expect(ts).toContain('config.template(".base",')
+      expect(ts).toContain('config.job("build",')
+      expect(ts).toContain('extends: ".base"')
+    })
+
+    it("should handle extends with arrays", () => {
+      const yaml = `
+.base1:
+  image: node:22
+
+.base2:
+  tags:
+    - docker
+
+build:
+  extends:
+    - .base1
+    - .base2
+  script:
+    - npm run build
+`
+
+      const ts = fromYaml(yaml)
+
+      expect(ts).toContain('config.template(".base1",')
+      expect(ts).toContain('config.template(".base2",')
+      expect(ts).toContain('config.job("build",')
+      expect(ts).toContain('extends: [".base1", ".base2"]')
+    })
   })
 })

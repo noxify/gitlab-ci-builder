@@ -216,6 +216,17 @@ export class Config {
   }
 
   /**
+   * Normalize extends to always be an array.
+   * GitLab CI allows both `extends: .base` (string) and `extends: [.base1, .base2]` (array).
+   */
+  private normalizeExtends(definition: JobDefinition): JobDefinition {
+    if (definition.extends && typeof definition.extends === "string") {
+      return { ...definition, extends: [definition.extends] }
+    }
+    return definition
+  }
+
+  /**
    * Define a job or a hidden template alias.
    *
    * Behavior:
@@ -241,18 +252,21 @@ export class Config {
     hidden = false,
     options: { mergeExisting?: boolean } = { mergeExisting: true },
   ) {
+    // Normalize extends to always be an array
+    const normalizedDef = this.normalizeExtends(definition)
+
     // If name starts with a dot, treat it as a template. If `hidden` is true,
     // ensure the name is prefixed with a single dot; do not add an extra dot
     // when the provided name already starts with one.
     if (name.startsWith(".") || hidden) {
       const useName = name.startsWith(".") ? name : `.${name}`
-      return this.template(useName, definition, options)
+      return this.template(useName, normalizedDef, options)
     }
 
     if (!this.jobsValue[name]) {
-      this.jobsValue[name] = definition
+      this.jobsValue[name] = normalizedDef
     } else if (options.mergeExisting) {
-      this.jobsValue[name] = merge(this.jobsValue[name], definition)
+      this.jobsValue[name] = merge(this.jobsValue[name], normalizedDef)
     }
     return this
   }
@@ -365,7 +379,10 @@ export class Config {
     if (job.extends) {
       job.needsExtends ??= []
 
-      for (const from of job.extends) {
+      // Normalize extends to array if it's a string
+      const extendsArray = Array.isArray(job.extends) ? job.extends : [job.extends]
+
+      for (const from of extendsArray) {
         let jobKey: string | undefined
         if (pipeline.jobs?.[from]) {
           jobKey = from
@@ -440,10 +457,18 @@ export class Config {
     for (const key of jobIds) {
       const job = pipeline.jobs[key] as JobDefinitionExtends
       if (job.extends) {
-        job.extends = job.extends.filter((extendName) => !jobIds.includes(extendName))
-        if (!job.extends.length) {
+        // Normalize to array for filtering
+        const extendsArray = Array.isArray(job.extends) ? job.extends : [job.extends]
+        const filtered = extendsArray.filter((extendName: string) => !jobIds.includes(extendName))
+
+        if (filtered.length === 0) {
           delete job.extends
           delete job.needsExtends
+        } else if (filtered.length === 1) {
+          // Keep as string if only one extends remains (preserves original format)
+          job.extends = filtered[0]
+        } else {
+          job.extends = filtered
         }
       }
     }
