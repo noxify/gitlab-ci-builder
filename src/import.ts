@@ -127,6 +127,59 @@ export function fromYaml(yamlContent: string): string {
 }
 
 /**
+ * Format script values (script, before_script, after_script) intelligently.
+ *
+ * Detects shell-specific patterns and formats accordingly:
+ * - Line continuations (\) → Template literal
+ * - Heredoc (<<) → Template literal
+ * - Shell operators (|, >, >>, 2>, &>, <) → Template literal
+ * - Simple multi-line commands → Array of strings
+ * - Single line → String
+ */
+function formatScriptValue(value: unknown): string {
+  if (typeof value !== "string") {
+    return formatValue(value, 0)
+  }
+
+  // Single line without special characters
+  if (!value.includes("\n")) {
+    return JSON.stringify(value)
+  }
+
+  // Check for shell-specific patterns that require keeping as single string
+  const shellOperatorPatterns = [
+    /\\\n/, // Line continuation
+    /<</, // Heredoc
+    /(?<!\|)\|(?!\|)/, // Pipe (but not ||) - negative lookbehind and lookahead
+    />>?/, // Redirect output
+    /2>/, // Redirect stderr
+    /&>/, // Redirect both
+    /(?<!<)<(?!<)/, // Redirect input (but not <<) - negative lookbehind and lookahead
+  ]
+
+  const hasShellOperators = shellOperatorPatterns.some((pattern) => pattern.test(value))
+
+  if (hasShellOperators) {
+    // Keep as template literal to preserve exact formatting
+    // Escape backticks and ${} in the string
+    const escaped = value.replace(/`/g, "\\`").replace(/\$\{/g, "\\${")
+    return `\`${escaped}\``
+  }
+
+  // Simple multi-line without shell operators - split into array
+  const lines = value
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+
+  if (lines.length === 1) {
+    return JSON.stringify(lines[0])
+  }
+
+  return `[${lines.map((l) => JSON.stringify(l)).join(", ")}]`
+}
+
+/**
  * Format a value as TypeScript code with proper indentation.
  */
 function formatValue(value: unknown, indentLevel: number): string {
@@ -177,6 +230,17 @@ function formatValue(value: unknown, indentLevel: number): string {
     // Format as multi-line object
     const props = entries.map(([k, v]) => {
       const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k) ? k : JSON.stringify(k)
+
+      // Special handling for script-related properties
+      const scriptProperties = ["script", "before_script", "after_script"]
+      if (scriptProperties.includes(k)) {
+        // For script arrays, format each element intelligently
+        if (Array.isArray(v)) {
+          const formattedScripts = v.map((item) => formatScriptValue(item))
+          return `${indent}${key}: [${formattedScripts.join(", ")}]`
+        }
+        return `${indent}${key}: ${formatScriptValue(v)}`
+      }
 
       // Special handling for properties that should be strings but might be single-element arrays
       // These properties accept string | string[] but single values are more common
