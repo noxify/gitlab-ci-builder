@@ -37,7 +37,7 @@ interface ArtifactsDefinition {
     /**
      * @see https://docs.gitlab.com/ee/ci/pipelines/job_artifacts.html#artifactsreportsdotenv
      */
-    dotenv?: string
+    dotenv?: string | string[]
     /**
      * @see https://docs.gitlab.com/ee/ci/pipelines/job_artifacts.html#artifactsreportscobertura
      */
