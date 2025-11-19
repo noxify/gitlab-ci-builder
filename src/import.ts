@@ -14,18 +14,46 @@ const referenceTag = new yaml.Type("!reference", {
 const CUSTOM_SCHEMA = yaml.DEFAULT_SCHEMA.extend({ explicit: [referenceTag] })
 
 /**
+ * Options for converting YAML to TypeScript
+ */
+export interface ImportOptions {
+  /**
+   * Generate extended config with type-only import and function-based export.
+   * When true:
+   * - Uses `import type { Config }` instead of `import { Config }`
+   * - Exports a function that receives and returns a Config instance
+   * @default false
+   */
+  asExtendedConfig?: boolean
+}
+
+/**
  * Convert a GitLab CI YAML string to TypeScript Config builder code.
  *
  * @param yamlContent - The YAML string to parse and convert.
+ * @param options - Optional configuration for the conversion.
  * @returns TypeScript code as a string that uses the Config builder API.
  */
-export function fromYaml(yamlContent: string): string {
+export function fromYaml(yamlContent: string, options?: ImportOptions): string {
   const parsed = yaml.load(yamlContent, { schema: CUSTOM_SCHEMA }) as Record<string, unknown>
+  const asExtended = options?.asExtendedConfig ?? false
 
   const lines: string[] = []
-  lines.push('import { Config } from "@noxify/gitlab-ci-builder"')
+
+  // Import statement
+  if (asExtended) {
+    lines.push('import type { Config } from "@noxify/gitlab-ci-builder"')
+  } else {
+    lines.push('import { Config } from "@noxify/gitlab-ci-builder"')
+  }
   lines.push("")
-  lines.push("const config = new Config()")
+
+  // Function wrapper or direct config
+  if (asExtended) {
+    lines.push("export default function (config: Config) {")
+  } else {
+    lines.push("const config = new Config()")
+  }
   lines.push("")
 
   // Known top-level keys in GitLab CI
@@ -54,40 +82,61 @@ export function fromYaml(yamlContent: string): string {
     }
   }
 
+  // Helper to add line with proper indentation
+  const addLine = (line: string) => {
+    if (asExtended && line.trim() !== "") {
+      // For multi-line values, indent each line
+      if (line.includes("\n")) {
+        const splitLines = line.split("\n")
+        const indentedLines = splitLines.map((l, idx) => {
+          // Don't indent the first line (it's already handled by the prefix)
+          // But indent all subsequent lines
+          if (idx === 0) return `  ${l}`
+          return l.trim() === "" ? "" : `  ${l}`
+        })
+        lines.push(indentedLines.join("\n"))
+      } else {
+        lines.push(`  ${line}`)
+      }
+    } else {
+      lines.push(line)
+    }
+  }
+
   // Stages
   if (topLevel.stages && Array.isArray(topLevel.stages) && topLevel.stages.length > 0) {
-    lines.push(`config.stages(${topLevel.stages.map((s) => JSON.stringify(s)).join(", ")})`)
-    lines.push("")
+    addLine(`config.stages(${topLevel.stages.map((s) => JSON.stringify(s)).join(", ")})`)
+    addLine("")
   }
 
   // Workflow
   if (topLevel.workflow) {
-    lines.push(`config.workflow(${formatValue(topLevel.workflow, 1)})`)
-    lines.push("")
+    addLine(`config.workflow(${formatValue(topLevel.workflow, 1, asExtended)})`)
+    addLine("")
   }
 
   // Include
   if (topLevel.include && Array.isArray(topLevel.include) && topLevel.include.length > 0) {
     for (const inc of topLevel.include) {
-      lines.push(`config.include(${formatValue(inc, 1)})`)
+      addLine(`config.include(${formatValue(inc, 1, asExtended)})`)
     }
-    lines.push("")
+    addLine("")
   }
 
   // Variables
   if (topLevel.variables && typeof topLevel.variables === "object") {
-    lines.push("config.variables({")
+    addLine("config.variables({")
     for (const [key, value] of Object.entries(topLevel.variables as Record<string, unknown>)) {
-      lines.push(`  ${JSON.stringify(key)}: ${formatValue(value, 1)},`)
+      addLine(`  ${JSON.stringify(key)}: ${formatValue(value, 1, asExtended)},`)
     }
-    lines.push("})")
-    lines.push("")
+    addLine("})")
+    addLine("")
   }
 
   // Default
   if (topLevel.default) {
-    lines.push(`config.defaults(${formatValue(topLevel.default, 1)})`)
-    lines.push("")
+    addLine(`config.defaults(${formatValue(topLevel.default, 1, asExtended)})`)
+    addLine("")
   }
 
   // Jobs (separate templates and regular jobs)
@@ -107,8 +156,8 @@ export function fromYaml(yamlContent: string): string {
   for (const key of templateKeys) {
     const job = jobs[key]
     if (job) {
-      lines.push(`config.template(${JSON.stringify(key)}, ${formatValue(job, 1)})`)
-      lines.push("")
+      addLine(`config.template(${JSON.stringify(key)}, ${formatValue(job, 1, asExtended)})`)
+      addLine("")
     }
   }
 
@@ -116,12 +165,19 @@ export function fromYaml(yamlContent: string): string {
   for (const key of jobKeys) {
     const job = jobs[key]
     if (job) {
-      lines.push(`config.job(${JSON.stringify(key)}, ${formatValue(job, 1)})`)
-      lines.push("")
+      addLine(`config.job(${JSON.stringify(key)}, ${formatValue(job, 1, asExtended)})`)
+      addLine("")
     }
   }
 
-  lines.push("export default config")
+  // Export statement
+  if (asExtended) {
+    lines.push("")
+    lines.push("  return config")
+    lines.push("}")
+  } else {
+    lines.push("export default config")
+  }
 
   return lines.join("\n")
 }
@@ -181,9 +237,13 @@ function formatScriptValue(value: unknown): string {
 
 /**
  * Format a value as TypeScript code with proper indentation.
+ * @param value - The value to format
+ * @param indentLevel - The indentation level
+ * @param addExtraIndent - Whether to add an extra level of indentation (for function bodies)
  */
-function formatValue(value: unknown, indentLevel: number): string {
-  const indent = "  ".repeat(indentLevel)
+function formatValue(value: unknown, indentLevel: number, addExtraIndent = false): string {
+  const baseIndent = addExtraIndent ? "  " : ""
+  const indent = baseIndent + "  ".repeat(indentLevel)
 
   if (value === null || value === undefined) {
     return "undefined"
@@ -213,12 +273,12 @@ function formatValue(value: unknown, indentLevel: number): string {
     )
 
     if (allSimple) {
-      return `[${value.map((v) => formatValue(v, 0)).join(", ")}]`
+      return `[${value.map((v) => formatValue(v, 0, addExtraIndent)).join(", ")}]`
     }
 
     // Complex array - multi-line
-    const items = value.map((v) => `${indent}${formatValue(v, indentLevel + 1)}`)
-    return `[\n${items.join(",\n")},\n${indent.slice(2)}]`
+    const items = value.map((v) => `${indent}${formatValue(v, indentLevel + 1, addExtraIndent)}`)
+    return `[\n${items.join(",\n")},\n${indent.slice(baseIndent.length + 2)}]`
   }
 
   if (typeof value === "object") {
@@ -296,13 +356,13 @@ function formatValue(value: unknown, indentLevel: number): string {
       // These properties accept string | string[] but single values are more common
       const singleValueProperties = ["extends", "annotations", "dotenv"]
       if (singleValueProperties.includes(k) && Array.isArray(v) && v.length === 1) {
-        return `${indent}${key}: ${formatValue(v[0], indentLevel + 1)}`
+        return `${indent}${key}: ${formatValue(v[0], indentLevel + 1, addExtraIndent)}`
       }
 
-      return `${indent}${key}: ${formatValue(v, indentLevel + 1)}`
+      return `${indent}${key}: ${formatValue(v, indentLevel + 1, addExtraIndent)}`
     })
 
-    return `{\n${props.join(",\n")},\n${indent.slice(2)}}`
+    return `{\n${props.join(",\n")},\n${indent.slice(baseIndent.length + 2)}}`
   }
 
   return JSON.stringify(value)
@@ -313,11 +373,16 @@ function formatValue(value: unknown, indentLevel: number): string {
  *
  * @param yamlPath - Path to the `.gitlab-ci.yml` file to import.
  * @param outputPath - Optional path where to write the generated TypeScript file.
+ * @param options - Optional configuration for the conversion.
  * @returns The generated TypeScript code.
  */
-export async function importYamlFile(yamlPath: string, outputPath?: string): Promise<string> {
+export async function importYamlFile(
+  yamlPath: string,
+  outputPath?: string,
+  options?: ImportOptions,
+): Promise<string> {
   const content = await fs.readFile(yamlPath, "utf-8")
-  const tsCode = fromYaml(content)
+  const tsCode = fromYaml(content, options)
 
   if (outputPath) {
     await fs.writeFile(outputPath, tsCode, "utf-8")

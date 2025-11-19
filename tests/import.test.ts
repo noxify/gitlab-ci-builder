@@ -48,6 +48,70 @@ build:
       expect(ts).toContain('extends: ".template"')
     })
 
+    it("should use type-only import and function export when asExtendedConfig is true", () => {
+      const yaml = `
+stages:
+  - build
+  - test
+
+build-job:
+  stage: build
+  script:
+    - npm run build
+`
+
+      const ts = fromYaml(yaml, { asExtendedConfig: true })
+
+      expect(ts).toContain('import type { Config } from "@noxify/gitlab-ci-builder"')
+      expect(ts).not.toContain('import { Config } from "@noxify/gitlab-ci-builder"')
+      expect(ts).toContain("export default function (config: Config) {")
+      expect(ts).toContain('  config.stages("build", "test")')
+      expect(ts).toContain('  config.job("build-job",')
+      expect(ts).toContain("  return config")
+      expect(ts).toContain("}")
+      expect(ts).not.toContain("const config = new Config()")
+      expect(ts).not.toContain("export default config")
+    })
+
+    it("should use regular import and direct export by default", () => {
+      const yaml = `
+stages:
+  - build
+`
+
+      const ts = fromYaml(yaml)
+
+      expect(ts).toContain('import { Config } from "@noxify/gitlab-ci-builder"')
+      expect(ts).not.toContain('import type { Config } from "@noxify/gitlab-ci-builder"')
+      expect(ts).toContain("const config = new Config()")
+      expect(ts).toContain("export default config")
+      expect(ts).not.toContain("export default function")
+      expect(ts).not.toContain("return config")
+    })
+
+    it("should properly indent all config calls when asExtendedConfig is true", () => {
+      const yaml = `
+variables:
+  NODE_ENV: production
+
+.base:
+  image: node:22
+
+test:
+  extends: .base
+  script:
+    - npm test
+`
+
+      const ts = fromYaml(yaml, { asExtendedConfig: true })
+
+      expect(ts).toContain("export default function (config: Config) {")
+      expect(ts).toContain("  config.variables({")
+      expect(ts).toContain('  config.template(".base",')
+      expect(ts).toContain('  config.job("test",')
+      expect(ts).toContain("  return config")
+    })
+
     it("should handle workflow", () => {
       const yaml = `
 workflow:
@@ -261,6 +325,47 @@ build:
       vi.mocked(fs.readFile).mockRejectedValue(new Error("File not found"))
 
       await expect(importYamlFile(testYamlPath)).rejects.toThrow("File not found")
+    })
+
+    it("should use type-only import when asExtendedConfig is true", async () => {
+      const result = await importYamlFile(testYamlPath, undefined, { asExtendedConfig: true })
+
+      expect(fs.readFile).toHaveBeenCalledWith(testYamlPath, "utf-8")
+      expect(result).toContain('import type { Config } from "@noxify/gitlab-ci-builder"')
+      expect(result).not.toContain('import { Config } from "@noxify/gitlab-ci-builder"')
+      expect(result).toContain("export default function (config: Config) {")
+      expect(result).toContain('  config.stages("build")')
+      expect(result).toContain("  return config")
+    })
+
+    it("should use regular import when asExtendedConfig is false", async () => {
+      const result = await importYamlFile(testYamlPath, undefined, { asExtendedConfig: false })
+
+      expect(fs.readFile).toHaveBeenCalledWith(testYamlPath, "utf-8")
+      expect(result).toContain('import { Config } from "@noxify/gitlab-ci-builder"')
+      expect(result).not.toContain('import type { Config } from "@noxify/gitlab-ci-builder"')
+      expect(result).toContain("const config = new Config()")
+      expect(result).toContain("export default config")
+    })
+
+    it("should write function-based export to file when asExtendedConfig is true", async () => {
+      await importYamlFile(testYamlPath, testOutputPath, { asExtendedConfig: true })
+
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        testOutputPath,
+        expect.stringContaining('import type { Config } from "@noxify/gitlab-ci-builder"'),
+        "utf-8",
+      )
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        testOutputPath,
+        expect.stringContaining("export default function (config: Config) {"),
+        "utf-8",
+      )
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        testOutputPath,
+        expect.stringContaining("  return config"),
+        "utf-8",
+      )
     })
   })
 
