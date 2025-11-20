@@ -299,5 +299,24 @@ describe("export", () => {
       expect(yaml).not.toContain('"!reference')
       expect(yaml).toContain("- pnpm run test")
     })
+
+    it("should handle !reference in scalar values like image", () => {
+      const config = new Config()
+      config.template(".database_template", {
+        image: "postgres:15",
+      })
+      config.job("test", {
+        image: "!reference [.database_template, image]",
+        script: ["npm test"],
+      })
+
+      const yaml = toYaml(config.getPlainObject())
+
+      expect(yaml).toContain("test:")
+      expect(yaml).toContain("image: !reference [.database_template, image]")
+      expect(yaml).not.toContain('"!reference')
+      expect(yaml).toContain("script:")
+      expect(yaml).toContain("- npm test")
+    })
   })
 })

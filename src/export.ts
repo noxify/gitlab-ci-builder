@@ -126,7 +126,7 @@ export function toYaml(config: GitLabCi) {
   while (i < lines.length) {
     const line = lines[i]
 
-    // Check if this line contains a multiline !reference tag
+    // Case 1: Check if this line contains a multiline !reference tag in an array
     if (line && line.trim() === "- !reference") {
       // Next two lines should contain the array elements
       const nextLine1 = lines[i + 1]
@@ -151,6 +151,37 @@ export function toYaml(config: GitLabCi) {
         // Skip the next two lines
         i += 3
         continue
+      }
+    }
+
+    // Case 2: Check if this line contains a scalar !reference (e.g., "image: !reference")
+    if (line?.includes(": !reference")) {
+      // Next two lines should contain the array elements
+      const nextLine1 = lines[i + 1]
+      const nextLine2 = lines[i + 2]
+
+      if (
+        nextLine1 &&
+        nextLine2 &&
+        nextLine1.trim().startsWith("- ") &&
+        nextLine2.trim().startsWith("- ")
+      ) {
+        const elem1 = nextLine1.trim().slice(2)
+        const elem2 = nextLine2.trim().slice(2)
+
+        // Get the key part (e.g., "image:")
+        const keyMatch = /^(\s*)(.+):\s*!reference\s*$/.exec(line)
+        if (keyMatch) {
+          const indent = keyMatch[1] ?? ""
+          const key = keyMatch[2]
+
+          // Create inline format
+          resultLines.push(`${indent}${key}: !reference [${elem1}, ${elem2}]`)
+
+          // Skip the next two lines
+          i += 3
+          continue
+        }
       }
     }
 
