@@ -3,6 +3,60 @@ import yaml from "js-yaml"
 
 import type { GitLabCi } from "./"
 
+// Wrapper class to mark arrays that should be rendered in flow style
+class FlowArray<T = unknown> extends Array<T> {
+  constructor(...items: T[]) {
+    super()
+    this.push(...items)
+  }
+}
+
+// Custom YAML type for !reference tags
+const referenceTag = new yaml.Type("!reference", {
+  kind: "sequence",
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  construct: (data) => data,
+  predicate: (obj) => {
+    return obj instanceof FlowArray
+  },
+  represent: (obj: unknown) => {
+    return obj
+  },
+  instanceOf: FlowArray,
+})
+
+const CUSTOM_SCHEMA = yaml.DEFAULT_SCHEMA.extend({ explicit: [referenceTag] })
+
+/**
+ * Process a value to convert !reference strings to proper arrays
+ */
+function processReferences(value: unknown): unknown {
+  if (typeof value === "string" && value.startsWith("!reference [")) {
+    // Parse "!reference [.template, script]" into FlowArray format
+    const match = /^!reference\s*\[([^\]]+)\]$/.exec(value)
+    if (match?.[1]) {
+      const parts = match[1].split(",").map((s) => s.trim())
+      if (parts.length === 2) {
+        return new FlowArray(...parts)
+      }
+    }
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(processReferences)
+  }
+
+  if (value && typeof value === "object") {
+    const result: Record<string, unknown> = {}
+    for (const [key, val] of Object.entries(value)) {
+      result[key] = processReferences(val)
+    }
+    return result
+  }
+
+  return value
+}
+
 /**
  * Convert a plain `GitLabCi` object to a YAML string.
  *
@@ -10,7 +64,10 @@ import type { GitLabCi } from "./"
  * @returns YAML string representation of the pipeline.
  */
 export function toYaml(config: GitLabCi) {
-  const { jobs, ...rest } = config
+  // Process references before serialization
+  const processed = processReferences(config) as GitLabCi
+
+  const { jobs, ...rest } = processed
 
   // Define preferred order for top-level keys
   const keyOrder = [
@@ -54,15 +111,64 @@ export function toYaml(config: GitLabCi) {
     }
   }
 
-  const yamlString = yaml.dump(ordered, { noRefs: true, sortKeys: false, lineWidth: -1 })
+  const yamlString = yaml.dump(ordered, {
+    noRefs: true,
+    sortKeys: false,
+    lineWidth: -1,
+    schema: CUSTOM_SCHEMA,
+  })
 
-  // Add blank lines between top-level sections for better readability
+  // Post-process to convert multiline !reference to inline format
   const lines = yamlString.split("\n")
   const resultLines: string[] = []
+  let i = 0
+
+  while (i < lines.length) {
+    const line = lines[i]
+
+    // Check if this line contains a multiline !reference tag
+    if (line && line.trim() === "- !reference") {
+      // Next two lines should contain the array elements
+      const nextLine1 = lines[i + 1]
+      const nextLine2 = lines[i + 2]
+
+      if (
+        nextLine1 &&
+        nextLine2 &&
+        nextLine1.trim().startsWith("- ") &&
+        nextLine2.trim().startsWith("- ")
+      ) {
+        const elem1 = nextLine1.trim().slice(2)
+        const elem2 = nextLine2.trim().slice(2)
+
+        // Get the indentation from the original "- !reference" line
+        const match = /^(\s*)/.exec(line)
+        const indent = match?.[1] ?? ""
+
+        // Create inline format
+        resultLines.push(`${indent}- !reference [${elem1}, ${elem2}]`)
+
+        // Skip the next two lines
+        i += 3
+        continue
+      }
+    }
+
+    if (line !== undefined) {
+      resultLines.push(line)
+    }
+    i++
+  }
+
+  const processedYaml = resultLines.join("\n")
+
+  // Add blank lines between top-level sections for better readability
+  const finalLines = processedYaml.split("\n")
+  const outputLines: string[] = []
   let lastTopLevelKey: string | null = null
   let previousLineWasValue = false
 
-  for (const line of lines) {
+  for (const line of finalLines) {
     const trimmed = line.trim()
 
     // Check if this is a top-level key (no indentation and ends with :)
@@ -83,10 +189,10 @@ export function toYaml(config: GitLabCi) {
       previousLineWasValue = true
     }
 
-    resultLines.push(line)
+    outputLines.push(line)
   }
 
-  return resultLines.join("\n")
+  return outputLines.join("\n")
 }
 
 /**

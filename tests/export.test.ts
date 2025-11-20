@@ -281,5 +281,23 @@ describe("export", () => {
       expect(yaml).toContain("optional: true")
       expect(yaml).toContain("- job: unit_tests")
     })
+
+    it("should handle !reference tags without quotes", () => {
+      const config = new Config()
+      config.template(".pnpm_install_template", {
+        script: ["pnpm install"],
+      })
+      config.job("test", {
+        script: ["!reference [.pnpm_install_template, script]", "pnpm run test"],
+      })
+
+      const yaml = toYaml(config.getPlainObject())
+
+      expect(yaml).toContain("test:")
+      expect(yaml).toContain("script:")
+      expect(yaml).toContain("- !reference [.pnpm_install_template, script]")
+      expect(yaml).not.toContain('"!reference')
+      expect(yaml).toContain("- pnpm run test")
+    })
   })
 })
