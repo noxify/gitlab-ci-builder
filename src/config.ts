@@ -6,14 +6,22 @@ import type {
   IncludeDefinition,
   IncludeOutputDefinition,
   JobDefinition,
-  JobDefinitionExtends,
   LocalInclude,
   RemoteInclude,
   VariablesDefinition,
 } from "."
 
 export type MacroArgs = unknown
-
+/**
+ * Erweiterung: remote-Flag für Jobs und Templates
+ */
+export interface JobDefinitionWithRemote extends JobDefinition {
+  remote?: boolean
+  /**
+   * Internal: used for extends resolution
+   */
+  needsExtends?: string[]
+}
 // A utility type for functions or operations that may be synchronous
 // or return a Promise. Useful for callbacks like `extendConfig` that
 // can either mutate the provided `Config` synchronously or perform
@@ -26,22 +34,28 @@ export type ExtendConfigFunction = (config: Config) => MaybeAsync<Config>
  * Options for job and template definitions.
  */
 export interface JobOptions {
-  /** If false, extends from parent templates/jobs will not be resolved. Default: true */
-  resolveExtends?: boolean
+  /** If false, extends from parent templates/jobs will not be merged. Default: true */
+  mergeExtends?: boolean
   /** If true, merge with existing job/template of same name. Default: true */
   mergeExisting?: boolean
   /** If true, treat as hidden template (prefix with dot). Default: false */
   hidden?: boolean
+  /** If true, only merge templates (names starting with .). Default: true (inherits global) */
+  resolveTemplatesOnly?: boolean
+  /** Optional: mark job as remote for merge logic */
+  remote?: boolean
 }
 
 /**
  * Global options that apply to all jobs unless overridden at job level.
  */
 export interface GlobalOptions {
-  /** If false, extends resolution is disabled globally. Job-level setting overrides. Default: true */
-  resolveExtends?: boolean
+  /** If false, extends merging is disabled globally. Job-level setting overrides. Default: true */
+  mergeExtends?: boolean
   /** If true, jobs with same name are merged by default. Job-level setting overrides. Default: true */
   mergeExisting?: boolean
+  /** If true, only merge templates (names starting with .). Default: true */
+  resolveTemplatesOnly?: boolean
 }
 
 /**
@@ -50,15 +64,19 @@ export interface GlobalOptions {
 export class Config {
   // Internal state directly on the instance instead of nested plain object
   private stagesValue: string[] = []
-  private jobsValue: Record<string, JobDefinition> = {}
-  private templatesValue: Record<string, JobDefinition> = {}
+  private jobsValue: Record<string, JobDefinitionWithRemote> = {}
+  private templatesValue: Record<string, JobDefinitionWithRemote> = {}
   private workflowValue: GitLabCi["workflow"] = { rules: [] }
   private defaultValue?: GitLabCi["default"]
   private variablesValue: VariablesDefinition = {}
   private macros: Record<string, (config: Config, args: MacroArgs) => void> = {}
   private patchers: ((plain: GitLabCi) => void)[] = []
   private includeValue: IncludeOutputDefinition[] = []
-  private globalOptionsValue: GlobalOptions = { resolveExtends: true, mergeExisting: true }
+  private globalOptionsValue: GlobalOptions = {
+    mergeExtends: true,
+    mergeExisting: true,
+    resolveTemplatesOnly: true,
+  }
   private jobOptionsMap: Record<string, JobOptions> = {}
 
   /**
@@ -199,22 +217,22 @@ export class Config {
     // Ensure the name starts with a dot
     const templateName = name.startsWith(".") ? name : `.${name}`
 
-    // Merge with global options, job-level options override
-    const mergedOptions: JobOptions = {
-      ...this.globalOptionsValue,
-      ...options,
-    }
+    // Merge with global options, job-level options override (remote only from options)
+    const mergedOptions = { ...this.globalOptionsValue, ...options }
+    // Only set remote if provided in options
+    const defWithRemote =
+      options.remote !== undefined ? { ...definition, remote: options.remote } : definition
 
     const templateExists = !!this.templatesValue[templateName]
 
     if (!templateExists) {
-      this.templatesValue[templateName] = definition
+      this.templatesValue[templateName] = defWithRemote
     } else if (mergedOptions.mergeExisting !== false) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.templatesValue[templateName] = merge(this.templatesValue[templateName]!, definition)
+      this.templatesValue[templateName] = merge(this.templatesValue[templateName]!, defWithRemote)
     } else {
       // mergeExisting is explicitly false and template exists - replace
-      this.templatesValue[templateName] = definition
+      this.templatesValue[templateName] = defWithRemote
     }
 
     // Store options for this template for later extends resolution
@@ -271,9 +289,9 @@ export class Config {
    */
   private normalizeExtends(definition: JobDefinition): JobDefinition {
     if (definition.extends && typeof definition.extends === "string") {
-      return { ...definition, extends: [definition.extends] }
+      return { ...definition, extends: [definition.extends] } as JobDefinitionWithRemote
     }
-    return definition
+    return definition as JobDefinitionWithRemote
   }
 
   /**
@@ -309,25 +327,27 @@ export class Config {
       return this.template(useName, normalizedDef, normalizedOptions)
     }
 
-    // Merge with global options, job-level options override
-    const mergedOptions: JobOptions = {
-      ...this.globalOptionsValue,
-      ...normalizedOptions,
-    }
+    // Merge with global options, job-level options override (remote only from options)
+    const mergedOptions = { ...this.globalOptionsValue, ...normalizedOptions }
+    // Only set remote if provided in options
+    const defWithRemote =
+      normalizedOptions.remote !== undefined
+        ? { ...normalizedDef, remote: normalizedOptions.remote }
+        : normalizedDef
 
     const jobExists = !!this.jobsValue[name]
 
     if (!jobExists) {
-      this.jobsValue[name] = normalizedDef
+      this.jobsValue[name] = defWithRemote
     } else if (mergedOptions.mergeExisting !== false) {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.jobsValue[name] = merge(this.jobsValue[name]!, normalizedDef)
+      this.jobsValue[name] = merge(this.jobsValue[name]!, defWithRemote)
     } else {
       // mergeExisting is explicitly false and job exists - replace
-      this.jobsValue[name] = normalizedDef
+      this.jobsValue[name] = defWithRemote
     }
 
-    // Store options for this job for later extends resolution
+    // Store options for this job for later extends merging
     this.jobOptionsMap[name] = mergedOptions
 
     return this
@@ -446,8 +466,8 @@ export class Config {
    */
   private recursivelyExtend(
     pipeline: GitLabCi,
-    firstJob: JobDefinitionExtends,
-    job: JobDefinitionExtends = firstJob,
+    firstJob: JobDefinitionWithRemote,
+    job: JobDefinitionWithRemote = firstJob,
   ) {
     if (job.extends) {
       job.needsExtends ??= []
@@ -497,20 +517,30 @@ export class Config {
       const job = pipeline.jobs[key]
       if (!job || !job.extends || key.startsWith(".")) continue
 
-      // Check if this job has resolveExtends disabled
+      // Check job and global options
       const jobOpts = this.jobOptionsMap[key]
-      if (jobOpts?.resolveExtends === false) {
+      if (jobOpts?.mergeExtends === false) {
+        // Do not merge, keep original extends field
         continue
       }
+      const resolveTemplatesOnly =
+        jobOpts?.resolveTemplatesOnly ?? this.globalOptionsValue.resolveTemplatesOnly ?? true
 
       this.recursivelyExtend(pipeline, job)
 
-      let result: JobDefinitionExtends = {}
-      const { needsExtends } = job as JobDefinitionExtends
+      let result: JobDefinitionWithRemote = {}
+      const { needsExtends } = job as JobDefinitionWithRemote
       if (needsExtends) {
         for (const extendKey of needsExtends) {
-          const extendJob = pipeline.jobs[extendKey]
-          if (extendJob) {
+          const extendJob = pipeline.jobs[extendKey] as JobDefinitionWithRemote
+          // Only merge if:
+          // - resolveTemplatesOnly: extendKey starts with .
+          // - else: merge all
+          // - never merge if extendJob?.remote === true
+          if (
+            (!resolveTemplatesOnly || extendKey.startsWith(".")) &&
+            !(extendJob.remote === true)
+          ) {
             result = merge(result, extendJob)
           }
         }
@@ -538,13 +568,14 @@ export class Config {
 
     const jobIds = Object.keys(pipeline.jobs)
     for (const key of jobIds) {
-      const job = pipeline.jobs[key] as JobDefinitionExtends
+      const job = pipeline.jobs[key] as JobDefinitionWithRemote
 
-      // Check if this job has resolveExtends disabled - if so, keep original extends (local or remote)
       const jobOpts = this.jobOptionsMap[key]
-      if (jobOpts?.resolveExtends === false) {
+      const mergeExtends = jobOpts?.mergeExtends ?? this.globalOptionsValue.mergeExtends
+      if (mergeExtends === false) {
+        // Always delete needsExtends
         delete job.needsExtends
-        // Normalize single-element array to string for cleaner output, but do not filter
+        // Normalize single-element array to string for cleaner output
         if (Array.isArray(job.extends) && job.extends.length === 1) {
           job.extends = job.extends[0]
         }

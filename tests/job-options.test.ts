@@ -3,6 +3,72 @@ import { describe, expect, it } from "vitest"
 import { Config } from "../src/config"
 
 describe("Job Options", () => {
+  describe("remote option", () => {
+    it("should ignore remote jobs when merging extends", () => {
+      const config = new Config()
+      config.template(".base", { script: ["template"] })
+      config.job("remotejob", { script: ["remote"] }, { remote: true })
+      config.job("child", { extends: [".base", "remotejob"], stage: "test" })
+
+      const result = config.getPlainObject()
+      // Nur .base wird gemerged, remotejob wird ignoriert
+      expect(result.jobs?.child).toMatchObject({
+        script: ["template"],
+        stage: "test",
+      })
+      expect(result.jobs?.child?.extends).toBeUndefined()
+    })
+
+    it("should ignore remote templates when merging", () => {
+      const config = new Config()
+      config.template(".remote", { script: ["remote template"] }, { remote: true })
+      config.template(".base", { script: ["base"] })
+      config.job("child", { extends: [".remote", ".base"], stage: "test" })
+
+      const result = config.getPlainObject()
+      // Nur .base wird gemerged, .remote wird ignoriert
+      expect(result.jobs?.child).toMatchObject({
+        script: ["base"],
+        stage: "test",
+      })
+      expect(result.jobs?.child?.extends).toBeUndefined()
+    })
+  })
+  describe("resolveTemplatesOnly option", () => {
+    it("should only merge templates by default (resolveTemplatesOnly is true)", () => {
+      const config = new Config()
+      config.template(".base", { script: ["template"] })
+      config.job("basejob", { script: ["job"] })
+      config.job("child", { extends: [".base", "basejob"], stage: "test" })
+
+      const result = config.getPlainObject()
+      // Nur .base wird gemerged, basejob als lokaler Job wird entfernt
+      expect(result.jobs?.child).toMatchObject({
+        script: ["template"],
+        stage: "test",
+      })
+      expect(result.jobs?.child?.extends).toBeUndefined()
+    })
+
+    it("should allow job-level override of resolveTemplatesOnly", () => {
+      const config = new Config()
+      config.template(".base", { script: ["template"] })
+      config.job("basejob", { script: ["job"] })
+      config.job(
+        "child",
+        { extends: [".base", "basejob"], stage: "test" },
+        { resolveTemplatesOnly: false },
+      )
+
+      const result = config.getPlainObject()
+      // Beide werden gemerged, Reihenfolge: basejob, dann .base
+      expect(result.jobs?.child).toMatchObject({
+        script: ["job", "template"],
+        stage: "test",
+      })
+      expect(result.jobs?.child?.extends).toBeUndefined()
+    })
+  })
   describe("resolveExtends option", () => {
     it("should resolve extends by default", () => {
       const config = new Config()
@@ -17,10 +83,10 @@ describe("Job Options", () => {
       expect(result.jobs?.child?.extends).toBeUndefined()
     })
 
-    it("should skip extends resolution when resolveExtends is false", () => {
+    it("should skip extends merging when mergeExtends is false", () => {
       const config = new Config()
       config.template(".base", { script: ["base command"] })
-      config.job("child", { extends: ".base", stage: "test" }, { resolveExtends: false })
+      config.job("child", { extends: ".base", stage: "test" }, { mergeExtends: false })
 
       const result = config.getPlainObject()
       expect(result.jobs?.child).toMatchObject({
@@ -31,9 +97,9 @@ describe("Job Options", () => {
       expect(result.jobs?.child?.script).toBeUndefined()
     })
 
-    it("should respect global resolveExtends: false", () => {
+    it("should respect global mergeExtends: false", () => {
       const config = new Config()
-      config.globalOptions({ resolveExtends: false })
+      config.globalOptions({ mergeExtends: false })
       config.template(".base", { script: ["base command"] })
       config.job("child", { extends: ".base", stage: "test" })
 
@@ -46,12 +112,12 @@ describe("Job Options", () => {
       expect(result.jobs?.child?.script).toBeUndefined()
     })
 
-    it("should allow job-level override of global resolveExtends", () => {
+    it("should allow job-level override of global mergeExtends", () => {
       const config = new Config()
-      config.globalOptions({ resolveExtends: false })
+      config.globalOptions({ mergeExtends: false })
       config.template(".base", { script: ["base command"] })
       config.job("disabled", { extends: ".base", stage: "test" })
-      config.job("enabled", { extends: ".base", stage: "deploy" }, { resolveExtends: true })
+      config.job("enabled", { extends: ".base", stage: "deploy" }, { mergeExtends: true })
 
       const result = config.getPlainObject()
 
@@ -63,7 +129,7 @@ describe("Job Options", () => {
       expect(result.jobs?.disabled?.extends).toBe(".base")
       expect(result.jobs?.disabled?.script).toBeUndefined()
 
-      // enabled should resolve extends
+      // enabled should merge extends
       expect(result.jobs?.enabled).toMatchObject({
         script: ["base command"],
         stage: "deploy",
@@ -165,7 +231,7 @@ describe("Job Options", () => {
       config.job(
         "test",
         { extends: ".base", stage: "test" },
-        { resolveExtends: false, hidden: false, mergeExisting: true },
+        { mergeExtends: false, hidden: false, mergeExisting: true },
       )
 
       const result = config.getPlainObject()
@@ -179,11 +245,11 @@ describe("Job Options", () => {
 
     it("should handle global options with selective job overrides", () => {
       const config = new Config()
-      config.globalOptions({ resolveExtends: false, mergeExisting: false })
+      config.globalOptions({ mergeExtends: false, mergeExisting: false })
 
       config.template(".base", { script: ["base"] })
       config.job("job1", { extends: ".base" })
-      config.job("job2", { extends: ".base" }, { resolveExtends: true })
+      config.job("job2", { extends: ".base" }, { mergeExtends: true })
 
       config.job("job3", { stage: "test" })
       config.job("job3", { script: ["override"] })
@@ -193,10 +259,10 @@ describe("Job Options", () => {
 
       const result = config.getPlainObject()
 
-      // job1: global resolveExtends=false
+      // job1: global mergeExtends=false
       expect(result.jobs?.job1?.extends).toBe(".base")
 
-      // job2: local override resolveExtends=true
+      // job2: local override mergeExtends=true
       expect(result.jobs?.job2?.script).toEqual(["base"])
       expect(result.jobs?.job2?.extends).toBeUndefined()
 

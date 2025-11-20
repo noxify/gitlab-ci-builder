@@ -359,13 +359,15 @@ export default function (config: Config) {
 
 ### Job Options
 
-The `job()`, `template()`, and `extends()` methods accept an optional `JobOptions` parameter for fine-grained control:
+The `job()`, `template()`, and `extends()` methods accept an optional `JobOptions` object for fine-grained control:
 
 ```ts
 interface JobOptions {
   hidden?: boolean // Mark as template (prefix with dot)
   mergeExisting?: boolean // Merge with existing job/template (default: true)
-  resolveExtends?: boolean // Resolve parent extends (default: true)
+  mergeExtends?: boolean // Merge extends (default: true)
+  resolveTemplatesOnly?: boolean // Only merge templates (names starting with .)
+  remote?: boolean // Mark job/template as remote (excluded from merging)
 }
 ```
 
@@ -385,36 +387,67 @@ config.job("build", { script: ["npm run build:prod"] }, { mergeExisting: false }
 
 // Keep extends reference (don't resolve parent)
 config.template(".base", { script: ["base command"] })
-config.job("child", { extends: ".base" }, { resolveExtends: false })
+config.job("child", { extends: ".base" }, { mergeExtends: false })
 // Output keeps: extends: ".base"
+
+// Only merge templates, ignore jobs without dot
+config.template(".base", { script: ["template"] })
+config.job("basejob", { script: ["job"] })
+config.job(
+  "child",
+  { extends: [".base", "basejob"], stage: "test" },
+  { resolveTemplatesOnly: true },
+)
+// Output: script: ["template"], extends removed
+
+// Mark job/template as remote (excluded from merging)
+config.job("remote-job", { script: ["do something remote"] }, { remote: true })
+config.template(".remote-template", { script: ["remote template"] }, { remote: true })
+// These will be ignored during merging and not appear in the output
 ```
 
 ### Global Options
 
 Set default behavior for all jobs using `globalOptions()`. Job-level options override global settings:
 
+````
+
 ```ts
 const config = new Config()
 
-// Disable extends resolution globally
-config.globalOptions({ resolveExtends: false })
+// Disable extends merging globally
+config.globalOptions({ mergeExtends: false })
+
+// Only merge templates globally
+config.globalOptions({ resolveTemplatesOnly: true })
 
 config.template(".base", { script: ["base"] })
+config.job("basejob", { script: ["job"] })
 
 // This job keeps extends (global setting)
 config.job("job1", { extends: ".base" })
 // Output: { extends: ".base" }
 
-// This job resolves extends (local override)
-config.job("job2", { extends: ".base" }, { resolveExtends: true })
-// Output: { script: ["base"] }
-```
+// This job merges only templates (global setting)
+config.job("job2", { extends: [".base", "basejob"], stage: "test" })
+// Output: script: ["base"], extends removed
+
+// This job merges all (local override)
+config.job(
+  "job3",
+  { extends: [".base", "basejob"], stage: "test" },
+  { resolveTemplatesOnly: false },
+)
+// Output: script: ["job", "base"], extends removed
+````
 
 **Use Cases:**
 
-- **Preserve extends in output**: Set `resolveExtends: false` to keep GitLab CI's native extends instead of inlining parent properties
-- **Strict replacement**: Set `mergeExisting: false` globally to prevent accidental job merging
-- **Conditional resolution**: Disable extends resolution globally, then selectively enable it for specific jobs
+- **Preserve extends in output**: Set `mergeExtends: false` to keep GitLab CI's native `extends` keyword instead of inlining parent properties.
+- **Strict replacement**: Set `mergeExisting: false` globally to prevent accidental job merging and always replace jobs/templates.
+- **Conditional template resolution**: Set `resolveTemplatesOnly: true` to only merge templates (names starting with `.`), ignoring regular jobs during extends resolution.
+- **Remote jobs/templates**: Set `remote: true` on individual jobs or templates to exclude them from merging and output. This is only available at the job/template level. Use this for jobs/templates defined in external includes or that should not be processed locally.
+  - **Shadow-overrides for remote jobs/templates**: If a job or template is marked as `remote: true`, it will be ignored during merging and output. However, you can locally define a job/template with the same name (without `remote: true`) to override or "shadow" the remote definition. This allows you to selectively replace or extend remote jobs/templates in your local pipeline configuration.
 
 ## API Reference
 
@@ -432,7 +465,8 @@ the runtime builder and are derived from the JSDoc on the source `Config` class.
 
 - `globalOptions(options: GlobalOptions): Config`
   - Set global options that apply to all jobs and templates.
-  - Options: `{ resolveExtends?: boolean, mergeExisting?: boolean }`
+  - Options: `{ mergeExtends?: boolean, mergeExisting?: boolean, resolveTemplatesOnly?: boolean, remote?: boolean }`
+    - Options: `{ mergeExtends?: boolean, mergeExisting?: boolean, resolveTemplatesOnly?: boolean }`
   - Job-level options override global settings.
 
 - `workflow(workflow: GitLabCi["workflow"]): Config`
@@ -455,7 +489,7 @@ the runtime builder and are derived from the JSDoc on the source `Config` class.
 
 - `template(name: string, definition: JobDefinition, options?: JobOptions): Config`
   - Define or deep-merge a hidden template job. The stored template name will have a leading `.`.
-  - Options: `{ mergeExisting?: boolean, resolveExtends?: boolean, hidden?: boolean }`
+  - Options: `{ mergeExisting?: boolean, mergeExtends?: boolean, resolveTemplatesOnly?: boolean, hidden?: boolean, remote?: boolean }`
 
 - `include(item: IncludeDefinition | IncludeDefinition[]): Config`
   - Add include entries. Accepts strings, objects or arrays and normalizes strings to
@@ -464,7 +498,7 @@ the runtime builder and are derived from the JSDoc on the source `Config` class.
 - `job(name: string, definition: JobDefinition, options?: JobOptions): Config`
   - Create or merge a job. If `name` starts with `.` or `options.hidden` is true, the call delegates
     to `template()` and ensures a single leading `.` on the stored template name.
-  - Options: `{ hidden?: boolean, mergeExisting?: boolean, resolveExtends?: boolean }`
+  - Options: `{ hidden?: boolean, mergeExisting?: boolean, mergeExtends?: boolean, resolveTemplatesOnly?: boolean, remote?: boolean }`
 
 - `macro<T extends MacroArgs>(key: string, callback: (config: Config, args: T) => void): void`
   - Register a macro function for programmatic job generation.
@@ -474,7 +508,7 @@ the runtime builder and are derived from the JSDoc on the source `Config` class.
 
 - `extends(fromName: string | string[], name: string, job?: JobDefinition, options?: JobOptions): void`
   - Create a job that will extend one or more templates/jobs (injects an `extends` property).
-  - Options: `{ hidden?: boolean, mergeExisting?: boolean, resolveExtends?: boolean }`
+  - Options: `{ hidden?: boolean, mergeExisting?: boolean, mergeExtends?: boolean, resolveTemplatesOnly?: boolean, remote?: boolean }`
 
 - `dynamicInclude(cwd: string, globs: string[]): Promise<void>`
   - Import TypeScript modules matched by the provided globs and call their exported `extendConfig`.
