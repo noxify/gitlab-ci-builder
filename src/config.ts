@@ -62,6 +62,14 @@ export interface GlobalOptions {
  * A global OOP-style GitLab CI configurator.
  */
 export class Config {
+  /**
+   * Remove internal-only properties (like remote) from job/template definitions before output.
+   */
+  private static stripInternalProps<T extends object>(obj: T): T {
+    // Remove 'remote' property (internal use only)
+    const { remote: _remote, ...rest } = obj as Record<string, unknown>
+    return rest as T
+  }
   // Internal state directly on the instance instead of nested plain object
   private stagesValue: string[] = []
   private jobsValue: Record<string, JobDefinitionWithRemote> = {}
@@ -627,6 +635,15 @@ export class Config {
   public getPlainObject() {
     // Create a deep copy to avoid mutating internal state
     // Merge templates and jobs (templates first, then jobs can override)
+    // Prepare jobs/templates for output, removing internal-only props
+    const jobsOut: Record<string, JobDefinition> = {}
+    for (const [name, job] of Object.entries(this.templatesValue)) {
+      jobsOut[name] = Config.stripInternalProps(job)
+    }
+    for (const [name, job] of Object.entries(this.jobsValue)) {
+      jobsOut[name] = Config.stripInternalProps(job)
+    }
+
     const copy: GitLabCi = JSON.parse(
       JSON.stringify({
         stages: this.stagesValue.length ? [...this.stagesValue] : undefined,
@@ -640,7 +657,7 @@ export class Config {
         default: this.defaultValue,
         variables: Object.keys(this.variablesValue).length ? { ...this.variablesValue } : undefined,
         include: this.includeValue.length ? [...this.includeValue] : undefined,
-        jobs: { ...this.templatesValue, ...this.jobsValue },
+        jobs: jobsOut,
       }),
     ) as GitLabCi
 
