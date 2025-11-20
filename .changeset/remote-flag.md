@@ -1,5 +1,5 @@
 ---
-"gitlab-ci-builder": minor
+"@noxify/gitlab-ci-builder": minor
 ---
 
 Add support for `remote` flag on jobs and templates

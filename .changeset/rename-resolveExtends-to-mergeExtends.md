@@ -1,5 +1,5 @@
 ---
-"gitlab-ci-builder": patch
+"@noxify/gitlab-ci-builder": patch
 ---
 
 Rename option `resolveExtends` to `mergeExtends`
