@@ -1,5 +1,11 @@
 # @noxify/gitlab-ci-builder
 
+## 0.1.1
+
+### Patch Changes
+
+- 9db94c7: Extended `!reference` tag support to handle scalar values (e.g., `image`, `extends`) in addition to arrays, ensuring inline format without quotes for all use cases.
+
 ## 0.1.0
 
 ### Minor Changes
