@@ -4,19 +4,18 @@ import { Config } from "../src/config"
 
 describe("Job Options", () => {
   describe("remote option", () => {
-    it("should ignore remote jobs when merging extends", () => {
+    it("should ignore remote jobs when merging extends, but keep reference", () => {
       const config = new Config()
       config.template(".base", { script: ["template"] })
       config.job("remotejob", { script: ["remote"] }, { remote: true })
       config.job("child", { extends: [".base", "remotejob"], stage: "test" })
 
       const result = config.getPlainObject()
-      // Nur .base wird gemerged, remotejob wird ignoriert
       expect(result.jobs?.child).toMatchObject({
         script: ["template"],
         stage: "test",
+        extends: "remotejob",
       })
-      expect(result.jobs?.child?.extends).toBeUndefined()
     })
 
     it("should ignore remote templates when merging", () => {
@@ -26,12 +25,11 @@ describe("Job Options", () => {
       config.job("child", { extends: [".remote", ".base"], stage: "test" })
 
       const result = config.getPlainObject()
-      // Nur .base wird gemerged, .remote wird ignoriert
       expect(result.jobs?.child).toMatchObject({
         script: ["base"],
         stage: "test",
+        extends: ".remote",
       })
-      expect(result.jobs?.child?.extends).toBeUndefined()
     })
   })
   describe("resolveTemplatesOnly option", () => {
@@ -42,7 +40,6 @@ describe("Job Options", () => {
       config.job("child", { extends: [".base", "basejob"], stage: "test" })
 
       const result = config.getPlainObject()
-      // Nur .base wird gemerged, basejob als lokaler Job wird entfernt
       expect(result.jobs?.child).toMatchObject({
         script: ["template"],
         stage: "test",
@@ -61,7 +58,6 @@ describe("Job Options", () => {
       )
 
       const result = config.getPlainObject()
-      // Beide werden gemerged, Reihenfolge: basejob, dann .base
       expect(result.jobs?.child).toMatchObject({
         script: ["job", "template"],
         stage: "test",

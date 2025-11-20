@@ -545,10 +545,7 @@ export class Config {
           // - resolveTemplatesOnly: extendKey starts with .
           // - else: merge all
           // - never merge if extendJob?.remote === true
-          if (
-            (!resolveTemplatesOnly || extendKey.startsWith(".")) &&
-            !(extendJob.remote === true)
-          ) {
+          if ((!resolveTemplatesOnly || extendKey.startsWith(".")) && extendJob.remote !== true) {
             result = merge(result, extendJob)
           }
         }
@@ -571,19 +568,20 @@ export class Config {
    * @param pipeline - The pipeline object being prepared for output.
    */
   private clear(pipeline: GitLabCi) {
-    // Finally, remove all existing `extends`
+    // Remove local extends entries, keep only remote/external ones, preserve extends if only remote remains
     if (!pipeline.jobs) return
 
     const jobIds = Object.keys(pipeline.jobs)
     for (const key of jobIds) {
       const job = pipeline.jobs[key] as JobDefinitionWithRemote
-
       const jobOpts = this.jobOptionsMap[key]
       const mergeExtends = jobOpts?.mergeExtends ?? this.globalOptionsValue.mergeExtends
+
+      // Always delete needsExtends
+      delete job.needsExtends
+
       if (mergeExtends === false) {
-        // Always delete needsExtends
-        delete job.needsExtends
-        // Normalize single-element array to string for cleaner output
+        // If mergeExtends is false, just optimize extends to string if only one remains
         if (Array.isArray(job.extends) && job.extends.length === 1) {
           job.extends = job.extends[0]
         }
@@ -593,20 +591,21 @@ export class Config {
       if (job.extends) {
         // Normalize to array for filtering
         const extendsArray = Array.isArray(job.extends) ? job.extends : [job.extends]
-        const filtered = extendsArray.filter((extendName: string) => !jobIds.includes(extendName))
-
+        // Remove all local extends entries (i.e., those that exist in pipeline.jobs and are not remote)
+        const filtered = extendsArray.filter((extendName: string) => {
+          const extJob = pipeline.jobs?.[extendName]
+          // Keep if not a local job/template, or if remote
+          return !extJob || (extJob as JobDefinitionWithRemote).remote === true
+        })
+        // If all remaining extends are remote, preserve them
         if (filtered.length === 0) {
           delete job.extends
         } else if (filtered.length === 1) {
-          // Keep as string if only one extends remains (preserves original format)
           job.extends = filtered[0]
         } else {
           job.extends = filtered
         }
       }
-
-      // Always delete needsExtends as it's internal metadata
-      delete job.needsExtends
     }
   }
 
@@ -635,13 +634,13 @@ export class Config {
   public getPlainObject() {
     // Create a deep copy to avoid mutating internal state
     // Merge templates and jobs (templates first, then jobs can override)
-    // Prepare jobs/templates for output, removing internal-only props
-    const jobsOut: Record<string, JobDefinition> = {}
+    // Keep remote flag during resolution, strip it later
+    const jobsWithRemote: Record<string, JobDefinitionWithRemote> = {}
     for (const [name, job] of Object.entries(this.templatesValue)) {
-      jobsOut[name] = Config.stripInternalProps(job)
+      jobsWithRemote[name] = job
     }
     for (const [name, job] of Object.entries(this.jobsValue)) {
-      jobsOut[name] = Config.stripInternalProps(job)
+      jobsWithRemote[name] = job
     }
 
     const copy: GitLabCi = JSON.parse(
@@ -657,13 +656,20 @@ export class Config {
         default: this.defaultValue,
         variables: Object.keys(this.variablesValue).length ? { ...this.variablesValue } : undefined,
         include: this.includeValue.length ? [...this.includeValue] : undefined,
-        jobs: jobsOut,
+        jobs: jobsWithRemote,
       }),
     ) as GitLabCi
 
-    // Resolve extends
+    // Resolve extends (needs remote flag to be present)
     this.resolveExtends(copy)
     this.clear(copy)
+
+    // Strip internal properties after resolution
+    if (copy.jobs) {
+      for (const [name, job] of Object.entries(copy.jobs)) {
+        copy.jobs[name] = Config.stripInternalProps(job as JobDefinitionWithRemote)
+      }
+    }
 
     // Apply patchers (for macros and imports)
     for (const patcher of this.patchers) {
