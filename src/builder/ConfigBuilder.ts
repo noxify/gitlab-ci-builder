@@ -177,10 +177,19 @@ export class ConfigBuilder {
 
   /**
    * Define a template (hidden job starting with dot)
+   *
+   * Templates default to `mergeExtends: false` to preserve extends references
+   * in the template definition, allowing proper resolution when jobs extend from it.
    */
   public template(name: string, definition: JobDefinitionInput, options: JobOptions = {}) {
     // Ensure name starts with dot
     const templateName = name.startsWith(".") ? name : `.${name}`
+
+    // Templates default to mergeExtends: false unless explicitly overridden
+    const templateOptions: JobOptions = {
+      ...options,
+      mergeExtends: options.mergeExtends ?? false,
+    }
 
     // Parse and normalize (extends is automatically normalized to array)
     const normalized = JobDefinitionParseSchema.parse(definition)
@@ -192,9 +201,9 @@ export class ConfigBuilder {
     if (existing && mergeExisting !== false) {
       // Merge with existing
       const merged = mergeJobDefinitions(existing, normalized)
-      this.state.setTemplate(templateName, merged, options)
+      this.state.setTemplate(templateName, merged, templateOptions)
     } else {
-      this.state.setTemplate(templateName, normalized, options)
+      this.state.setTemplate(templateName, normalized, templateOptions)
     }
 
     return this
@@ -210,6 +219,7 @@ export class ConfigBuilder {
     // Check if it should be treated as template
     if (name.startsWith(".") || options.hidden) {
       const templateName = name.startsWith(".") ? name : `.${name}`
+      // Delegate to template() which applies template defaults
       return this.template(templateName, definition, options)
     }
 

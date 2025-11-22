@@ -173,9 +173,15 @@ describe("ConfigBuilder - extends", () => {
       image: "node:22",
     })
 
-    config.extends(".base", ".with-deps", {
-      before_script: ["npm install"],
-    })
+    // Create intermediate template with mergeExtends: true to resolve the chain
+    config.extends(
+      ".base",
+      ".with-deps",
+      {
+        before_script: ["npm install"],
+      },
+      { mergeExtends: true },
+    )
 
     config.extends(".with-deps", "build", {
       script: ["npm run build"],
