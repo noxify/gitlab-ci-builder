@@ -71,7 +71,10 @@ jobs:
       - name: Setup
         uses: ./.github/setup
 
-      - name: Typecheck
+      - name: Build
+        run: pnpm build
+
+      - name: Test
         run: pnpm test
 
   pkg-new-release:
