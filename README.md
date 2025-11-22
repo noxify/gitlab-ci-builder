@@ -1,60 +1,54 @@
 # gitlab-ci-builder
 
-A small TypeScript utility for programmatically building GitLab CI YAML objects.
+A TypeScript utility for programmatically building GitLab CI YAML configurations.
 
-This project provides a fluent `Config` API to compose GitLab pipelines in code
+This project provides a fluent `ConfigBuilder` API to compose GitLab pipelines in code
 and output a YAML-serializable JavaScript object. It focuses on strong TypeScript
-types and a simple builder surface rather than a full runtime execution engine.
+types, proper extends resolution, and a simple builder surface.
 
 ## Features
 
 - Fluent TypeScript API to declare `stages`, `jobs`, `templates`, `variables` and `include` entries
 - **Import existing YAML**: Convert `.gitlab-ci.yml` files to TypeScript code using the builder API
 - **Export to YAML**: Generate properly formatted YAML with customizable key ordering and spacing
-- Normalizes `include` inputs (strings and arrays) into consistent objects
-- Supports reusable template jobs (hidden jobs starting with `.`) and deep-merge extends
-- Dynamic TypeScript-based includes: import other files and apply their `extendConfig` functions
-- Small and dependency-light implementation intended for composition in build scripts
+- **Robust extends resolution**: Proper topological sorting, cycle detection, and merge strategies
+- Supports reusable template jobs (hidden jobs starting with `.`) with deep-merge semantics
+- Dynamic TypeScript-based includes: import other files and apply their configuration functions
+- Comprehensive test coverage (241 tests, 86%+ coverage)
+- Small and dependency-light implementation
 
 ## Installation
 
-This project is intended to be consumed from source. Install dependencies and run tests with pnpm:
-
 ```bash
-pnpm install
-pnpm test
+pnpm add @noxify/gitlab-ci-builder
 ```
 
 ## Quick Start
 
-Basic usage: create a `Config`, add jobs and produce a plain object that can be serialized to YAML.
+Basic usage: create a `ConfigBuilder`, add jobs and produce a plain object that can be serialized to YAML.
 
 ```ts
-import { Config } from "./src"
+import { ConfigBuilder } from "@noxify/gitlab-ci-builder"
 
-const cfg = new Config()
+const config = new ConfigBuilder()
   .stages("build", "test", "deploy")
   .variable("NODE_ENV", "production")
-  .include("./common.yml")
+  .include({ local: "./common.yml" })
 
 // Template job (hidden)
-config.template("base", { image: "node:18" })
-// Or using job() with options:
-// config.job("base", { image: "node:18" }, { hidden: true })
-// Or with dot prefix:
-// config.job(".base", { image: "node:18" })
+config.template(".base", { image: "node:18" })
 
 config.extends(".base", "unittest", {
   stage: "test",
   script: ["npm run test"],
 })
 
-cfg.job("build", {
+config.job("build", {
   stage: "build",
   script: ["npm ci", "npm run build"],
 })
 
-const plain = cfg.getPlainObject()
+const plain = config.getPlainObject()
 console.log(JSON.stringify(plain, null, 2))
 ```
 
@@ -62,22 +56,22 @@ console.log(JSON.stringify(plain, null, 2))
 
 ### Exporting to YAML
 
-Convert your Config to a properly formatted YAML file:
+Convert your ConfigBuilder to a properly formatted YAML file:
 
 ```ts
-import { Config, toYaml, writeYamlFile } from "./src"
+import { ConfigBuilder } from "@noxify/gitlab-ci-builder"
 
-const cfg = new Config().stages("build", "test").job("build", {
+const config = new ConfigBuilder().stages("build", "test").job("build", {
   stage: "build",
   script: ["npm run build"],
 })
 
 // Convert to YAML string
-const yamlString = toYaml(cfg.getPlainObject())
+const yamlString = config.toYaml()
 console.log(yamlString)
 
 // Or write directly to a file
-await writeYamlFile(".gitlab-ci.yml", cfg.getPlainObject())
+await config.writeYamlFile(".gitlab-ci.yml")
 ```
 
 The YAML output features:
@@ -92,7 +86,7 @@ The YAML output features:
 Convert existing `.gitlab-ci.yml` files to TypeScript code:
 
 ```ts
-import { fromYaml, importYamlFile } from "./src"
+import { fromYaml, importYamlFile } from "@noxify/gitlab-ci-builder"
 
 // Convert YAML string to TypeScript code
 const yamlContent = `
@@ -113,9 +107,9 @@ build:
 const tsCode = fromYaml(yamlContent)
 console.log(tsCode)
 // Output:
-// import { Config } from "gitlab-ci-builder"
+// import { ConfigBuilder } from "@noxify/gitlab-ci-builder"
 //
-// const config = new Config()
+// const config = new ConfigBuilder()
 //
 // config.stages("build", "test")
 //
@@ -222,14 +216,14 @@ config.job("build", {
 
 ### Dynamic TypeScript Includes
 
-The `dynamicInclude` method allows you to modularize your GitLab CI configuration by splitting it across multiple TypeScript files. Each included file can export a configuration function that receives the main `Config` instance.
+The `dynamicInclude` method allows you to modularize your GitLab CI configuration by splitting it across multiple TypeScript files. Each included file can export a configuration function that receives the main `ConfigBuilder` instance.
 
 #### Basic Usage
 
 ```ts
-import { Config } from "./src"
+import { ConfigBuilder } from "@noxify/gitlab-ci-builder"
 
-const config = new Config()
+const config = new ConfigBuilder()
 
 // Include all config files from a directory
 await config.dynamicInclude(process.cwd(), ["configs/**/*.ts"])
@@ -239,16 +233,15 @@ console.log(config.getPlainObject())
 
 #### Creating Included Config Files
 
-Included files can use either a **default export** (preferred) or a **named `extendConfig` export**. The exported function receives the `Config` instance, mutates it, and returns it for consistency with the fluent API.
+Included files can use either a **default export** (preferred) or a **named `extendConfig` export**. The exported function receives the `ConfigBuilder` instance, mutates it, and returns it for consistency with the fluent API.
 
-**Option 1: Default Export (Recommended)**
-
-````ts
 **Option 1: Default Export (Recommended)**
 
 ```ts
 // configs/build-jobs.ts
-import type { Config } from "gitlab-ci-builder"
+import type { ConfigBuilder } from "@noxify/gitlab-ci-builder"
+
+export default function (config: ConfigBuilder) {
 
 export default function (config: Config) {
   // Mutate the config instance directly
@@ -266,15 +259,15 @@ export default function (config: Config) {
 
   return config
 }
-````
+```
 
 **Option 2: Named Export**
 
 ```ts
 // configs/test-jobs.ts
-import type { Config } from "gitlab-ci-builder"
+import type { ConfigBuilder } from "@noxify/gitlab-ci-builder"
 
-export function extendConfig(config: Config) {
+export function extendConfig(config: ConfigBuilder) {
   config.stages("test")
 
   config.job("unit-test", {
@@ -297,10 +290,10 @@ export function extendConfig(config: Config) {
 
 ```ts
 // build-pipeline.ts
-import { Config, writeYamlFile } from "./src"
+import { ConfigBuilder } from "@noxify/gitlab-ci-builder"
 
 async function main() {
-  const config = new Config()
+  const config = new ConfigBuilder()
 
   // Set up base configuration
   config.stages("prepare", "build", "test", "deploy")
@@ -314,7 +307,7 @@ async function main() {
   ])
 
   // Write the final pipeline configuration
-  await writeYamlFile(".gitlab-ci.yml", config.getPlainObject())
+  await config.writeYamlFile(".gitlab-ci.yml")
 }
 
 main()
@@ -324,9 +317,9 @@ main()
 
 ```ts
 // configs/deploy-jobs.ts
-import type { Config } from "gitlab-ci-builder"
+import type { ConfigBuilder } from "@noxify/gitlab-ci-builder"
 
-export default function (config: Config) {
+export default function (config: ConfigBuilder) {
   config.job("deploy-staging", {
     stage: "deploy",
     script: ["kubectl apply -f k8s/staging/"],
@@ -374,7 +367,7 @@ interface JobOptions {
 **Example:**
 
 ```ts
-const config = new Config()
+const config = new ConfigBuilder()
 
 // Create a hidden template
 config.job("base", { image: "node:22" }, { hidden: true })
@@ -410,10 +403,8 @@ config.template(".remote-template", { script: ["remote template"] }, { remote: t
 
 Set default behavior for all jobs using `globalOptions()`. Job-level options override global settings:
 
-````
-
 ```ts
-const config = new Config()
+const config = new ConfigBuilder()
 
 // Disable extends merging globally
 config.globalOptions({ mergeExtends: false })
@@ -439,7 +430,7 @@ config.job(
   { resolveTemplatesOnly: false },
 )
 // Output: script: ["job", "base"], extends removed
-````
+```
 
 **Use Cases:**
 
@@ -451,34 +442,34 @@ config.job(
 
 ## API Reference
 
-This reference summarizes the primary `Config` API surface. Method signatures reflect
-the runtime builder and are derived from the JSDoc on the source `Config` class.
+This reference summarizes the primary `ConfigBuilder` API surface. Method signatures reflect
+the runtime builder and are derived from the JSDoc on the source `ConfigBuilder` class.
 
-- `new Config()`
+- `new ConfigBuilder()`
   - Create a new builder instance.
 
-- `stages(...stages: string[]): Config`
+- `stages(...stages: string[]): ConfigBuilder`
   - Add stages to the global stage list. Ensures uniqueness and preserves order.
 
-- `addStage(stage: string): Config`
+- `addStage(stage: string): ConfigBuilder`
   - Convenience wrapper for adding a single stage.
 
-- `globalOptions(options: GlobalOptions): Config`
+- `globalOptions(options: GlobalOptions): ConfigBuilder`
   - Set global options that apply to all jobs and templates.
   - Options: `{ mergeExtends?: boolean, mergeExisting?: boolean, resolveTemplatesOnly?: boolean, remote?: boolean }`
     - Options: `{ mergeExtends?: boolean, mergeExisting?: boolean, resolveTemplatesOnly?: boolean }`
   - Job-level options override global settings.
 
-- `workflow(workflow: GitLabCi["workflow"]): Config`
+- `workflow(workflow: Workflow): ConfigBuilder`
   - Set or deep-merge the top-level `workflow` configuration (typically `rules`).
 
-- `defaults(defaults: GitLabCi["default"]): Config`
+- `defaults(defaults: Defaults): ConfigBuilder`
   - Set global default job parameters (deep-merged with existing defaults).
 
-- `variable(key: string, value: string | number | boolean | undefined): Config`
+- `variable(key: string, value: string | number | boolean | undefined): ConfigBuilder`
   - Set a single global variable.
 
-- `variables(vars: VariablesDefinition): Config`
+- `variables(vars: Variables): ConfigBuilder`
   - Merge multiple global variables at once.
 
 - `getVariable(job: string, key: string): string | number | boolean | undefined`
@@ -487,26 +478,25 @@ the runtime builder and are derived from the JSDoc on the source `Config` class.
 - `getJob(name: string): JobDefinition | undefined`
   - Look up a job or template definition by name (templates start with `.`).
 
-- `template(name: string, definition: JobDefinition, options?: JobOptions): Config`
+- `template(name: string, definition: JobDefinitionInput, options?: JobOptions): ConfigBuilder`
   - Define or deep-merge a hidden template job. The stored template name will have a leading `.`.
   - Options: `{ mergeExisting?: boolean, mergeExtends?: boolean, resolveTemplatesOnly?: boolean, hidden?: boolean, remote?: boolean }`
 
-- `include(item: IncludeDefinition | IncludeDefinition[]): Config`
-  - Add include entries. Accepts strings, objects or arrays and normalizes strings to
-    `{ local: "..." }` or `{ remote: "https://..." }` depending on the value.
+- `include(items: Include | Include[]): ConfigBuilder`
+  - Add include entries. Accepts objects or arrays of include definitions.
 
-- `job(name: string, definition: JobDefinition, options?: JobOptions): Config`
+- `job(name: string, definition: JobDefinitionInput, options?: JobOptions): ConfigBuilder`
   - Create or merge a job. If `name` starts with `.` or `options.hidden` is true, the call delegates
     to `template()` and ensures a single leading `.` on the stored template name.
   - Options: `{ hidden?: boolean, mergeExisting?: boolean, mergeExtends?: boolean, resolveTemplatesOnly?: boolean, remote?: boolean }`
 
-- `macro<T extends MacroArgs>(key: string, callback: (config: Config, args: T) => void): void`
+- `macro<T extends MacroArgs>(key: string, callback: (config: ConfigBuilder, args: T) => void): void`
   - Register a macro function for programmatic job generation.
 
 - `from<T extends MacroArgs>(key: string, args: T): void`
   - Invoke a previously registered macro.
 
-- `extends(fromName: string | string[], name: string, job?: JobDefinition, options?: JobOptions): void`
+- `extends(fromName: string | string[], name: string, job?: JobDefinitionInput, options?: JobOptions): ConfigBuilder`
   - Create a job that will extend one or more templates/jobs (injects an `extends` property).
   - Options: `{ hidden?: boolean, mergeExisting?: boolean, mergeExtends?: boolean, resolveTemplatesOnly?: boolean, remote?: boolean }`
 
@@ -516,21 +506,31 @@ the runtime builder and are derived from the JSDoc on the source `Config` class.
 - `patch(callback: (plain: GitLabCi) => void): void`
   - Register a patcher callback that runs on the plain object before it is returned.
 
-- `getPlainObject(): GitLabCi`
-  - Return a deep-cloned, YAML-serializable pipeline object. Templates and jobs are merged
-    under the `jobs` property. The returned object has had `extends` resolved and patchers applied.
+- `getPlainObject(): PipelineOutput`
+  - Return a YAML-serializable pipeline object with resolved extends and applied patchers.
+    Returns the result of `finalize().pipeline`.
 
-- `toJSON(): GitLabCi`
+- `toJSON(): PipelineOutput`
   - Alias for `getPlainObject()` (useful for `JSON.stringify`).
+
+- `finalize(): FinalizeResult`
+  - Finalize the configuration and return the resolved pipeline with validation metadata.
+  - Returns `{ pipeline: PipelineOutput, errors: ValidationError[], warnings: ValidationError[], metadata: { skippedChecks: string[] } }`
+
+- `toYaml(): string`
+  - Convert the configuration to a formatted YAML string.
+
+- `writeYamlFile(filePath: string): Promise<void>`
+  - Write the configuration to a YAML file.
 
 ### Export Functions
 
-- `toYaml(config: GitLabCi): string`
-  - Convert a plain `GitLabCi` object to a formatted YAML string. Features logical key ordering,
+- `toYaml(config: PipelineOutput): string`
+  - Convert a pipeline configuration to a formatted YAML string. Features logical key ordering,
     blank lines between sections, and proper formatting for readability.
 
-- `writeYamlFile(filePath: string, config: GitLabCi, options?: { encoding?: BufferEncoding }): Promise<void>`
-  - Write a `GitLabCi` object to a YAML file. Uses UTF-8 encoding by default.
+- `writeYamlFile(filePath: string, config: PipelineOutput): Promise<void>`
+  - Write a pipeline configuration to a YAML file.
 
 ### Import Functions
 

@@ -17,11 +17,12 @@
   "type": "module",
   "exports": {
     ".": {
+      "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs",
-      "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
     }
   },
+  "types": "./dist/index.d.mts",
   "files": [
     "dist"
   ],
