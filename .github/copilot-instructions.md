@@ -41,7 +41,8 @@
 - Add ESLint disable comments only when absolutely necessary
 - Follow the import order specified in prettier config
 - Use consistent naming conventions (camelCase for variables, PascalCase for types)
-- **Generic type parameters**: Always prefix with `T` (e.g., `TJobPayload`, `TResult`, `TEventData`)
+- **Generic type parameters**: Prefix generic type parameters with `T` for clarity (e.g., `GenericType<TPayload>`, `Handler<TResult, TError>`)
+- **Type/Interface names**: Use PascalCase without prefix (e.g., `JobDefinition`, `WorkflowRule`, `ConfigOptions`)
 - Prefer explicit return types for functions
 - Use proper error handling instead of throwing generic errors
 - Write self-documenting code that doesn't need excessive comments

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { Config } from "../src/config"
+import { ConfigBuilder } from "../src"
 
-describe("Config - extends", () => {
-  let config: Config
+describe("ConfigBuilder - extends", () => {
+  let config: ConfigBuilder
 
   beforeEach(() => {
-    config = new Config()
+    config = new ConfigBuilder()
   })
 
   it("should extend from a single job", () => {
@@ -30,6 +30,57 @@ describe("Config - extends", () => {
     expect(buildJob.image).toBe("node:22")
     expect(buildJob.before_script).toEqual(["npm install"])
     expect(buildJob.script).toEqual(["npm run build"])
+  })
+
+  it("should handle extends with single-element array", () => {
+    config.job(".base-cache", {
+      cache: {
+        key: "my-cache",
+        paths: ["node_modules/"],
+      },
+    })
+
+    config.job("test", {
+      extends: [".base-cache"],
+      script: ["npm test"],
+    })
+
+    const result = config.getPlainObject()
+    const testJob = result.jobs?.test
+
+    expect(testJob).toBeDefined()
+    // Properties from .base-cache should be merged
+    expect(testJob?.cache).toEqual({
+      key: "my-cache",
+      paths: ["node_modules/"],
+    })
+    expect(testJob?.script).toEqual(["npm test"])
+    // Local extends are resolved and removed from output by default
+    expect(testJob?.extends).toBeUndefined()
+  })
+
+  it("should keep single-element array extends when mergeExtends is false", () => {
+    config.job(".base-cache", {
+      cache: {
+        key: "my-cache",
+        paths: ["node_modules/"],
+      },
+    })
+
+    config.globalOptions({ mergeExtends: false })
+
+    config.job("test", {
+      extends: [".base-cache"],
+      script: ["npm test"],
+    })
+
+    const result = config.getPlainObject()
+    const testJob = result.jobs?.test
+
+    expect(testJob).toBeDefined()
+    // With mergeExtends: false, extends is kept and normalized to string
+    expect(testJob?.extends).toBe(".base-cache")
+    expect(testJob?.script).toEqual(["npm test"])
   })
 
   it("should extend from multiple jobs", () => {
@@ -122,9 +173,15 @@ describe("Config - extends", () => {
       image: "node:22",
     })
 
-    config.extends(".base", ".with-deps", {
-      before_script: ["npm install"],
-    })
+    // Create intermediate template with mergeExtends: true to resolve the chain
+    config.extends(
+      ".base",
+      ".with-deps",
+      {
+        before_script: ["npm install"],
+      },
+      { mergeExtends: true },
+    )
 
     config.extends(".with-deps", "build", {
       script: ["npm run build"],

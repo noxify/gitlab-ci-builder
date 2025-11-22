@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import type { IncludeEntry } from "../src"
-import { Config } from "../src/config"
+import { ConfigBuilder } from "../src"
 
-describe("Config - include (static YAML entries)", () => {
+describe("ConfigBuilder - include (static YAML entries)", () => {
   it("should accept a string include and serialize it as an array", () => {
-    const cfg = new Config()
+    const cfg = new ConfigBuilder()
     cfg.include("build_jobs.yml")
 
     const out = cfg.getPlainObject()
@@ -14,7 +13,7 @@ describe("Config - include (static YAML entries)", () => {
   })
 
   it("should accept an object include with rules", () => {
-    const cfg = new Config()
+    const cfg = new ConfigBuilder()
     cfg.include({ local: "build_jobs.yml", rules: [{ if: '$INCLUDE_BUILDS == "true"' }] })
 
     const out = cfg.getPlainObject()
@@ -27,7 +26,7 @@ describe("Config - include (static YAML entries)", () => {
   })
 
   it("should accept an array of mixed include entries", () => {
-    const cfg = new Config()
+    const cfg = new ConfigBuilder()
     cfg.include(["a.yml", { local: "b.yml" }])
 
     const out = cfg.getPlainObject()
@@ -35,14 +34,14 @@ describe("Config - include (static YAML entries)", () => {
   })
 
   it("should be chainable", () => {
-    const cfg = new Config().include("a.yml").include({ local: "b.yml" })
+    const cfg = new ConfigBuilder().include("a.yml").include({ local: "b.yml" })
 
     const out = cfg.getPlainObject()
     expect(out.include).toEqual([{ local: "a.yml" }, { local: "b.yml" }])
   })
 
   it("should normalize remote URL strings to remote includes", () => {
-    const cfg = new Config()
+    const cfg = new ConfigBuilder()
     cfg.include("https://example.com/remote.yml")
 
     const out = cfg.getPlainObject()
@@ -50,8 +49,8 @@ describe("Config - include (static YAML entries)", () => {
   })
 
   it("should flatten nested arrays and normalize mixed entries", () => {
-    const cfg = new Config()
-    const nested: IncludeEntry[] = ["a.yml", "https://r.com/x.yml", { local: "b.yml" }, "c.yml"]
+    const cfg = new ConfigBuilder()
+    const nested = ["a.yml", "https://r.com/x.yml", { local: "b.yml" }, "c.yml"]
     cfg.include(nested)
 
     const out = cfg.getPlainObject()

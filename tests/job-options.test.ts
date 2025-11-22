@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import { Config } from "../src/config"
+import { ConfigBuilder } from "../src"
 
 describe("Job Options", () => {
   describe("remote option", () => {
     it("should ignore remote jobs when merging extends, but keep reference", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.template(".base", { script: ["template"] })
       config.job("remotejob", { script: ["remote"] }, { remote: true })
       config.job("child", { extends: [".base", "remotejob"], stage: "test" })
@@ -19,7 +19,7 @@ describe("Job Options", () => {
     })
 
     it("should ignore remote templates when merging", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.template(".remote", { script: ["remote template"] }, { remote: true })
       config.template(".base", { script: ["base"] })
       config.job("child", { extends: [".remote", ".base"], stage: "test" })
@@ -34,7 +34,7 @@ describe("Job Options", () => {
   })
   describe("resolveTemplatesOnly option", () => {
     it("should only merge templates by default (resolveTemplatesOnly is true)", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.template(".base", { script: ["template"] })
       config.job("basejob", { script: ["job"] })
       config.job("child", { extends: [".base", "basejob"], stage: "test" })
@@ -48,7 +48,7 @@ describe("Job Options", () => {
     })
 
     it("should allow job-level override of resolveTemplatesOnly", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.template(".base", { script: ["template"] })
       config.job("basejob", { script: ["job"] })
       config.job(
@@ -59,7 +59,7 @@ describe("Job Options", () => {
 
       const result = config.getPlainObject()
       expect(result.jobs?.child).toMatchObject({
-        script: ["job", "template"],
+        script: ["template", "job"],
         stage: "test",
       })
       expect(result.jobs?.child?.extends).toBeUndefined()
@@ -67,7 +67,7 @@ describe("Job Options", () => {
   })
   describe("resolveExtends option", () => {
     it("should resolve extends by default", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.template(".base", { script: ["base command"] })
       config.job("child", { extends: ".base", stage: "test" })
 
@@ -80,7 +80,7 @@ describe("Job Options", () => {
     })
 
     it("should skip extends merging when mergeExtends is false", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.template(".base", { script: ["base command"] })
       config.job("child", { extends: ".base", stage: "test" }, { mergeExtends: false })
 
@@ -94,7 +94,7 @@ describe("Job Options", () => {
     })
 
     it("should respect global mergeExtends: false", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.globalOptions({ mergeExtends: false })
       config.template(".base", { script: ["base command"] })
       config.job("child", { extends: ".base", stage: "test" })
@@ -109,7 +109,7 @@ describe("Job Options", () => {
     })
 
     it("should allow job-level override of global mergeExtends", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.globalOptions({ mergeExtends: false })
       config.template(".base", { script: ["base command"] })
       config.job("disabled", { extends: ".base", stage: "test" })
@@ -136,7 +136,7 @@ describe("Job Options", () => {
 
   describe("mergeExisting option", () => {
     it("should merge by default when job name already exists", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.job("test", { script: ["first"] })
       config.job("test", { stage: "deploy" })
 
@@ -148,7 +148,7 @@ describe("Job Options", () => {
     })
 
     it("should replace when mergeExisting is false", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.job("test", { script: ["first"], stage: "test" })
       config.job("test", { stage: "deploy" }, { mergeExisting: false })
 
@@ -160,7 +160,7 @@ describe("Job Options", () => {
     })
 
     it("should respect global mergeExisting: false", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.globalOptions({ mergeExisting: false })
       config.job("test", { script: ["first"], stage: "test" })
       config.job("test", { stage: "deploy" })
@@ -173,7 +173,7 @@ describe("Job Options", () => {
     })
 
     it("should allow job-level override of global mergeExisting", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.globalOptions({ mergeExisting: false })
       config.job("test1", { script: ["first"], stage: "test" })
       config.job("test1", { stage: "deploy" })
@@ -199,7 +199,7 @@ describe("Job Options", () => {
 
   describe("hidden option", () => {
     it("should create template when hidden is true", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.job("base", { script: ["command"] }, { hidden: true })
 
       const result = config.getPlainObject()
@@ -210,7 +210,7 @@ describe("Job Options", () => {
     })
 
     it("should work with extends method", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.template(".base", { script: ["base"] })
       config.extends(".base", "hidden-child", { stage: "test" }, { hidden: true })
 
@@ -222,7 +222,7 @@ describe("Job Options", () => {
 
   describe("combined options", () => {
     it("should work with multiple options together", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.template(".base", { script: ["base command"] })
       config.job(
         "test",
@@ -240,7 +240,7 @@ describe("Job Options", () => {
     })
 
     it("should handle global options with selective job overrides", () => {
-      const config = new Config()
+      const config = new ConfigBuilder()
       config.globalOptions({ mergeExtends: false, mergeExisting: false })
 
       config.template(".base", { script: ["base"] })

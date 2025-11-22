@@ -1,3 +1,4 @@
-// This module intentionally exports nothing for testing dynamicInclude error path
+// This file intentionally doesn't export anything
+// Used to test error handling when no extendConfig is exported
 
-export const NOTHING = 42
+const someValue = "test"

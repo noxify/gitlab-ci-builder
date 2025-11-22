@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import { Config } from "../src"
+import { ConfigBuilder } from "../src"
 
 describe("needs", () => {
   it("should support needs as simple string array", () => {
-    const cfg = new Config()
+    const cfg = new ConfigBuilder()
 
     cfg.job("build", {
       script: ["npm run build"],
@@ -21,7 +21,7 @@ describe("needs", () => {
   })
 
   it("should support needs with job objects", () => {
-    const cfg = new Config()
+    const cfg = new ConfigBuilder()
 
     cfg.job("build", {
       script: ["npm run build"],
@@ -42,7 +42,7 @@ describe("needs", () => {
   })
 
   it("should support needs with artifacts property", () => {
-    const cfg = new Config()
+    const cfg = new ConfigBuilder()
 
     cfg.job("build", {
       script: ["npm run build"],
@@ -64,7 +64,7 @@ describe("needs", () => {
   })
 
   it("should support needs with optional property", () => {
-    const cfg = new Config()
+    const cfg = new ConfigBuilder()
 
     cfg.job("generate_version", {
       script: ["echo version"],
@@ -96,7 +96,7 @@ describe("needs", () => {
   })
 
   it("should support needs with both optional and artifacts", () => {
-    const cfg = new Config()
+    const cfg = new ConfigBuilder()
 
     cfg.job("build", {
       script: ["npm run build"],
@@ -119,7 +119,7 @@ describe("needs", () => {
   })
 
   it("should support pipeline needs with optional", () => {
-    const cfg = new Config()
+    const cfg = new ConfigBuilder()
 
     cfg.job("deploy", {
       script: ["echo deploying"],

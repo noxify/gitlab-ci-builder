@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { fromYaml, importYamlFile } from "../src/import"
 
-describe("import", () => {
-  describe("fromYaml()", () => {
+describe("YAML Import", () => {
+  describe("fromYaml() - Basic Conversion", () => {
     it("should convert simple YAML to TypeScript config", () => {
       const yaml = `
 stages:
@@ -19,7 +19,8 @@ build-job:
 
       const ts = fromYaml(yaml)
 
-      expect(ts).toContain('import { Config } from "@noxify/gitlab-ci-builder"')
+      expect(ts).toContain('import { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(ts).toContain("const config = new ConfigBuilder()")
       expect(ts).toContain('config.stages("build", "test")')
       expect(ts).toContain('config.job("build-job",')
       expect(ts).toContain('stage: "build"')
@@ -48,68 +49,27 @@ build:
       expect(ts).toContain('extends: ".template"')
     })
 
-    it("should use type-only import and function export when asExtendedConfig is true", () => {
+    it("should normalize single-element array extends to string", () => {
       const yaml = `
-stages:
-  - build
-  - test
-
-build-job:
-  stage: build
-  script:
-    - npm run build
-`
-
-      const ts = fromYaml(yaml, { asExtendedConfig: true })
-
-      expect(ts).toContain('import type { Config } from "@noxify/gitlab-ci-builder"')
-      expect(ts).not.toContain('import { Config } from "@noxify/gitlab-ci-builder"')
-      expect(ts).toContain("export default function (config: Config) {")
-      expect(ts).toContain('  config.stages("build", "test")')
-      expect(ts).toContain('  config.job("build-job",')
-      expect(ts).toContain("  return config")
-      expect(ts).toContain("}")
-      expect(ts).not.toContain("const config = new Config()")
-      expect(ts).not.toContain("export default config")
-    })
-
-    it("should use regular import and direct export by default", () => {
-      const yaml = `
-stages:
-  - build
-`
-
-      const ts = fromYaml(yaml)
-
-      expect(ts).toContain('import { Config } from "@noxify/gitlab-ci-builder"')
-      expect(ts).not.toContain('import type { Config } from "@noxify/gitlab-ci-builder"')
-      expect(ts).toContain("const config = new Config()")
-      expect(ts).toContain("export default config")
-      expect(ts).not.toContain("export default function")
-      expect(ts).not.toContain("return config")
-    })
-
-    it("should properly indent all config calls when asExtendedConfig is true", () => {
-      const yaml = `
-variables:
-  NODE_ENV: production
-
-.base:
-  image: node:22
+.base-cache:
+  cache:
+    key: my-cache
+    paths:
+      - node_modules/
 
 test:
-  extends: .base
+  extends: [.base-cache]
   script:
     - npm test
 `
 
-      const ts = fromYaml(yaml, { asExtendedConfig: true })
+      const ts = fromYaml(yaml)
 
-      expect(ts).toContain("export default function (config: Config) {")
-      expect(ts).toContain("  config.variables({")
-      expect(ts).toContain('  config.template(".base",')
-      expect(ts).toContain('  config.job("test",')
-      expect(ts).toContain("  return config")
+      expect(ts).toContain('config.template(".base-cache",')
+      expect(ts).toContain('config.job("test",')
+      // Single-element array is normalized to string for cleaner generated code
+      expect(ts).toContain('extends: ".base-cache"')
+      expect(ts).not.toContain('extends: [".base-cache"]')
     })
 
     it("should handle workflow", () => {
@@ -256,7 +216,75 @@ test:
       expect(templateIndex).toBeLessThan(buildIndex)
       expect(templateIndex).toBeLessThan(testIndex)
     })
+  })
 
+  describe("fromYaml() - Extended Config Mode", () => {
+    it("should use type-only import and function export when asExtendedConfig is true", () => {
+      const yaml = `
+stages:
+  - build
+  - test
+
+build-job:
+  stage: build
+  script:
+    - npm run build
+`
+
+      const ts = fromYaml(yaml, { asExtendedConfig: true })
+
+      expect(ts).toContain('import type { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(ts).not.toContain('import { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(ts).toContain("export default function (config: ConfigBuilder) {")
+      expect(ts).toContain('  config.stages("build", "test")')
+      expect(ts).toContain('  config.job("build-job",')
+      expect(ts).toContain("  return config")
+      expect(ts).toContain("}")
+      expect(ts).not.toContain("const config = new ConfigBuilder()")
+      expect(ts).not.toContain("export default config")
+    })
+
+    it("should use regular import and direct export by default", () => {
+      const yaml = `
+stages:
+  - build
+`
+
+      const ts = fromYaml(yaml)
+
+      expect(ts).toContain('import { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(ts).not.toContain('import type { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(ts).toContain("const config = new ConfigBuilder()")
+      expect(ts).toContain("export default config")
+      expect(ts).not.toContain("export default function")
+      expect(ts).not.toContain("return config")
+    })
+
+    it("should properly indent all config calls when asExtendedConfig is true", () => {
+      const yaml = `
+variables:
+  NODE_ENV: production
+
+.base:
+  image: node:22
+
+test:
+  extends: .base
+  script:
+    - npm test
+`
+
+      const ts = fromYaml(yaml, { asExtendedConfig: true })
+
+      expect(ts).toContain("export default function (config: ConfigBuilder) {")
+      expect(ts).toContain("  config.variables({")
+      expect(ts).toContain('  config.template(".base",')
+      expect(ts).toContain('  config.job("test",')
+      expect(ts).toContain("  return config")
+    })
+  })
+
+  describe("fromYaml() - Script Handling", () => {
     it("should handle multiline scripts", () => {
       const yaml = `
 build:
@@ -338,193 +366,28 @@ job:
       expect(ts).toContain("esac")
       expect(ts).toMatch(/script: \[`[\s\S]*case[\s\S]*esac[\s\S]*`\]/)
     })
-  })
 
-  describe("importYamlFile()", () => {
-    const testYamlPath = "/tmp/test-gitlab-ci.yml"
-    const testOutputPath = "/tmp/test-config.ts"
-
-    beforeEach(() => {
-      vi.spyOn(fs, "readFile").mockResolvedValue(`
-stages:
-  - build
-
-build:
-  stage: build
-  script:
-    - npm run build
-`)
-      vi.spyOn(fs, "writeFile").mockResolvedValue()
-    })
-
-    afterEach(() => {
-      vi.restoreAllMocks()
-    })
-
-    it("should read YAML file and convert to TypeScript", async () => {
-      const result = await importYamlFile(testYamlPath)
-
-      expect(fs.readFile).toHaveBeenCalledWith(testYamlPath, "utf-8")
-      expect(result).toContain('import { Config } from "@noxify/gitlab-ci-builder"')
-      expect(result).toContain('config.stages("build")')
-    })
-
-    it("should write to output file when path is provided", async () => {
-      await importYamlFile(testYamlPath, testOutputPath)
-
-      expect(fs.writeFile).toHaveBeenCalledWith(
-        testOutputPath,
-        expect.stringContaining('import { Config } from "@noxify/gitlab-ci-builder"'),
-        "utf-8",
-      )
-    })
-
-    it("should not write file when output path is not provided", async () => {
-      await importYamlFile(testYamlPath)
-
-      expect(fs.writeFile).not.toHaveBeenCalled()
-    })
-
-    it("should handle read errors", async () => {
-      vi.mocked(fs.readFile).mockRejectedValue(new Error("File not found"))
-
-      await expect(importYamlFile(testYamlPath)).rejects.toThrow("File not found")
-    })
-
-    it("should use type-only import when asExtendedConfig is true", async () => {
-      const result = await importYamlFile(testYamlPath, undefined, { asExtendedConfig: true })
-
-      expect(fs.readFile).toHaveBeenCalledWith(testYamlPath, "utf-8")
-      expect(result).toContain('import type { Config } from "@noxify/gitlab-ci-builder"')
-      expect(result).not.toContain('import { Config } from "@noxify/gitlab-ci-builder"')
-      expect(result).toContain("export default function (config: Config) {")
-      expect(result).toContain('  config.stages("build")')
-      expect(result).toContain("  return config")
-    })
-
-    it("should use regular import when asExtendedConfig is false", async () => {
-      const result = await importYamlFile(testYamlPath, undefined, { asExtendedConfig: false })
-
-      expect(fs.readFile).toHaveBeenCalledWith(testYamlPath, "utf-8")
-      expect(result).toContain('import { Config } from "@noxify/gitlab-ci-builder"')
-      expect(result).not.toContain('import type { Config } from "@noxify/gitlab-ci-builder"')
-      expect(result).toContain("const config = new Config()")
-      expect(result).toContain("export default config")
-    })
-
-    it("should write function-based export to file when asExtendedConfig is true", async () => {
-      await importYamlFile(testYamlPath, testOutputPath, { asExtendedConfig: true })
-
-      expect(fs.writeFile).toHaveBeenCalledWith(
-        testOutputPath,
-        expect.stringContaining('import type { Config } from "@noxify/gitlab-ci-builder"'),
-        "utf-8",
-      )
-      expect(fs.writeFile).toHaveBeenCalledWith(
-        testOutputPath,
-        expect.stringContaining("export default function (config: Config) {"),
-        "utf-8",
-      )
-      expect(fs.writeFile).toHaveBeenCalledWith(
-        testOutputPath,
-        expect.stringContaining("  return config"),
-        "utf-8",
-      )
-    })
-  })
-
-  describe("complex examples", () => {
-    it("should handle a complex GitLab CI YAML", () => {
+    it("should handle multi-line scripts with shell operators as template literals", () => {
       const yaml = `
-.tags_test: &tags_test
-  - test1
-  - test2
-
-download_node_modules:
-  stage: init
-  tags: *tags_test
-  image: $NODE_ALPINE_IMAGE
+build:
   script:
-    - !reference [.pnpm_install_template, script]
-  cache:
-    - key: \${NPM_CACHE_KEY}
-      paths:
-        - /node_modules
-        - /.pnpm-store
-      policy: pull-push
-  variables:
-    APP_DIR: "."
-    NPM_CACHE_KEY: default
-
-deploy-job:
-  stage: deploy
-  script:
-    - echo "Deploying..."
-  environment:
-    name: production
-    url: https://example.com
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-      when: always
+    - |
+      if [ -f package.json ]; then
+        npm install
+      fi
 `
 
       const ts = fromYaml(yaml)
-      expect(ts).toContain('"!reference [.pnpm_install_template, script]"')
+
+      expect(ts).toContain("script: [`")
+      expect(ts).toContain("if [ -f package.json ]; then")
+      expect(ts).toContain("npm install")
+      expect(ts).toContain("fi")
+      expect(ts).toContain("`]")
     })
+  })
 
-    it("should handle anchors", () => {
-      const yaml = `
-.tags_test: &tags_test
-  - test1
-  - test2
-
-.job_template: &job_configuration
-  script:
-    - test project
-  tags:
-    - dev
-
-.postgres_services:
-  services: &postgres_configuration
-    - postgres
-    - ruby
-
-.mysql_services:
-  services: &mysql_configuration
-    - mysql
-    - ruby
-
-test:postgres:
-  <<: *job_configuration
-  services: *postgres_configuration
-  tags:
-    - postgres
-
-test:mysql:
-  <<: *job_configuration
-  services: *mysql_configuration
-  `
-
-      const ts = fromYaml(yaml)
-
-      // Anchor-only definitions (.tags_test) should be ignored
-      expect(ts).not.toContain('config.template(".tags_test"')
-
-      // Templates with actual job definitions should be included
-      expect(ts).toContain('config.template(".postgres_services"')
-      expect(ts).toContain('config.template(".mysql_services"')
-      expect(ts).toContain('config.template(".job_template"')
-
-      // Jobs should reference the merged anchor values
-      expect(ts).toContain('config.job("test:postgres"')
-      expect(ts).toContain('config.job("test:mysql"')
-      expect(ts).toContain('services: ["postgres", "ruby"]')
-      expect(ts).toContain('services: ["mysql", "ruby"]')
-
-      // Merged script from anchor should be present
-      expect(ts).toContain('"test project"')
-    })
-
+  describe("fromYaml() - Advanced Features", () => {
     it("should handle extends with strings", () => {
       const yaml = `
 .base:
@@ -633,6 +496,256 @@ test:
       expect(ts).toContain("artifacts:")
       expect(ts).toContain("reports:")
       expect(ts).toContain('annotations: ["file1.json", "file2.json"]')
+    })
+
+    it("should handle !reference tags", () => {
+      const yaml = `
+.base:
+  script:
+    - npm install
+
+build:
+  script:
+    - !reference [.base, script]
+    - npm run build
+`
+
+      const ts = fromYaml(yaml)
+
+      expect(ts).toContain('"!reference [.base, script]"')
+      expect(ts).toContain('"npm run build"')
+    })
+
+    it("should handle anchors", () => {
+      const yaml = `
+.tags_test: &tags_test
+  - test1
+  - test2
+
+.job_template: &job_configuration
+  script:
+    - test project
+  tags:
+    - dev
+
+.postgres_services:
+  services: &postgres_configuration
+    - postgres
+    - ruby
+
+.mysql_services:
+  services: &mysql_configuration
+    - mysql
+    - ruby
+
+test:postgres:
+  <<: *job_configuration
+  services: *postgres_configuration
+  tags:
+    - postgres
+
+test:mysql:
+  <<: *job_configuration
+  services: *mysql_configuration
+  `
+
+      const ts = fromYaml(yaml)
+
+      // Anchor-only definitions (.tags_test) should be ignored
+      expect(ts).not.toContain('config.template(".tags_test"')
+
+      // Templates with actual job definitions should be included
+      expect(ts).toContain('config.template(".postgres_services"')
+      expect(ts).toContain('config.template(".mysql_services"')
+      expect(ts).toContain('config.template(".job_template"')
+
+      // Jobs should reference the merged anchor values
+      expect(ts).toContain('config.job("test:postgres"')
+      expect(ts).toContain('config.job("test:mysql"')
+      expect(ts).toContain('services: ["postgres", "ruby"]')
+      expect(ts).toContain('services: ["mysql", "ruby"]')
+
+      // Merged script from anchor should be present
+      expect(ts).toContain('"test project"')
+    })
+  })
+
+  describe("fromYaml() - Complex Examples", () => {
+    it("should handle a complex GitLab CI YAML", () => {
+      const yaml = `
+.tags_test: &tags_test
+  - test1
+  - test2
+
+download_node_modules:
+  stage: init
+  tags: *tags_test
+  image: $NODE_ALPINE_IMAGE
+  script:
+    - !reference [.pnpm_install_template, script]
+  cache:
+    - key: \${NPM_CACHE_KEY}
+      paths:
+        - /node_modules
+        - /.pnpm-store
+      policy: pull-push
+  variables:
+    APP_DIR: "."
+    NPM_CACHE_KEY: default
+
+deploy-job:
+  stage: deploy
+  script:
+    - echo "Deploying..."
+  environment:
+    name: production
+    url: https://example.com
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: always
+`
+
+      const ts = fromYaml(yaml)
+      expect(ts).toContain('"!reference [.pnpm_install_template, script]"')
+    })
+
+    it("should handle complex YAML with all features", () => {
+      const yaml = `
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+
+variables:
+  NODE_VERSION: "20"
+
+default:
+  image: node:$NODE_VERSION
+  cache:
+    paths:
+      - node_modules/
+
+.base:
+  before_script:
+    - npm install
+
+build:
+  extends: .base
+  stage: build
+  script:
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+
+test:
+  extends: .base
+  stage: test
+  script:
+    - npm test
+`
+
+      const ts = fromYaml(yaml)
+
+      expect(ts).toContain("config.workflow({")
+      expect(ts).toContain("config.variables({")
+      expect(ts).toContain("config.defaults({")
+      expect(ts).toContain('config.template(".base",')
+      expect(ts).toContain('config.job("build",')
+      expect(ts).toContain('config.job("test",')
+      expect(ts).toContain("artifacts:")
+    })
+  })
+
+  describe("importYamlFile()", () => {
+    const testYamlPath = "/tmp/test-gitlab-ci.yml"
+    const testOutputPath = "/tmp/test-config.ts"
+
+    beforeEach(() => {
+      vi.spyOn(fs, "readFile").mockResolvedValue(`
+stages:
+  - build
+
+build:
+  stage: build
+  script:
+    - npm run build
+`)
+      vi.spyOn(fs, "writeFile").mockResolvedValue()
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it("should read YAML file and convert to TypeScript", async () => {
+      const result = await importYamlFile(testYamlPath)
+
+      expect(fs.readFile).toHaveBeenCalledWith(testYamlPath, "utf-8")
+      expect(result).toContain('import { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(result).toContain('config.stages("build")')
+    })
+
+    it("should write to output file when path is provided", async () => {
+      await importYamlFile(testYamlPath, testOutputPath)
+
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        testOutputPath,
+        expect.stringContaining('import { ConfigBuilder } from "@noxify/gitlab-ci-builder"'),
+        "utf-8",
+      )
+    })
+
+    it("should not write file when output path is not provided", async () => {
+      await importYamlFile(testYamlPath)
+
+      expect(fs.writeFile).not.toHaveBeenCalled()
+    })
+
+    it("should handle read errors", async () => {
+      vi.mocked(fs.readFile).mockRejectedValue(new Error("File not found"))
+
+      await expect(importYamlFile(testYamlPath)).rejects.toThrow("File not found")
+    })
+
+    it("should use type-only import when asExtendedConfig is true", async () => {
+      const result = await importYamlFile(testYamlPath, undefined, { asExtendedConfig: true })
+
+      expect(fs.readFile).toHaveBeenCalledWith(testYamlPath, "utf-8")
+      expect(result).toContain('import type { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(result).not.toContain('import { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(result).toContain("export default function (config: ConfigBuilder) {")
+      expect(result).toContain('  config.stages("build")')
+      expect(result).toContain("  return config")
+    })
+
+    it("should use regular import when asExtendedConfig is false", async () => {
+      const result = await importYamlFile(testYamlPath, undefined, { asExtendedConfig: false })
+
+      expect(fs.readFile).toHaveBeenCalledWith(testYamlPath, "utf-8")
+      expect(result).toContain('import { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(result).not.toContain('import type { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(result).toContain("const config = new ConfigBuilder()")
+      expect(result).toContain("export default config")
+    })
+
+    it("should write function-based export to file when asExtendedConfig is true", async () => {
+      await importYamlFile(testYamlPath, testOutputPath, { asExtendedConfig: true })
+
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        testOutputPath,
+        expect.stringContaining('import type { ConfigBuilder } from "@noxify/gitlab-ci-builder"'),
+        "utf-8",
+      )
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        testOutputPath,
+        expect.stringContaining("export default function (config: ConfigBuilder) {"),
+        "utf-8",
+      )
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        testOutputPath,
+        expect.stringContaining("  return config"),
+        "utf-8",
+      )
     })
   })
 })
