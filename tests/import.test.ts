@@ -19,7 +19,7 @@ build-job:
 
       const ts = fromYaml(yaml)
 
-      expect(ts).toContain('import { Config } from "@noxify/gitlab-ci-builder"')
+      expect(ts).toContain('import { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
       expect(ts).toContain('config.stages("build", "test")')
       expect(ts).toContain('config.job("build-job",')
       expect(ts).toContain('stage: "build"')
@@ -62,14 +62,14 @@ build-job:
 
       const ts = fromYaml(yaml, { asExtendedConfig: true })
 
-      expect(ts).toContain('import type { Config } from "@noxify/gitlab-ci-builder"')
-      expect(ts).not.toContain('import { Config } from "@noxify/gitlab-ci-builder"')
-      expect(ts).toContain("export default function (config: Config) {")
+      expect(ts).toContain('import type { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(ts).not.toContain('import { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(ts).toContain("export default function (config: ConfigBuilder) {")
       expect(ts).toContain('  config.stages("build", "test")')
       expect(ts).toContain('  config.job("build-job",')
       expect(ts).toContain("  return config")
       expect(ts).toContain("}")
-      expect(ts).not.toContain("const config = new Config()")
+      expect(ts).not.toContain("const config = new ConfigBuilder()")
       expect(ts).not.toContain("export default config")
     })
 
@@ -81,9 +81,9 @@ stages:
 
       const ts = fromYaml(yaml)
 
-      expect(ts).toContain('import { Config } from "@noxify/gitlab-ci-builder"')
-      expect(ts).not.toContain('import type { Config } from "@noxify/gitlab-ci-builder"')
-      expect(ts).toContain("const config = new Config()")
+      expect(ts).toContain('import { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(ts).not.toContain('import type { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(ts).toContain("const config = new ConfigBuilder()")
       expect(ts).toContain("export default config")
       expect(ts).not.toContain("export default function")
       expect(ts).not.toContain("return config")
@@ -105,7 +105,7 @@ test:
 
       const ts = fromYaml(yaml, { asExtendedConfig: true })
 
-      expect(ts).toContain("export default function (config: Config) {")
+      expect(ts).toContain("export default function (config: ConfigBuilder) {")
       expect(ts).toContain("  config.variables({")
       expect(ts).toContain('  config.template(".base",')
       expect(ts).toContain('  config.job("test",')
@@ -365,7 +365,7 @@ build:
       const result = await importYamlFile(testYamlPath)
 
       expect(fs.readFile).toHaveBeenCalledWith(testYamlPath, "utf-8")
-      expect(result).toContain('import { Config } from "@noxify/gitlab-ci-builder"')
+      expect(result).toContain('import { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
       expect(result).toContain('config.stages("build")')
     })
 
@@ -374,7 +374,7 @@ build:
 
       expect(fs.writeFile).toHaveBeenCalledWith(
         testOutputPath,
-        expect.stringContaining('import { Config } from "@noxify/gitlab-ci-builder"'),
+        expect.stringContaining('import { ConfigBuilder } from "@noxify/gitlab-ci-builder"'),
         "utf-8",
       )
     })
@@ -395,9 +395,9 @@ build:
       const result = await importYamlFile(testYamlPath, undefined, { asExtendedConfig: true })
 
       expect(fs.readFile).toHaveBeenCalledWith(testYamlPath, "utf-8")
-      expect(result).toContain('import type { Config } from "@noxify/gitlab-ci-builder"')
-      expect(result).not.toContain('import { Config } from "@noxify/gitlab-ci-builder"')
-      expect(result).toContain("export default function (config: Config) {")
+      expect(result).toContain('import type { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(result).not.toContain('import { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(result).toContain("export default function (config: ConfigBuilder) {")
       expect(result).toContain('  config.stages("build")')
       expect(result).toContain("  return config")
     })
@@ -406,9 +406,9 @@ build:
       const result = await importYamlFile(testYamlPath, undefined, { asExtendedConfig: false })
 
       expect(fs.readFile).toHaveBeenCalledWith(testYamlPath, "utf-8")
-      expect(result).toContain('import { Config } from "@noxify/gitlab-ci-builder"')
-      expect(result).not.toContain('import type { Config } from "@noxify/gitlab-ci-builder"')
-      expect(result).toContain("const config = new Config()")
+      expect(result).toContain('import { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(result).not.toContain('import type { ConfigBuilder } from "@noxify/gitlab-ci-builder"')
+      expect(result).toContain("const config = new ConfigBuilder()")
       expect(result).toContain("export default config")
     })
 
@@ -417,12 +417,12 @@ build:
 
       expect(fs.writeFile).toHaveBeenCalledWith(
         testOutputPath,
-        expect.stringContaining('import type { Config } from "@noxify/gitlab-ci-builder"'),
+        expect.stringContaining('import type { ConfigBuilder } from "@noxify/gitlab-ci-builder"'),
         "utf-8",
       )
       expect(fs.writeFile).toHaveBeenCalledWith(
         testOutputPath,
-        expect.stringContaining("export default function (config: Config) {"),
+        expect.stringContaining("export default function (config: ConfigBuilder) {"),
         "utf-8",
       )
       expect(fs.writeFile).toHaveBeenCalledWith(

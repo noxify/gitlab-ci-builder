@@ -1,0 +1,228 @@
+import type { JobDefinitionNormalized } from "../schema"
+
+/**
+ * Merge strategy types
+ */
+export type MergeStrategy = "replace" | "concat" | "union" | "deep"
+
+/**
+ * Field-specific merge rules for GitLab CI job properties
+ */
+export const MERGE_RULES: Record<string, MergeStrategy> = {
+  // Scripts: concat (preserve order, parent first)
+  script: "concat",
+  before_script: "concat",
+  after_script: "concat",
+
+  // Tags: union (unique values)
+  tags: "union",
+
+  // Services: concat unique (by name)
+  services: "union",
+
+  // Variables: replace (child overrides parent)
+  variables: "replace",
+
+  // Deep merge for complex objects
+  artifacts: "deep",
+  cache: "deep",
+  environment: "deep",
+  retry: "deep",
+  release: "deep",
+  trigger: "deep",
+
+  // Replace (child wins)
+  stage: "replace",
+  image: "replace",
+  needs: "replace",
+  dependencies: "replace",
+  rules: "replace",
+  allow_failure: "replace",
+  when: "replace",
+  timeout: "replace",
+  parallel: "replace",
+  interruptible: "replace",
+  resource_group: "replace",
+}
+
+/**
+ * Merge two string arrays by concatenating (preserving order)
+ */
+function concatArrays<T>(parent: T[] | undefined, child: T[] | undefined): T[] | undefined {
+  if (!parent && !child) return undefined
+  if (!parent) return child
+  if (!child) return parent
+  return [...parent, ...child]
+}
+
+/**
+ * Merge two arrays by union (unique values)
+ */
+function unionArrays<T>(parent: T[] | undefined, child: T[] | undefined): T[] | undefined {
+  if (!parent && !child) return undefined
+  if (!parent) return child
+  if (!child) return parent
+  return Array.from(new Set([...parent, ...child]))
+}
+
+/**
+ * Deep merge two objects
+ */
+function deepMerge<T>(parent: T | undefined, child: T | undefined): T | undefined {
+  if (!parent && !child) return undefined
+  if (!parent) return child
+  if (!child) return parent
+
+  // Handle arrays
+  if (Array.isArray(parent) && Array.isArray(child)) {
+    return child as T // For deep merge, child array replaces parent
+  }
+
+  // Handle objects
+  if (
+    typeof parent === "object" &&
+    typeof child === "object" &&
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    parent !== null &&
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    child !== null
+  ) {
+    const result: Record<string, unknown> = { ...(parent as object) } as Record<string, unknown>
+
+    for (const [key, value] of Object.entries(child as object)) {
+      if (key in result) {
+        const parentValue = result[key]
+        if (
+          typeof parentValue === "object" &&
+          parentValue !== null &&
+          typeof value === "object" &&
+          value !== null &&
+          !Array.isArray(parentValue) &&
+          !Array.isArray(value)
+        ) {
+          result[key] = deepMerge(parentValue, value)
+        } else {
+          result[key] = value
+        }
+      } else {
+        result[key] = value
+      }
+    }
+
+    return result as T
+  }
+
+  return child
+}
+
+/**
+ * Merge two job definitions using field-specific strategies
+ */
+export function mergeJobDefinitions(
+  parent: JobDefinitionNormalized,
+  child: JobDefinitionNormalized,
+): JobDefinitionNormalized {
+  const result: Record<string, unknown> = {}
+
+  // Collect all keys from both parent and child
+  const allKeys = new Set([...Object.keys(parent), ...Object.keys(child)])
+
+  for (const key of allKeys) {
+    const parentValue = parent[key as keyof JobDefinitionNormalized]
+    const childValue = child[key as keyof JobDefinitionNormalized]
+
+    // Get merge strategy for this field
+    const strategy = MERGE_RULES[key] ?? "replace"
+
+    switch (strategy) {
+      case "concat":
+        if (Array.isArray(parentValue) || Array.isArray(childValue)) {
+          result[key] = concatArrays(
+            parentValue as unknown[] | undefined,
+            childValue as unknown[] | undefined,
+          )
+        } else {
+          // For non-array values (like single strings), convert to arrays and concat
+          const parentArray = parentValue
+            ? Array.isArray(parentValue)
+              ? parentValue
+              : [parentValue]
+            : undefined
+          const childArray = childValue
+            ? Array.isArray(childValue)
+              ? childValue
+              : [childValue]
+            : undefined
+          result[key] = concatArrays(parentArray, childArray)
+        }
+        break
+
+      case "union":
+        if (key === "services") {
+          // Services: union by service name
+          result[key] = mergeServices(
+            parentValue as JobDefinitionNormalized["services"],
+            childValue as JobDefinitionNormalized["services"],
+          )
+        } else {
+          result[key] = unionArrays(
+            parentValue as unknown[] | undefined,
+            childValue as unknown[] | undefined,
+          )
+        }
+        break
+
+      case "deep":
+        result[key] = deepMerge(parentValue, childValue)
+        break
+
+      case "replace":
+      default:
+        result[key] = childValue ?? parentValue
+        break
+    }
+  }
+
+  return result as JobDefinitionNormalized
+}
+
+/**
+ * Merge services with union by name
+ */
+function mergeServices(
+  parent: JobDefinitionNormalized["services"],
+  child: JobDefinitionNormalized["services"],
+): JobDefinitionNormalized["services"] {
+  if (!parent && !child) return undefined
+  if (!parent) return child
+  if (!child) return parent
+
+  const serviceMap = new Map<string, (typeof parent)[number]>()
+
+  // Add parent services
+  for (const service of parent) {
+    const name = typeof service === "string" ? service : service.name
+    serviceMap.set(name, service)
+  }
+
+  // Add/override with child services
+  for (const service of child) {
+    const name = typeof service === "string" ? service : service.name
+    serviceMap.set(name, service)
+  }
+
+  return Array.from(serviceMap.values())
+}
+
+/**
+ * Merge variables (child overrides parent keys)
+ */
+export function mergeVariables(
+  parent: JobDefinitionNormalized["variables"],
+  child: JobDefinitionNormalized["variables"],
+): JobDefinitionNormalized["variables"] {
+  if (!parent && !child) return undefined
+  if (!parent) return child
+  if (!child) return parent
+  return { ...parent, ...child }
+}
