@@ -74,8 +74,11 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Test
-        run: pnpm test
+      - name: Unit Tests
+        run: pnpm test:unit
+
+      - name: Integration Tests
+        run: pnpm test:integration
 
   pkg-new-release:
     needs: [lint, format, typecheck]
