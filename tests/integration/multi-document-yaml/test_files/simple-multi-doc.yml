@@ -1,0 +1,66 @@
+---
+# Document 1: Pipeline defaults
+default:
+  image: node:20-alpine
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+
+variables:
+  NODE_ENV: production
+  CI_DEBUG_TRACE: "false"
+
+---
+# Document 2: Stages and workflow
+stages:
+  - build
+  - test
+  - deploy
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_MERGE_REQUEST_ID
+
+---
+# Document 3: Jobs
+build:
+  stage: build
+  script:
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 hour
+
+test:unit:
+  stage: test
+  script:
+    - npm ci
+    - npm run test:unit
+  coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+
+test:integration:
+  stage: test
+  script:
+    - npm ci
+    - npm run test:integration
+  needs:
+    - build
+
+deploy:production:
+  stage: deploy
+  script:
+    - npm run deploy
+  environment:
+    name: production
+    url: https://example.com
+  needs:
+    - job: test:unit
+    - job: test:integration
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

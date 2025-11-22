@@ -115,6 +115,7 @@ export class CodeGenerator {
       include?: unknown
       variables?: unknown
       default?: unknown
+      spec?: unknown
     },
     templates: [string, Record<string, unknown>][],
     jobs: [string, Record<string, unknown>][],
@@ -179,6 +180,17 @@ export class CodeGenerator {
         ts.factory.createExpressionStatement(
           createMethodCall("config", "defaults", [
             objectToExpression(topLevel.default as Record<string, unknown>),
+          ]),
+        ),
+      )
+    }
+
+    // Spec
+    if (topLevel.spec) {
+      statements.push(
+        ts.factory.createExpressionStatement(
+          createMethodCall("config", "spec", [
+            objectToExpression(topLevel.spec as Record<string, unknown>),
           ]),
         ),
       )

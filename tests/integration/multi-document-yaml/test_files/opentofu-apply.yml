@@ -1,0 +1,251 @@
+spec:
+  inputs:
+    # Job and Stage name
+    as:
+      default: "apply"
+      description: "Defines the name of this job."
+    stage:
+      default: "deploy"
+      description: "Defines the stage that this job will belong to."
+
+    # Versions
+    # This version is only required, because we cannot access the context of the component,
+    # see https://gitlab.com/gitlab-org/gitlab/-/issues/438275
+    version:
+      default: "3.12.0"
+      description: "Version of this component. Has to be the same as the one in the component include entry."
+
+    base_os:
+      default: "alpine"
+      options:
+        - "alpine"
+        - "debian"
+        - "$GITLAB_OPENTOFU_BASE_IMAGE_OS"
+      description: "Base OS of GitLab OpenTofu image."
+
+    opentofu_version:
+      default: "1.10.7"
+      options:
+        - "1.10.7"
+        - "1.10.6"
+        - "1.10.5"
+        - "1.10.0"
+        - "1.9.3"
+        - "1.8.11"
+        - "1.7.10"
+        - "$OPENTOFU_VERSION"
+      description: "OpenTofu version that should be used."
+
+    # Images
+    image_registry_base:
+      default: "$CI_TEMPLATE_REGISTRY_HOST/components/opentofu"
+      description: "Host URI to the job images. Will be combined with `image_name` to construct the actual image URI."
+    # FIXME: not yet possible because of https://gitlab.com/gitlab-org/gitlab/-/issues/438722
+    # gitlab_opentofu_image:
+    #   # FIXME: This should reference the component tag that is used.
+    #   #        Currently, blocked by https://gitlab.com/gitlab-org/gitlab/-/issues/438275
+    #   # default: '$CI_TEMPLATE_REGISTRY_HOST/components/opentofu/gitlab-opentofu:$[[ inputs.opentofu_version ]]'
+    #   default: '$CI_TEMPLATE_REGISTRY_HOST/components/opentofu/gitlab-opentofu:$[[ inputs.version ]]-opentofu$[[ inputs.opentofu_version ]]'
+    #   description: 'Tag of the gitlab-opentofu image.'
+
+    image_name:
+      default: "gitlab-opentofu"
+      description: "Image name for the job images. Hosted under `image_registry_base`."
+
+    image_digest:
+      default: ""
+      # FIXME: we cannot use regex yet because of a bug that rejects
+      # empty strings from ever being checked against the regex.
+      # see https://gitlab.com/gitlab-org/gitlab/-/issues/477707
+      # regex: '^(@sha256:[a-z0-9]{64})?$'
+      description: "Image digest of the image you want to use. The format must be `@<image_digest>`, e.g. `@sha256:abc..`, see regex of this input. Please consult the release page at https://gitlab.com/components/opentofu/-/releases to obtain the image digests."
+
+    use_rootless_image:
+      default: false
+      type: boolean
+      description: "Whether or not to use the rootless container image."
+
+    # Configuration
+    root_dir:
+      default: "."
+      description: "Root directory for the OpenTofu project. Prefer a relative path if `use_lockfile_for_cache_key` is set."
+    state_name:
+      default: default
+      description: "Remote OpenTofu state name."
+    environment_name:
+      default: $GITLAB_TOFU_STATE_NAME
+      description: "Name for the environment."
+    environment_prefix:
+      default: ""
+      description: "Prefix for the environment name."
+    resource_group_name:
+      default: $GITLAB_TOFU_STATE_NAME
+      description: "Name for the resource group."
+    resource_group_prefix:
+      default: ""
+      description: "Prefix for the resource group."
+    no_plan:
+      default: false
+      type: boolean
+      description: "Whether a plan file should be used."
+    plan_name:
+      default: "plan"
+      description: "The name of the plan file to use. Will be used for plan cache and json files."
+    var_file:
+      default: ""
+      type: string
+      description: "Path to a variables files relative to root_dir. Only used if no_plan is true otherwise the variables are coming from the plan."
+    rules:
+      default: [{ when: manual }]
+      type: array
+      description: "Defines the `rules` of the job."
+    cache_policy:
+      default: pull-push
+      type: string
+      description: "Defines the cache policy of the job."
+    auto_encryption:
+      default: false
+      type: boolean
+      description: "Whether to enable automatic state and plan encryption."
+    auto_encryption_passphrase:
+      default: ""
+      type: string
+      description: "Defines the passphrase to auto encrypt the state and plan. Only used if `auto_encryption` is `true`."
+    auto_encryption_enable_migration_from_unencrypted:
+      default: false
+      type: boolean
+      description: "Whether to setup automatic state and plan encryption for currently unencrypted state. This is only temporarily useful when migrating from an unencrypted state."
+    auto_define_backend:
+      default: false
+      type: boolean
+      description: "Whether to automatically define the HTTP backend configuration block."
+    enable_id_tokens:
+      default: false
+      type: boolean
+      description: |
+        Whether to enable `id_tokens` support for the job.
+        This works by extending a hidden base job configuration with the `id_tokens` field.
+        The job should only contain the `id_tokens` field, the rest may be overridden.
+        The job name can be configured with `id_tokens_base_job_name` if necessary.
+        If the script given in `id_tokens_setup_script` exists, it will be sourced so that setup actions can be performed,
+        like assuming an IAM role of your cloud provider.
+    id_tokens_base_job_name:
+      default: ".gitlab-tofu:id_tokens"
+      type: string
+      description: "Name of the hidden base job containing the `id_tokens` configuration to extend this job from. Make sure to only configure `id_tokens`, everything else might be overridden."
+    id_tokens_setup_script:
+      default: ".gitlab/ci/setup-id-tokens.sh"
+      type: string
+      description: "Path to a shell script that is sourced when `enable_id_tokens` is `true`."
+    use_lockfile_for_cache_key:
+      default: false
+      description: "If set to `true` the `.terraform.lock.hcl` will be used for the cache key. Requires `root_dir` to be a relative path."
+      type: boolean
+    lockfile:
+      type: string
+      options:
+        - ""
+        - "readonly"
+      default: ""
+      description: |
+        Can be set to `readonly` to force an init with a readonly lockfile.
+        It is recommended to be set to `readonly`, but is currently not for backwards compatibility reasons.
+        This may change in the future.
+    artifacts_access:
+      default: "none"
+      description: "Access level for the plan artifact. See https://docs.gitlab.com/ee/ci/yaml/#artifactsaccess for possible values."
+    save_outputs_as_artifact:
+      default: false
+      description: "Whether to run `tofu output`, and capture the outputs as JSON to a job artifact"
+      type: boolean
+    output_artifact_name:
+      default: $GITLAB_TOFU_STATE_NAME
+      description: "Name of the artifact to capture the output to, this is used as the filename with .json and artifact name"
+      type: string
+---
+include:
+  # NOTE: see the note in that template file for what he heck is going on here.
+  - local: "/templates/__internal_id_tokens_base_job.yml"
+    rules:
+      - if: '"$[[ inputs.enable_id_tokens ]]" == "true"'
+    inputs:
+      as: $[[ inputs.as ]]
+      id_tokens_base_job_name: $[[ inputs.id_tokens_base_job_name ]]
+      id_tokens_setup_script: $[[ inputs.id_tokens_setup_script ]]
+  - local: "/templates/__internal_image_base_job.yml"
+    inputs:
+      as: $[[ inputs.as ]]
+      image_registry_base: $[[ inputs.image_registry_base ]]
+      image_name: $[[ inputs.image_name ]]
+      version: $[[ inputs.version ]]
+      opentofu_version: $[[ inputs.opentofu_version ]]
+      base_os: $[[ inputs.base_os ]]
+      image_digest: $[[ inputs.image_digest ]]
+
+".$[[ inputs.as ]]:lockfile_for_cache_key:false":
+  cache:
+    key: "$__CACHE_KEY_HACK"
+    policy: $[[ inputs.cache_policy ]]
+    paths:
+      - $GITLAB_TOFU_ROOT_DIR/.terraform/
+
+".$[[ inputs.as ]]:lockfile_for_cache_key:true":
+  cache:
+    key:
+      prefix: "$__CACHE_KEY_HACK"
+      files: ["$[[ inputs.root_dir | expand_vars ]]/.terraform.lock.hcl"]
+    policy: $[[ inputs.cache_policy ]]
+    paths:
+      - $GITLAB_TOFU_ROOT_DIR/.terraform/
+
+# NOTE: due to the lacking support of providing map nodes as input values
+# we need to hack support for id_tokens together. It's even worse that id_tokens
+# do NOT have a consistent type - or rather it's child nodes - for example, the `aud`
+# can be a literal string value, a variable or an array. Limitations, bear with me.
+# See https://gitlab.com/gitlab-org/gitlab/-/issues/452451
+".$[[ inputs.as ]]:id_tokens-setup:false":
+  extends: null
+
+".$[[ inputs.as ]]:output:false":
+  extends: null
+
+".$[[ inputs.as ]]:output:true":
+  artifacts:
+    name: $[[ inputs.output_artifact_name ]]
+    access: "$[[ inputs.artifacts_access ]]"
+    paths:
+      - $[[ inputs.output_artifact_name ]].json
+
+"$[[ inputs.as ]]":
+  extends:
+    # NOTE: see the comment above. This is to support the `id_tokens` setup.
+    - ".$[[ inputs.as ]]:id_tokens-setup:$[[ inputs.enable_id_tokens ]]"
+    - ".$[[ inputs.as ]]:lockfile_for_cache_key:$[[ inputs.use_lockfile_for_cache_key ]]"
+    - ".$[[ inputs.as ]]:output:$[[ inputs.save_outputs_as_artifact ]]"
+    - ".$[[ inputs.as ]]:rootless:$[[ inputs.use_rootless_image ]]"
+  stage: $[[ inputs.stage ]]
+  environment:
+    name: $[[ inputs.environment_prefix ]]$[[ inputs.environment_name ]]
+    action: start
+  resource_group: $[[ inputs.resource_group_prefix ]]$[[ inputs.resource_group_name ]]
+  rules: $[[ inputs.rules ]]
+  variables:
+    # FIXME: work around to make slashes work in `cache:key`. see https://gitlab.com/gitlab-org/gitlab/-/issues/439898
+    __CACHE_KEY_HACK: "$[[ inputs.root_dir ]]"
+    GITLAB_TOFU_ROOT_DIR: $[[ inputs.root_dir ]]
+    GITLAB_TOFU_STATE_NAME: $[[ inputs.state_name ]]
+    GITLAB_TOFU_APPLY_NO_PLAN: $[[ inputs.no_plan ]]
+    GITLAB_TOFU_PLAN_NAME: $[[ inputs.plan_name ]]
+    GITLAB_TOFU_VAR_FILE: "$[[ inputs.var_file ]]"
+    GITLAB_TOFU_AUTO_ENCRYPTION: "$[[ inputs.auto_encryption ]]"
+    GITLAB_TOFU_AUTO_ENCRYPTION_PASSPHRASE: "$[[ inputs.auto_encryption_passphrase ]]"
+    GITLAB_TOFU_AUTO_ENCRYPTION_ENABLE_MIGRATION_FROM_UNENCRYPTED: "$[[ inputs.auto_encryption_enable_migration_from_unencrypted ]]"
+    GITLAB_TOFU_AUTO_DEFINE_BACKEND: "$[[ inputs.auto_define_backend ]]"
+    GITLAB_TOFU_INIT_LOCKFILE: "$[[ inputs.lockfile ]]"
+  script:
+    - gitlab-tofu apply
+    - |
+      if $[[ inputs.save_outputs_as_artifact ]]; then
+        echo "Saving tofu outputs to $[[ inputs.output_artifact_name ]].json ..."
+        gitlab-tofu output -json > "$[[ inputs.output_artifact_name ]].json"
+      fi

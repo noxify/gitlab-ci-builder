@@ -21,13 +21,17 @@ export const BaseInputSchema = z.object({
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsregex" })
     .optional(),
   default: z
-    .any()
+    .union([z.string(), z.number(), z.boolean(), z.array(z.any()), z.record(z.string(), z.any())])
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsdefault" })
     .optional(),
-  rules: z.array(z.object({})).optional(),
 })
 
 export type BaseInput = z.infer<typeof BaseInputSchema>
+
+/**
+ * Spec input definition (same as BaseInput, for clarity)
+ */
+export type SpecInput = BaseInput
 
 /**
  * Spec configuration - Pipeline inputs
@@ -43,9 +47,31 @@ export type Spec = z.infer<typeof SpecSchema>
 /**
  * Job inputs definition (different from spec.inputs - default is required)
  */
-export const JobInputSchema = BaseInputSchema.extend({
-  default: z.any(),
-}).required({ default: true })
+export const JobInputSchema = z.object({
+  type: z
+    .enum(["string", "number", "boolean", "array"])
+    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputstype" })
+    .optional(),
+  description: z
+    .string()
+    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsdescription" })
+    .optional(),
+  options: z
+    .array(z.union([z.string(), z.number(), z.boolean()]))
+    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsoptions" })
+    .optional(),
+  regex: z
+    .string()
+    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsregex" })
+    .optional(),
+  default: z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.array(z.any()),
+    z.record(z.string(), z.any()),
+  ]),
+})
 
 export const JobInputsSchema = z
   .record(z.string(), JobInputSchema)

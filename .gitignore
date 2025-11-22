@@ -35,3 +35,5 @@ dist/
 
 # turbo
 .turbo
+
+**/.generated/

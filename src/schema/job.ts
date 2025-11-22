@@ -10,6 +10,7 @@ import {
   ServicesSchema,
   TagsSchema,
 } from "./base"
+import { orInterpolation } from "./interpolation"
 import { JobInputsSchema, PagesConfigSchema } from "./spec"
 import { StepsSchema } from "./steps"
 
@@ -123,8 +124,7 @@ export const ArtifactsSchema = z
       .string()
       .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#artifactsexpire_in" })
       .optional(),
-    access: z
-      .enum(["none", "developer", "all"])
+    access: orInterpolation(z.enum(["none", "developer", "all"]))
       .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#artifactsaccess" })
       .optional(),
     reports: z
@@ -283,8 +283,7 @@ export const CacheSchema = z
       .enum(["on_success", "on_failure", "always"])
       .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#cachewhen" })
       .optional(),
-    policy: z
-      .enum(["pull", "push", "pull-push"])
+    policy: orInterpolation(z.enum(["pull", "push", "pull-push"]))
       .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#cachepolicy" })
       .optional(),
     unprotect: z
@@ -305,7 +304,9 @@ export type Cache = z.infer<typeof CacheSchema>
  * Base job definition (shared fields)
  */
 export const BaseJobSchema = z.object({
-  stage: z.string().meta({ description: "@see https://docs.gitlab.com/ci/yaml/#stage" }).optional(),
+  stage: orInterpolation(z.string())
+    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#stage" })
+    .optional(),
   script: ScriptSchema.optional(),
   run: StepsSchema.optional(),
   before_script: ScriptSchema.meta({
@@ -318,7 +319,7 @@ export const BaseJobSchema = z.object({
   services: ServicesSchema.optional(),
   tags: TagsSchema.optional(),
   variables: JobVariablesSchema.optional(),
-  rules: RulesSchema.optional(),
+  rules: orInterpolation(RulesSchema).optional(),
   extends: ExtendsInputSchema.meta({
     description: "@see https://docs.gitlab.com/ci/yaml/#extends",
   }).optional(),
@@ -378,13 +379,14 @@ export const BaseJobSchema = z.object({
     ])
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#retry" })
     .optional(),
-  parallel: z
-    .union([
+  parallel: orInterpolation(
+    z.union([
       z.number(),
       z.object({
         matrix: z.array(z.record(z.string(), z.union([z.string(), z.number(), z.array(z.any())]))),
       }),
-    ])
+    ]),
+  )
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#parallel" })
     .optional(),
   interruptible: z

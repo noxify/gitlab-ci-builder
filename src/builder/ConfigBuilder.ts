@@ -9,6 +9,7 @@ import type {
   JobDefinitionNormalized,
   JobDefinitionOutput,
   JobOptions,
+  Spec,
   ValidationError,
   Variables,
   Workflow,
@@ -16,8 +17,27 @@ import type {
 import { mergeJobDefinitions } from "../merge"
 import { PipelineState } from "../model"
 import { resolveExtends } from "../resolution"
-import { DefaultsSchema, IncludeSchema, JobDefinitionParseSchema, WorkflowSchema } from "../schema"
+import {
+  DefaultsSchema,
+  IncludeSchema,
+  JobDefinitionParseSchema,
+  SpecSchema,
+  WorkflowSchema,
+} from "../schema"
 import { serializeToYaml } from "../serializer"
+
+/**
+ * Reserved top-level keywords that cannot be used as job names
+ * @see https://docs.gitlab.com/ee/ci/yaml/#keywords
+ */
+const RESERVED_JOB_NAMES = new Set([
+  "default",
+  "include",
+  "stages",
+  "variables",
+  "workflow",
+  "spec",
+])
 
 /**
  * Macro args type
@@ -176,6 +196,20 @@ export class ConfigBuilder {
   }
 
   /**
+   * Set spec configuration (pipeline inputs for CI/CD components)
+   * @see https://docs.gitlab.com/ee/ci/yaml/#spec
+   */
+  public spec(spec: Spec) {
+    const validated = SpecSchema.parse(spec)
+    this.state.setSpec(validated)
+    return this
+  }
+
+  /**
+   * Define a template (hidden job starting with dot)
+  }
+
+  /**
    * Define a template (hidden job starting with dot)
    *
    * Templates default to `mergeExtends: false` to preserve extends references
@@ -213,6 +247,13 @@ export class ConfigBuilder {
    * Define a job or template
    */
   public job(name: string, definition: JobDefinitionInput, options: JobOptions = {}) {
+    // Validate job name is not a reserved keyword
+    if (RESERVED_JOB_NAMES.has(name)) {
+      throw new Error(
+        `Job name "${name}" is a reserved keyword and cannot be used as a job name. Reserved keywords: ${[...RESERVED_JOB_NAMES].join(", ")}`,
+      )
+    }
+
     // Parse and normalize (extends is automatically normalized to array)
     const normalized = JobDefinitionParseSchema.parse(definition)
 
@@ -360,6 +401,7 @@ export class ConfigBuilder {
 
     // Build final output
     const pipeline: PipelineOutput = {
+      spec: plain.spec,
       stages: plain.stages,
       workflow: plain.workflow,
       default: plain.default,

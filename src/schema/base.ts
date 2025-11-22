@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { orInterpolation } from "./interpolation"
+
 /**
  * Variable value types supported by GitLab CI
  */
@@ -120,9 +122,9 @@ export type TemplateName = z.infer<typeof TemplateNameSchema>
 /**
  * Tags for runner selection
  */
-export const TagsSchema = z
-  .array(z.string())
-  .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#tags" })
+export const TagsSchema = orInterpolation(z.array(z.string())).meta({
+  description: "@see https://docs.gitlab.com/ci/yaml/#tags",
+})
 
 export type Tags = z.infer<typeof TagsSchema>
 

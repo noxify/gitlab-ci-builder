@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 // Generated types from Zod schemas
 // Do not edit manually - run 'pnpm generate:types' to regenerate
 
@@ -101,7 +102,7 @@ export interface Artifacts {
   /**
    * @see https://docs.gitlab.com/ci/yaml/#artifactsaccess
    */
-  access?: "none" | "developer" | "all"
+  access?: ("none" | "developer" | "all") | string
   /**
    * @see https://docs.gitlab.com/ci/yaml/#artifactsreports
    */
@@ -212,7 +213,7 @@ export interface Cache {
   /**
    * @see https://docs.gitlab.com/ci/yaml/#cachepolicy
    */
-  policy?: "pull" | "push" | "pull-push"
+  policy?: ("pull" | "push" | "pull-push") | string
   /**
    * @see https://docs.gitlab.com/ci/yaml/#cacheunprotect
    */
@@ -389,69 +390,71 @@ export interface BaseJob {
   /**
    * @see https://docs.gitlab.com/ci/yaml/#tags
    */
-  tags?: string[]
+  tags?: string[] | string
   variables?: Record<string, unknown>
-  rules?: {
-    /**
-     * @see https://docs.gitlab.com/ci/yaml/#rulesif
-     */
-    if?: string
-    /**
-     * @see https://docs.gitlab.com/ci/yaml/#ruleswhen
-     */
-    when?: "on_success" | "on_failure" | "always" | "never" | "manual" | "delayed"
-    /**
-     * @see https://docs.gitlab.com/ci/yaml/#ruleschanges
-     */
-    changes?:
-      | string
-      | string[]
-      | {
-          paths: string[]
-          compare_to?: string
-        }
-    /**
-     * @see https://docs.gitlab.com/ci/yaml/#rulesexists
-     */
-    exists?:
-      | string[]
-      | {
-          paths: string[]
-          project?: string
-          ref?: string
-        }
-    /**
-     * @see https://docs.gitlab.com/ci/yaml/#rulesallow_failure
-     */
-    allow_failure?:
-      | boolean
-      | {
-          exit_codes: number | number[]
-        }
-    /**
-     * @see https://docs.gitlab.com/ci/yaml/#rulesvariables
-     */
-    variables?: Record<string, string | number | boolean>
-    /**
-     * @see https://docs.gitlab.com/ci/yaml/#when
-     */
-    start_in?: string
-    /**
-     * @see https://docs.gitlab.com/ci/yaml/#rulesneeds
-     */
-    needs?: (
-      | string
-      | {
-          job: string
-          artifacts?: boolean
-          optional?: boolean
-        }
-    )[]
-    /**
-     * @see https://docs.gitlab.com/ci/yaml/#rulesinterruptible
-     */
-    interruptible?: boolean
-  }[]
+  rules?:
+    | {
+        /**
+         * @see https://docs.gitlab.com/ci/yaml/#rulesif
+         */
+        if?: string
+        /**
+         * @see https://docs.gitlab.com/ci/yaml/#ruleswhen
+         */
+        when?: "on_success" | "on_failure" | "always" | "never" | "manual" | "delayed"
+        /**
+         * @see https://docs.gitlab.com/ci/yaml/#ruleschanges
+         */
+        changes?:
+          | string
+          | string[]
+          | {
+              paths: string[]
+              compare_to?: string
+            }
+        /**
+         * @see https://docs.gitlab.com/ci/yaml/#rulesexists
+         */
+        exists?:
+          | string[]
+          | {
+              paths: string[]
+              project?: string
+              ref?: string
+            }
+        /**
+         * @see https://docs.gitlab.com/ci/yaml/#rulesallow_failure
+         */
+        allow_failure?:
+          | boolean
+          | {
+              exit_codes: number | number[]
+            }
+        /**
+         * @see https://docs.gitlab.com/ci/yaml/#rulesvariables
+         */
+        variables?: Record<string, string | number | boolean>
+        /**
+         * @see https://docs.gitlab.com/ci/yaml/#when
+         */
+        start_in?: string
+        /**
+         * @see https://docs.gitlab.com/ci/yaml/#rulesneeds
+         */
+        needs?: (
+          | string
+          | {
+              job: string
+              artifacts?: boolean
+              optional?: boolean
+            }
+        )[]
+        /**
+         * @see https://docs.gitlab.com/ci/yaml/#rulesinterruptible
+         */
+        interruptible?: boolean
+      }[]
+    | string
   /**
    * @see https://docs.gitlab.com/ci/yaml/#extends
    */
@@ -491,7 +494,7 @@ export interface BaseJob {
     /**
      * @see https://docs.gitlab.com/ci/yaml/#artifactsaccess
      */
-    access?: "none" | "developer" | "all"
+    access?: ("none" | "developer" | "all") | string
     /**
      * @see https://docs.gitlab.com/ci/yaml/#artifactsreports
      */
@@ -599,7 +602,7 @@ export interface BaseJob {
         /**
          * @see https://docs.gitlab.com/ci/yaml/#cachepolicy
          */
-        policy?: "pull" | "push" | "pull-push"
+        policy?: ("pull" | "push" | "pull-push") | string
         /**
          * @see https://docs.gitlab.com/ci/yaml/#cacheunprotect
          */
@@ -652,7 +655,7 @@ export interface BaseJob {
         /**
          * @see https://docs.gitlab.com/ci/yaml/#cachepolicy
          */
-        policy?: "pull" | "push" | "pull-push"
+        policy?: ("pull" | "push" | "pull-push") | string
         /**
          * @see https://docs.gitlab.com/ci/yaml/#cacheunprotect
          */
@@ -731,10 +734,13 @@ export interface BaseJob {
    * @see https://docs.gitlab.com/ci/yaml/#parallel
    */
   parallel?:
-    | number
-    | {
-        matrix: Record<string, string | number | unknown[]>[]
-      }
+    | (
+        | number
+        | {
+            matrix: Record<string, string | number | unknown[]>[]
+          }
+      )
+    | string
   /**
    * @see https://docs.gitlab.com/ci/yaml/#interruptible
    */
@@ -991,8 +997,7 @@ export interface BaseJob {
        * @see https://docs.gitlab.com/ci/yaml/#specinputsregex
        */
       regex?: string
-      default: unknown
-      rules?: Record<string, unknown>[]
+      default: string | number | boolean | unknown[] | Record<string, unknown>
     }
   >
   /**
@@ -1606,7 +1611,7 @@ export interface Defaults {
   /**
    * @see https://docs.gitlab.com/ci/yaml/#tags
    */
-  tags?: string[]
+  tags?: string[] | string
   /**
    * @see https://docs.gitlab.com/ci/yaml/#artifacts
    */
@@ -1642,7 +1647,7 @@ export interface Defaults {
     /**
      * @see https://docs.gitlab.com/ci/yaml/#artifactsaccess
      */
-    access?: "none" | "developer" | "all"
+    access?: ("none" | "developer" | "all") | string
     /**
      * @see https://docs.gitlab.com/ci/yaml/#artifactsreports
      */
@@ -1750,7 +1755,7 @@ export interface Defaults {
         /**
          * @see https://docs.gitlab.com/ci/yaml/#cachepolicy
          */
-        policy?: "pull" | "push" | "pull-push"
+        policy?: ("pull" | "push" | "pull-push") | string
         /**
          * @see https://docs.gitlab.com/ci/yaml/#cacheunprotect
          */
@@ -1803,7 +1808,7 @@ export interface Defaults {
         /**
          * @see https://docs.gitlab.com/ci/yaml/#cachepolicy
          */
-        policy?: "pull" | "push" | "pull-push"
+        policy?: ("pull" | "push" | "pull-push") | string
         /**
          * @see https://docs.gitlab.com/ci/yaml/#cacheunprotect
          */
@@ -1881,8 +1886,7 @@ export interface Spec {
       /**
        * @see https://docs.gitlab.com/ci/yaml/#specinputsdefault
        */
-      default?: Record<string, unknown>
-      rules?: Record<string, unknown>[]
+      default?: string | number | boolean | unknown[] | Record<string, unknown>
     } | null
   >
 }
@@ -1974,4 +1978,4 @@ export type Service =
 /**
  * @see https://docs.gitlab.com/ci/yaml/#tags
  */
-export type Tags = string[]
+export type Tags = string[] | string

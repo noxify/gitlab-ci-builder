@@ -44,35 +44,42 @@ async function generateTypes(): Promise<void> {
   ]
 
   const generatedTypes: string[] = [
+    "/* eslint-disable @typescript-eslint/no-redundant-type-constituents */",
     "// Generated types from Zod schemas",
     "// Do not edit manually - run 'pnpm generate:types' to regenerate",
     "",
   ]
 
   for (const { name, schema } of schemas) {
-    // Convert Zod schema to JSON Schema with inline expansion
-    const jsonSchema = toJSONSchema(schema, {
-      reused: "inline",
-      unrepresentable: "any",
-    })
+    try {
+      // Convert Zod schema to JSON Schema with inline expansion
+      const jsonSchema = toJSONSchema(schema, {
+        reused: "inline",
+        unrepresentable: "any",
+      })
 
-    // Convert JSON Schema to TypeScript
-    let tsType = await compile(jsonSchema as typeof JSONSchema, name, {
-      bannerComment: "",
-      style: {
-        printWidth: 100,
-        semi: false,
-        singleQuote: false,
-        tabWidth: 2,
-      },
-    })
+      // Convert JSON Schema to TypeScript
+      let tsType = await compile(jsonSchema as typeof JSONSchema, name, {
+        bannerComment: "",
+        style: {
+          printWidth: 100,
+          semi: false,
+          singleQuote: false,
+          tabWidth: 2,
+        },
+      })
 
-    // Post-process: Only replace empty object types
-    // Let ESLint fix the index signatures automatically
-    tsType = tsType.replace(/\| \{\}/g, "| Record<string, unknown>")
-    tsType = tsType.replace(/\{\}\[\]/g, "Record<string, unknown>[]")
+      // Post-process: Only replace empty object types
+      // Let ESLint fix the index signatures automatically
+      tsType = tsType.replace(/\| \{\}/g, "| Record<string, unknown>")
+      tsType = tsType.replace(/\{\}\[\]/g, "Record<string, unknown>[]")
 
-    generatedTypes.push(tsType)
+      generatedTypes.push(tsType)
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(`❌ Failed to generate type for ${name}:`, error)
+      throw error
+    }
   }
 
   // Write to file

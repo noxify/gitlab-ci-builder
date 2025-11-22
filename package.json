@@ -39,7 +39,9 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest --run",
     "test:coverage": "vitest --coverage",
+    "test:integration": "vitest --run --project integration",
     "test:ui": "vitest --ui",
+    "test:unit": "vitest --run --project unit",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },

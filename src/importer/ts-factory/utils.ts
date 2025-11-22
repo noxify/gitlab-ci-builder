@@ -7,6 +7,7 @@ const KNOWN_TOP_LEVEL_KEYS = [
   "include",
   "variables",
   "default",
+  "spec",
   "image",
   "services",
   "before_script",
