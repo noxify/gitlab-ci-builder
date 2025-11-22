@@ -49,6 +49,29 @@ build:
       expect(ts).toContain('extends: ".template"')
     })
 
+    it("should normalize single-element array extends to string", () => {
+      const yaml = `
+.base-cache:
+  cache:
+    key: my-cache
+    paths:
+      - node_modules/
+
+test:
+  extends: [.base-cache]
+  script:
+    - npm test
+`
+
+      const ts = fromYaml(yaml)
+
+      expect(ts).toContain('config.template(".base-cache",')
+      expect(ts).toContain('config.job("test",')
+      // Single-element array is normalized to string for cleaner generated code
+      expect(ts).toContain('extends: ".base-cache"')
+      expect(ts).not.toContain('extends: [".base-cache"]')
+    })
+
     it("should handle workflow", () => {
       const yaml = `
 workflow:

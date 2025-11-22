@@ -104,10 +104,8 @@ export function valueToExpression(value: unknown): ts.Expression {
  * Create a template literal for multi-line strings
  */
 export function createTemplateLiteral(text: string): ts.TemplateLiteral {
-  // Only escape ${, backticks are automatically escaped by the printer
-  const escaped = text.replace(/\$\{/g, "\\${")
-
-  return ts.factory.createNoSubstitutionTemplateLiteral(escaped)
+  // No need to escape ${ - TypeScript printer handles it automatically
+  return ts.factory.createNoSubstitutionTemplateLiteral(text)
 }
 
 /**

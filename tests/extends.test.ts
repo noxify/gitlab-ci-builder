@@ -32,6 +32,57 @@ describe("ConfigBuilder - extends", () => {
     expect(buildJob.script).toEqual(["npm run build"])
   })
 
+  it("should handle extends with single-element array", () => {
+    config.job(".base-cache", {
+      cache: {
+        key: "my-cache",
+        paths: ["node_modules/"],
+      },
+    })
+
+    config.job("test", {
+      extends: [".base-cache"],
+      script: ["npm test"],
+    })
+
+    const result = config.getPlainObject()
+    const testJob = result.jobs?.test
+
+    expect(testJob).toBeDefined()
+    // Properties from .base-cache should be merged
+    expect(testJob?.cache).toEqual({
+      key: "my-cache",
+      paths: ["node_modules/"],
+    })
+    expect(testJob?.script).toEqual(["npm test"])
+    // Local extends are resolved and removed from output by default
+    expect(testJob?.extends).toBeUndefined()
+  })
+
+  it("should keep single-element array extends when mergeExtends is false", () => {
+    config.job(".base-cache", {
+      cache: {
+        key: "my-cache",
+        paths: ["node_modules/"],
+      },
+    })
+
+    config.globalOptions({ mergeExtends: false })
+
+    config.job("test", {
+      extends: [".base-cache"],
+      script: ["npm test"],
+    })
+
+    const result = config.getPlainObject()
+    const testJob = result.jobs?.test
+
+    expect(testJob).toBeDefined()
+    // With mergeExtends: false, extends is kept and normalized to string
+    expect(testJob?.extends).toBe(".base-cache")
+    expect(testJob?.script).toEqual(["npm test"])
+  })
+
   it("should extend from multiple jobs", () => {
     config.job(".base", {
       image: "node:22",

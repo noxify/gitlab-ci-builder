@@ -379,7 +379,12 @@ export const BaseJobSchema = z.object({
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#retry" })
     .optional(),
   parallel: z
-    .union([z.number(), z.object({ matrix: z.array(z.record(z.string(), z.array(z.any()))) })])
+    .union([
+      z.number(),
+      z.object({
+        matrix: z.array(z.record(z.string(), z.union([z.string(), z.number(), z.array(z.any())]))),
+      }),
+    ])
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#parallel" })
     .optional(),
   interruptible: z

@@ -455,7 +455,7 @@ export interface BaseJob {
   /**
    * @see https://docs.gitlab.com/ci/yaml/#extends
    */
-  extends?: Record<string, unknown>
+  extends?: string | string[]
   /**
    * @see https://docs.gitlab.com/ci/yaml/#artifacts
    */
@@ -694,6 +694,10 @@ export interface BaseJob {
             artifacts?: boolean
           }
       )[]
+    | {
+        pipeline: string
+        optional?: boolean
+      }
   /**
    * @see https://docs.gitlab.com/ci/yaml/#dependencies
    */
@@ -729,7 +733,7 @@ export interface BaseJob {
   parallel?:
     | number
     | {
-        matrix: Record<string, unknown[]>[]
+        matrix: Record<string, string | number | unknown[]>[]
       }
   /**
    * @see https://docs.gitlab.com/ci/yaml/#interruptible
