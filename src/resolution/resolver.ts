@@ -65,6 +65,7 @@ export function resolveExtends(
 
   // Resolve extends in topological order
   const resolved = new Map<string, JobDefinitionOutput>()
+  const fullyResolved = new Map<string, JobDefinitionNormalized>()
 
   for (const name of sortedNames) {
     const node = graph.get(name)
@@ -75,16 +76,10 @@ export function resolveExtends(
     const mergeExtends = jobOpts?.mergeExtends ?? globalOptions.mergeExtends
     const resolveTemplatesOnly = jobOpts?.resolveTemplatesOnly ?? globalOptions.resolveTemplatesOnly
 
-    if (mergeExtends === false) {
-      // Keep extends as-is
-      resolved.set(name, node.definition)
-      continue
-    }
-
     // Start with empty definition
     let mergedDef: JobDefinitionNormalized = {}
 
-    // Merge extends chain
+    // Merge extends chain (ALWAYS resolve for merging, regardless of mergeExtends)
     if (node.extends.length > 0) {
       for (const extendName of node.extends) {
         // Try with and without dot prefix
@@ -100,19 +95,10 @@ export function resolveExtends(
         if (targetNode.isRemote) continue
 
         if (shouldMerge) {
-          // Get the resolved definition (or use original if not yet resolved)
-          const targetDef = resolved.get(targetName)
+          // Use fully resolved definition (without extends field) for merging
+          const targetDef = fullyResolved.get(targetName)
           if (targetDef) {
-            // Convert back to normalized form for merging
-            const normalizedTarget: JobDefinitionNormalized = {
-              ...targetDef,
-              extends: targetDef.extends
-                ? Array.isArray(targetDef.extends)
-                  ? targetDef.extends
-                  : [targetDef.extends]
-                : undefined,
-            }
-            mergedDef = mergeJobDefinitions(mergedDef, normalizedTarget)
+            mergedDef = mergeJobDefinitions(mergedDef, targetDef)
           } else {
             mergedDef = mergeJobDefinitions(mergedDef, targetNode.definition)
           }
@@ -122,6 +108,16 @@ export function resolveExtends(
 
     // Merge with the job's own definition (highest priority)
     const finalDef = mergeJobDefinitions(mergedDef, node.definition)
+
+    // Store fully resolved version (for use by jobs that extend from this)
+    fullyResolved.set(name, finalDef)
+
+    // Determine what to output based on mergeExtends
+    if (mergeExtends === false) {
+      // Keep extends as-is in output
+      resolved.set(name, node.definition)
+      continue
+    }
 
     // Clean up extends field
     const cleanedDef = cleanExtendsField(finalDef, node, graph, globalOptions, jobOpts)

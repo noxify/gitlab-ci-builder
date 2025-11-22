@@ -20,8 +20,8 @@ export const MERGE_RULES: Record<string, MergeStrategy> = {
   // Services: concat unique (by name)
   services: "union",
 
-  // Variables: replace (child overrides parent)
-  variables: "replace",
+  // Variables: deep merge (child keys override parent keys)
+  variables: "deep",
 
   // Deep merge for complex objects
   artifacts: "deep",
