@@ -9,7 +9,7 @@ export type MergeStrategy = "replace" | "concat" | "union" | "deep"
  * Field-specific merge rules for GitLab CI job properties
  */
 export const MERGE_RULES: Record<string, MergeStrategy> = {
-  // Scripts: concat (preserve order, parent first)
+  // Scripts: concat (parent first, child appended)
   script: "concat",
   before_script: "concat",
   after_script: "concat",
@@ -46,7 +46,7 @@ export const MERGE_RULES: Record<string, MergeStrategy> = {
 }
 
 /**
- * Merge two string arrays by concatenating (preserving order)
+ * Merge two string arrays by concatenating (parent first, child appended)
  */
 function concatArrays<T>(parent: T[] | undefined, child: T[] | undefined): T[] | undefined {
   if (!parent && !child) return undefined

@@ -91,6 +91,13 @@ export type Script = z.infer<typeof ScriptSchema>
  */
 export const ExtendsInputSchema = z.union([z.string(), z.array(z.string())])
 
+/**
+ * Extends schema with normalization - always returns array
+ */
+export const ExtendsSchema = ExtendsInputSchema.transform((value) =>
+  Array.isArray(value) ? value : [value],
+)
+
 export type ExtendsInput = z.infer<typeof ExtendsInputSchema>
 
 /**

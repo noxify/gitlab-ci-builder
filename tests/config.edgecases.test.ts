@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { Config } from "../src/config"
+import { ConfigBuilder } from "../src"
 
-describe("Config - edge cases and branches", () => {
-  let cfg: Config
+describe("ConfigBuilder - edge cases and branches", () => {
+  let cfg: ConfigBuilder
 
   beforeEach(() => {
-    cfg = new Config()
+    cfg = new ConfigBuilder()
     vi.restoreAllMocks()
   })
 
@@ -61,7 +61,7 @@ describe("Config - edge cases and branches", () => {
   })
 
   it("template respects mergeExisting=false and does not deep-merge when disabled", () => {
-    const c = new Config()
+    const c = new ConfigBuilder()
     c.template(".base", { image: "node:22", variables: { FOO: "1" } })
     // Second call with mergeExisting:false should replace
     c.template(".base", { variables: { BAR: "2" } }, { mergeExisting: false })

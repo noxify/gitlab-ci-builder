@@ -95,6 +95,20 @@ export const IncludeInputSchema = z
 export type IncludeInput = z.infer<typeof IncludeInputSchema>
 
 /**
+ * Include schema with normalization - converts strings to local/remote objects
+ */
+export const IncludeSchema = IncludeInputSchema.transform((input): IncludeEntry => {
+  if (typeof input === "string") {
+    // Check if it's a URL
+    if (/^https?:\/\//i.test(input)) {
+      return { remote: input } satisfies IncludeEntry
+    }
+    return { local: input } satisfies IncludeEntry
+  }
+  return input
+})
+
+/**
  * Helper to normalize include input to IncludeEntry
  */
 export function normalizeInclude(input: IncludeInput): IncludeEntry {

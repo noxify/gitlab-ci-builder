@@ -1,4 +1,4 @@
-import type { GlobalOptions, JobDefinitionNormalized, ValidationError } from "../schema"
+import type { GlobalOptions, JobDefinitionNormalized, JobOptions, ValidationError } from "../schema"
 import { createValidationError, ValidationErrorCode } from "../schema"
 
 /**
@@ -28,29 +28,31 @@ export interface ExtendsResolutionResult {
 export function buildExtendsGraph(
   jobs: Record<string, JobDefinitionNormalized>,
   templates: Record<string, JobDefinitionNormalized>,
-  options: { remote?: boolean } = {},
+  jobOptionsMap: Record<string, JobOptions> = {},
 ): Map<string, ExtendsGraphNode> {
   const graph = new Map<string, ExtendsGraphNode>()
 
   // Add all templates to graph
   for (const [name, definition] of Object.entries(templates)) {
+    const jobOpts = jobOptionsMap[name]
     graph.set(name, {
       name,
       definition,
       extends: definition.extends ?? [],
       isTemplate: true,
-      isRemote: options.remote ?? false,
+      isRemote: jobOpts?.remote ?? false,
     })
   }
 
   // Add all jobs to graph
   for (const [name, definition] of Object.entries(jobs)) {
+    const jobOpts = jobOptionsMap[name]
     graph.set(name, {
       name,
       definition,
       extends: definition.extends ?? [],
       isTemplate: name.startsWith("."),
-      isRemote: options.remote ?? false,
+      isRemote: jobOpts?.remote ?? false,
     })
   }
 

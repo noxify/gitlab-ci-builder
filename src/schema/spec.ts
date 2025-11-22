@@ -4,11 +4,26 @@ import { z } from "zod"
  * Base input definition for spec.inputs
  */
 export const BaseInputSchema = z.object({
-  type: z.enum(["string", "number", "boolean", "array"]).optional(),
-  description: z.string().optional(),
-  options: z.array(z.union([z.string(), z.number(), z.boolean()])).optional(),
-  regex: z.string().optional(),
-  default: z.any().optional(),
+  type: z
+    .enum(["string", "number", "boolean", "array"])
+    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputstype" })
+    .optional(),
+  description: z
+    .string()
+    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsdescription" })
+    .optional(),
+  options: z
+    .array(z.union([z.string(), z.number(), z.boolean()]))
+    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsoptions" })
+    .optional(),
+  regex: z
+    .string()
+    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsregex" })
+    .optional(),
+  default: z
+    .any()
+    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsdefault" })
+    .optional(),
   rules: z.array(z.object({})).optional(),
 })
 

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { Config } from "../src/config"
+import { ConfigBuilder } from "../src"
 
-describe("Config - jobs", () => {
-  let config: Config
+describe("ConfigBuilder - jobs", () => {
+  let config: ConfigBuilder
 
   beforeEach(() => {
-    config = new Config()
+    config = new ConfigBuilder()
   })
 
   describe("job()", () => {

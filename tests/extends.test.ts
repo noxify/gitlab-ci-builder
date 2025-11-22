@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { Config } from "../src/config"
+import { ConfigBuilder } from "../src"
 
-describe("Config - extends", () => {
-  let config: Config
+describe("ConfigBuilder - extends", () => {
+  let config: ConfigBuilder
 
   beforeEach(() => {
-    config = new Config()
+    config = new ConfigBuilder()
   })
 
   it("should extend from a single job", () => {

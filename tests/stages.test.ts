@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { Config } from "../src/config"
+import { ConfigBuilder } from "../src"
 
-describe("Config - stages", () => {
-  let config: Config
+describe("ConfigBuilder - stages", () => {
+  let config: ConfigBuilder
 
   beforeEach(() => {
-    config = new Config()
+    config = new ConfigBuilder()
   })
 
   describe("stages()", () => {

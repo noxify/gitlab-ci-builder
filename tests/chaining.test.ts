@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { Config } from "../src/config"
+import { ConfigBuilder } from "../src"
 
-describe("Config - chaining", () => {
-  let config: Config
+describe("ConfigBuilder - chaining", () => {
+  let config: ConfigBuilder
 
   beforeEach(() => {
-    config = new Config()
+    config = new ConfigBuilder()
   })
 
   it("should support fluent API", () => {

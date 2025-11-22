@@ -1,3 +1,5 @@
+import fs from "fs/promises"
+
 import type { PipelineOutput } from "../model"
 import type {
   Defaults,
@@ -5,6 +7,7 @@ import type {
   IncludeInput,
   JobDefinitionInput,
   JobDefinitionNormalized,
+  JobDefinitionOutput,
   JobOptions,
   ValidationError,
   Variables,
@@ -13,7 +16,7 @@ import type {
 import { mergeJobDefinitions } from "../merge"
 import { PipelineState } from "../model"
 import { resolveExtends } from "../resolution"
-import { normalizeExtends, normalizeInclude } from "../schema"
+import { DefaultsSchema, IncludeSchema, JobDefinitionParseSchema, WorkflowSchema } from "../schema"
 import { serializeToYaml } from "../serializer"
 
 /**
@@ -69,7 +72,7 @@ export class ConfigBuilder {
   /**
    * Define pipeline stages
    */
-  public stages(...stages: string[]): this {
+  public stages(...stages: string[]) {
     this.state.addStages(stages)
     return this
   }
@@ -77,14 +80,14 @@ export class ConfigBuilder {
   /**
    * Add a single stage
    */
-  public addStage(stage: string): this {
+  public addStage(stage: string) {
     return this.stages(stage)
   }
 
   /**
    * Set global options
    */
-  public globalOptions(options: Partial<GlobalOptions>): this {
+  public globalOptions(options: Partial<GlobalOptions>) {
     this.state.setGlobalOptions(options)
     return this
   }
@@ -92,18 +95,19 @@ export class ConfigBuilder {
   /**
    * Set or merge workflow configuration
    */
-  public workflow(workflow: Workflow): this {
+  public workflow(workflow: Workflow) {
+    const validated = WorkflowSchema.parse(workflow)
     const current = this.state.workflow
     if (current) {
       // Deep merge workflow - rules has default([]) so safe to spread
       const merged: Workflow = {
         ...current,
-        ...workflow,
-        rules: [...current.rules, ...workflow.rules],
+        ...validated,
+        rules: [...current.rules, ...validated.rules],
       }
       this.state.setWorkflow(merged)
     } else {
-      this.state.setWorkflow(workflow)
+      this.state.setWorkflow(validated)
     }
     return this
   }
@@ -111,14 +115,17 @@ export class ConfigBuilder {
   /**
    * Set or merge default configuration
    */
-  public defaults(defaults: Defaults): this {
+  public defaults(defaults: Defaults) {
+    const validated = DefaultsSchema.parse(defaults)
     const current = this.state.defaults
     if (current) {
       // Deep merge defaults (using merge engine)
-      const merged = mergeJobDefinitions(current, defaults) as Defaults
-      this.state.setDefaults(merged)
+      const merged = mergeJobDefinitions(current, validated)
+      // Re-validate after merge to ensure type compatibility
+      const revalidated = DefaultsSchema.parse(merged) as Defaults
+      this.state.setDefaults(revalidated)
     } else {
-      this.state.setDefaults(defaults)
+      this.state.setDefaults(validated as Defaults)
     }
     return this
   }
@@ -126,7 +133,7 @@ export class ConfigBuilder {
   /**
    * Set a single variable
    */
-  public variable(key: string, value: string | number | boolean | undefined): this {
+  public variable(key: string, value: string | number | boolean | undefined) {
     this.state.setVariable(key, value)
     return this
   }
@@ -134,7 +141,7 @@ export class ConfigBuilder {
   /**
    * Set multiple variables
    */
-  public variables(vars: Variables): this {
+  public variables(vars: Variables) {
     const current = this.state.variables
     this.state.setVariables({ ...current, ...vars })
     return this
@@ -157,11 +164,11 @@ export class ConfigBuilder {
   /**
    * Add include entries
    */
-  public include(item: IncludeInput | IncludeInput[]): this {
+  public include(item: IncludeInput | IncludeInput[]) {
     const items = Array.isArray(item) ? item : [item]
 
     for (const entry of items) {
-      const normalized = normalizeInclude(entry)
+      const normalized = IncludeSchema.parse(entry)
       this.state.addInclude(normalized)
     }
 
@@ -171,12 +178,12 @@ export class ConfigBuilder {
   /**
    * Define a template (hidden job starting with dot)
    */
-  public template(name: string, definition: JobDefinitionInput, options: JobOptions = {}): this {
+  public template(name: string, definition: JobDefinitionInput, options: JobOptions = {}) {
     // Ensure name starts with dot
     const templateName = name.startsWith(".") ? name : `.${name}`
 
-    // Normalize extends
-    const normalized = normalizeExtends(definition)
+    // Parse and normalize (extends is automatically normalized to array)
+    const normalized = JobDefinitionParseSchema.parse(definition)
 
     // Check if template exists
     const existing = this.state.getJob(templateName)
@@ -196,9 +203,9 @@ export class ConfigBuilder {
   /**
    * Define a job or template
    */
-  public job(name: string, definition: JobDefinitionInput, options: JobOptions = {}): this {
-    // Normalize extends
-    const normalized = normalizeExtends(definition)
+  public job(name: string, definition: JobDefinitionInput, options: JobOptions = {}) {
+    // Parse and normalize (extends is automatically normalized to array)
+    const normalized = JobDefinitionParseSchema.parse(definition)
 
     // Check if it should be treated as template
     if (name.startsWith(".") || options.hidden) {
@@ -229,7 +236,7 @@ export class ConfigBuilder {
     name: string,
     job?: JobDefinitionInput,
     options: JobOptions = {},
-  ): this {
+  ) {
     const extendsArray = Array.isArray(fromName) ? fromName : [fromName]
 
     const definition: JobDefinitionInput = {
@@ -243,7 +250,7 @@ export class ConfigBuilder {
   /**
    * Register a macro
    */
-  public macro<TArgs extends MacroArgs>(key: string, callback: MacroFunction<TArgs>): this {
+  public macro<TArgs extends MacroArgs>(key: string, callback: MacroFunction<TArgs>) {
     if (this.macrosRegistry.has(key)) {
       throw new Error(`Macro ${key} already defined! You are not allowed to overwrite it.`)
     }
@@ -255,7 +262,7 @@ export class ConfigBuilder {
   /**
    * Apply a macro
    */
-  public from<TArgs extends MacroArgs>(key: string, args: TArgs): this {
+  public from<TArgs extends MacroArgs>(key: string, args: TArgs) {
     const macro = this.macrosRegistry.get(key)
 
     if (!macro) {
@@ -271,7 +278,7 @@ export class ConfigBuilder {
   /**
    * Register a patcher callback
    */
-  public patch(callback: PatcherFunction): this {
+  public patch(callback: PatcherFunction) {
     this.patchersRegistry.push(callback)
     return this
   }
@@ -328,6 +335,19 @@ export class ConfigBuilder {
       this.state.globalOptions,
     )
 
+    // Normalize extends in resolved jobs (convert single-element arrays to strings)
+    const normalizedJobs: Record<string, JobDefinitionOutput> = {}
+    for (const [name, job] of Object.entries(resolution.resolved)) {
+      if (job.extends && Array.isArray(job.extends) && job.extends.length === 1) {
+        normalizedJobs[name] = {
+          ...job,
+          extends: job.extends[0],
+        } as JobDefinitionOutput
+      } else {
+        normalizedJobs[name] = job
+      }
+    }
+
     // Build final output
     const pipeline: PipelineOutput = {
       stages: plain.stages,
@@ -335,7 +355,7 @@ export class ConfigBuilder {
       default: plain.default,
       variables: plain.variables,
       include: plain.include,
-      jobs: resolution.resolved,
+      jobs: normalizedJobs,
     }
 
     // Apply patchers
@@ -359,6 +379,14 @@ export class ConfigBuilder {
    */
   public getPlainObject(): PipelineOutput {
     const result = this.finalize()
+
+    // Log warnings to console
+    if (result.warnings.length > 0) {
+      for (const warning of result.warnings) {
+        // eslint-disable-next-line no-console
+        console.warn(`[GitLab CI Builder] ${warning.message}`)
+      }
+    }
 
     // Throw if there are errors (for backward compatibility)
     if (result.errors.length > 0) {
@@ -391,7 +419,6 @@ export class ConfigBuilder {
     filePath: string,
     options?: { encoding?: BufferEncoding },
   ): Promise<void> {
-    const fs = await import("fs/promises")
     const content = this.toYaml()
     await fs.writeFile(filePath, content, { encoding: options?.encoding ?? "utf8" })
   }

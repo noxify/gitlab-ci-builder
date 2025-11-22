@@ -1,18 +1,18 @@
 import { globSync } from "tinyglobby"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { Config } from "../src/config"
+import { ConfigBuilder } from "../src"
 
 // Mock tinyglobby
 vi.mock("tinyglobby", () => ({
   globSync: vi.fn(),
 }))
 
-describe("Config - include", () => {
-  let config: Config
+describe("ConfigBuilder - include", () => {
+  let config: ConfigBuilder
 
   beforeEach(() => {
-    config = new Config()
+    config = new ConfigBuilder()
     vi.clearAllMocks()
   })
 
@@ -50,7 +50,7 @@ describe("Config - include", () => {
   })
 
   it("should call extendConfig for each matched file", async () => {
-    const mockExtendConfig = vi.fn((cfg: Config) => {
+    const mockExtendConfig = vi.fn((cfg: ConfigBuilder) => {
       cfg.job("included-job", { script: ["echo included"] })
       return cfg
     })
@@ -126,7 +126,7 @@ describe("Config - include", () => {
   })
 
   it("should support default export", async () => {
-    const mockExtendConfig = vi.fn((cfg: Config) => {
+    const mockExtendConfig = vi.fn((cfg: ConfigBuilder) => {
       cfg.job("default-job", { script: ["echo default"] })
       return cfg
     })

@@ -1,8 +1,8 @@
 import fs from "fs/promises"
 
-import type { ConfigBuilder } from "./refactor"
-import type { PipelineOutput } from "./refactor/model"
-import { serializeToYaml } from "./refactor/serializer"
+import type { ConfigBuilder } from "."
+import type { PipelineOutput } from "./model"
+import { serializeToYaml } from "./serializer"
 
 /**
  * Convert a ConfigBuilder instance or PipelineOutput to a YAML string.

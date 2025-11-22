@@ -3,6 +3,7 @@ import { z } from "zod"
 import type { Script } from "./base"
 import {
   ExtendsInputSchema,
+  ExtendsSchema,
   ImageSchema,
   JobVariablesSchema,
   ScriptSchema,
@@ -286,8 +287,15 @@ export const CacheSchema = z
       .enum(["pull", "push", "pull-push"])
       .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#cachepolicy" })
       .optional(),
-    unprotect: z.boolean().optional(),
-    fallback_keys: z.array(z.string()).max(5).optional(),
+    unprotect: z
+      .boolean()
+      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#cacheunprotect" })
+      .optional(),
+    fallback_keys: z
+      .array(z.string())
+      .max(5)
+      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#cachefallback_keys" })
+      .optional(),
   })
   .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#cache" })
 
@@ -340,6 +348,10 @@ export const BaseJobSchema = z.object({
           }),
         ]),
       ),
+      z.object({
+        pipeline: z.string(),
+        optional: z.boolean().optional(),
+      }),
     ])
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#needs" })
     .optional(),
@@ -652,6 +664,13 @@ export type BaseJob = z.infer<typeof BaseJobSchema>
 export const JobDefinitionInputSchema = BaseJobSchema
 
 export type JobDefinitionInput = z.infer<typeof JobDefinitionInputSchema>
+
+/**
+ * Job definition parsing schema (applies transforms for normalization)
+ */
+export const JobDefinitionParseSchema = BaseJobSchema.extend({
+  extends: ExtendsSchema.optional(),
+})
 
 /**
  * Job definition (normalized internally - extends always array)

@@ -42,7 +42,7 @@ export function resolveExtends(
   }
 
   // Build combined graph
-  const graph = buildExtendsGraph(jobs, templates)
+  const graph = buildExtendsGraph(jobs, templates, jobOptionsMap)
 
   // Validate graph
   const validation = validateExtendsGraph(graph, globalOptions)
@@ -106,11 +106,11 @@ export function resolveExtends(
             // Convert back to normalized form for merging
             const normalizedTarget: JobDefinitionNormalized = {
               ...targetDef,
-              extends: Array.isArray(targetDef.extends)
-                ? targetDef.extends
-                : targetDef.extends
-                  ? [targetDef.extends]
-                  : undefined,
+              extends: targetDef.extends
+                ? Array.isArray(targetDef.extends)
+                  ? targetDef.extends
+                  : [targetDef.extends]
+                : undefined,
             }
             mergedDef = mergeJobDefinitions(mergedDef, normalizedTarget)
           } else {
