@@ -11,7 +11,24 @@ import { resolveReferences } from "./reference-resolver"
 const RESOLVABLE_SCHEMA = yaml.DEFAULT_SCHEMA.extend({ explicit: [referenceTagResolvable] })
 
 /**
- * Parse YAML with resolvable !reference tags (for resolution, not import)
+ * Parse YAML with resolvable !reference tags (for resolution, not import).
+ *
+ * Uses a custom YAML schema that handles GitLab's !reference tags without
+ * fully resolving them. Supports multi-document YAML by merging all documents
+ * into a single object.
+ *
+ * @param yamlContent - The YAML content to parse
+ * @returns Parsed YAML as a plain object with reference tags preserved as objects
+ *
+ * @example
+ * ```ts
+ * const yaml = `
+ * variables:
+ *   VAR: !reference [.base, vars, value]
+ * `
+ * const parsed = parseYamlResolvable(yaml)
+ * // Returns: { variables: { VAR: { ref: ['.base', 'vars', 'value'] } } }
+ * ```
  */
 function parseYamlResolvable(yamlContent: string): Record<string, unknown> {
   const documents = yaml.loadAll(yamlContent, null, { schema: RESOLVABLE_SCHEMA })
@@ -47,7 +64,37 @@ interface ResolutionContext {
 }
 
 /**
- * Resolve all includes in a configuration recursively
+ * Resolve all includes in a configuration recursively.
+ *
+ * This function processes all include directives in the pipeline configuration,
+ * fetching external files and merging them into the main configuration.
+ * Supports:
+ * - Local file includes
+ * - Remote URL includes
+ * - GitLab project includes
+ * - GitLab CI/CD template includes
+ *
+ * @param config - ConfigBuilder instance to resolve includes for
+ * @param options - Resolution options
+ * @param options.gitlabToken - GitLab authentication token for private repositories
+ * @param options.gitlabUrl - GitLab host URL (default: https://gitlab.com)
+ * @param options.maxDepth - Maximum include depth to prevent infinite recursion (default: 10)
+ * @param options.basePath - Base path for resolving relative local includes (default: process.cwd())
+ * @param options.resolveReferences - Resolve !reference tags in YAML (default: false)
+ * @returns Promise that resolves when all includes are processed
+ *
+ * @example
+ * ```ts
+ * const config = new ConfigBuilder()
+ *   .include({ local: '.gitlab/ci/build.yml' })
+ *   .include({ template: 'Security/SAST.gitlab-ci.yml' })
+ *
+ * await resolveIncludes(config, {
+ *   gitlabToken: process.env.GITLAB_TOKEN
+ * })
+ * ```
+ *
+ * @throws {Error} If maximum depth is exceeded or include cannot be fetched
  */
 export async function resolveIncludes(
   config: ConfigBuilder,
@@ -93,7 +140,43 @@ export async function resolveIncludes(
 }
 
 /**
- * Resolve a single include and return its YAML content
+ * Resolve a single include and return its YAML content.
+ *
+ * Handles all GitLab CI include types:
+ * - `local`: Reads files from the local filesystem
+ * - `remote`: Fetches files from HTTP URLs
+ * - `project`: Fetches files from GitLab projects using API
+ * - `template`: Fetches official GitLab CI/CD templates
+ * - `component`: Not yet supported, throws error
+ *
+ * Tracks visited includes to prevent circular dependencies.
+ *
+ * @param include - Include entry specifying the source to fetch
+ * @param basePath - Base path for resolving relative local paths
+ * @param options - Resolution options (tokens, URLs, etc.)
+ * @param visited - Set of already visited include paths to prevent cycles
+ * @returns Promise resolving to YAML content string, or null if already visited
+ *
+ * @example
+ * ```ts
+ * // Local include
+ * const content = await resolveInclude(
+ *   { local: '.gitlab/ci/build.yml' },
+ *   '/project/root',
+ *   {},
+ *   new Set()
+ * )
+ *
+ * // Remote include with authentication
+ * const content = await resolveInclude(
+ *   { remote: 'https://example.com/ci.yml' },
+ *   '/project/root',
+ *   { gitlabToken: 'glpat-xxx' },
+ *   new Set()
+ * )
+ * ```
+ *
+ * @throws {Error} If file cannot be read or fetched
  */
 async function resolveInclude(
   include: IncludeEntry,
@@ -202,7 +285,33 @@ async function resolveInclude(
 }
 
 /**
- * Convert YAML content to a ConfigBuilder instance
+ * Convert YAML content to a ConfigBuilder instance.
+ *
+ * Parses the YAML content and creates a ConfigBuilder instance with all
+ * pipeline elements (stages, variables, workflow, defaults, jobs, templates).
+ * Optionally resolves !reference tags before creating the builder.
+ *
+ * @param yamlContent - The YAML content to convert
+ * @param options - Conversion options
+ * @param options.resolveReferences - If true, resolves !reference tags before conversion (needed for visualization)
+ * @returns ConfigBuilder instance representing the parsed configuration
+ *
+ * @example
+ * ```ts
+ * const yaml = `
+ * stages:
+ *   - build
+ *   - test
+ *
+ * build-job:
+ *   stage: build
+ *   script: npm run build
+ * `
+ *
+ * const config = convertYamlToConfig(yaml)
+ * const plain = config.getPlainObject()
+ * // Returns: { stages: ['build', 'test'], jobs: { 'build-job': {...} } }
+ * ```
  */
 function convertYamlToConfig(
   yamlContent: string,
@@ -267,7 +376,22 @@ function convertYamlToConfig(
 }
 
 /**
- * Mark collected remote items with { remote: true } after resolution is complete
+ * Mark collected remote items with { remote: true } after resolution is complete.
+ *
+ * Re-adds jobs and templates to the configuration with the `remote: true` flag.
+ * This flag is used by visualization tools to distinguish between local and
+ * included items in the pipeline graph.
+ *
+ * @param config - ConfigBuilder instance to update
+ * @param remoteItems - Set of job/template names that originated from includes
+ *
+ * @example
+ * ```ts
+ * const config = new ConfigBuilder()
+ * const remoteItems = new Set(['build-job', '.template'])
+ * markRemoteItems(config, remoteItems)
+ * // Jobs 'build-job' and '.template' are now marked as remote
+ * ```
  */
 function markRemoteItems(config: ConfigBuilder, remoteItems: Set<string>): void {
   const plain = config.getPlainObject({ skipValidation: true })
@@ -287,7 +411,29 @@ function markRemoteItems(config: ConfigBuilder, remoteItems: Set<string>): void 
 }
 
 /**
- * Merge included configuration into the main configuration
+ * Merge included configuration into the main configuration.
+ *
+ * Combines all pipeline elements from the source configuration into the target:
+ * - Stages: Appended to existing stages list
+ * - Variables: Merged with existing variables (source overwrites target)
+ * - Workflow: Source workflow overwrites target workflow
+ * - Defaults: Source defaults overwrites target defaults
+ * - Jobs/Templates: Added to target, tracking remote items for later marking
+ *
+ * @param target - The main ConfigBuilder to merge into
+ * @param source - The included ConfigBuilder to merge from
+ * @param context - Resolution context for tracking remote items
+ *
+ * @example
+ * ```ts
+ * const main = new ConfigBuilder().stages('build', 'test')
+ * const included = new ConfigBuilder().stages('deploy').job('deploy', {...})
+ * const context = { remoteItems: new Set() }
+ *
+ * mergeConfigs(main, included, context)
+ * // main now has stages: ['build', 'test', 'deploy'] and job 'deploy'
+ * // context.remoteItems contains 'deploy'
+ * ```
  */
 function mergeConfigs(
   target: ConfigBuilder,

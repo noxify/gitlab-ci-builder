@@ -25,7 +25,30 @@ export interface ExtendsResolutionResult {
 }
 
 /**
- * Build extends dependency graph
+ * Build extends dependency graph from jobs and templates.
+ *
+ * Creates a graph structure representing all jobs and templates with their
+ * extends relationships. This is used for visualization and validation.
+ *
+ * @param jobs - Job definitions map
+ * @param templates - Template definitions map
+ * @param jobOptionsMap - Job-specific options map
+ * @returns Map of job/template names to their graph nodes
+ *
+ * @example
+ * ```ts
+ * const jobs = {
+ *   'build': { stage: 'build', script: 'build.sh' }
+ * }
+ * const templates = {
+ *   '.base': { script: 'base.sh' }
+ * }
+ *
+ * const graph = buildExtendsGraph(jobs, templates)
+ * for (const [name, node] of graph) {
+ *   console.log(`${name}: extends ${node.extends.join(', ')}`)
+ * }
+ * ```
  */
 export function buildExtendsGraph(
   jobs: Record<string, JobDefinitionNormalized>,
@@ -62,8 +85,20 @@ export function buildExtendsGraph(
 }
 
 /**
- * Detect cycles in extends graph using DFS
- * Returns array of cycles found (each cycle is an array of node names)
+ * Detect cycles in extends graph using depth-first search.
+ *
+ * Circular extends relationships are invalid in GitLab CI and will cause
+ * pipeline failures. This function detects such cycles.
+ *
+ * @param graph - The extends graph to check
+ * @returns Array of cycles found (each cycle is an array of node names forming the cycle)
+ *
+ * @example
+ * ```ts
+ * // Given: A extends B, B extends C, C extends A (circular)
+ * const cycles = detectCycles(graph)
+ * // Returns: [['A', 'B', 'C', 'A']]
+ * ```
  */
 export function detectCycles(graph: Map<string, ExtendsGraphNode>): string[][] {
   const cycles: string[][] = []
@@ -115,7 +150,20 @@ export function detectCycles(graph: Map<string, ExtendsGraphNode>): string[][] {
 }
 
 /**
- * Check for missing extends targets
+ * Check for missing extends targets in the graph.
+ *
+ * Identifies jobs that extend from templates or jobs that don't exist
+ * in the configuration.
+ *
+ * @param graph - The extends graph to check
+ * @returns Map of job names to their missing extend targets
+ *
+ * @example
+ * ```ts
+ * // Given: job 'build' extends '.missing-template' which doesn't exist
+ * const missing = findMissingExtends(graph)
+ * // Returns: Map { 'build' => ['.missing-template'] }
+ * ```
  */
 export function findMissingExtends(graph: Map<string, ExtendsGraphNode>): Map<string, string[]> {
   const missing = new Map<string, string[]>()
@@ -141,8 +189,20 @@ export function findMissingExtends(graph: Map<string, ExtendsGraphNode>): Map<st
 }
 
 /**
- * Topological sort of extends graph
- * Returns nodes in order (dependencies first)
+ * Topological sort of extends graph.
+ *
+ * Returns nodes in dependency order (dependencies first). This ensures that
+ * when merging extends, parent definitions are processed before children.
+ *
+ * @param graph - The extends graph to sort
+ * @returns Array of node names in topological order
+ *
+ * @example
+ * ```ts
+ * // Given: A extends B, B extends C
+ * const sorted = topologicalSort(graph)
+ * // Returns: ['C', 'B', 'A'] (dependencies first)
+ * ```
  */
 export function topologicalSort(graph: Map<string, ExtendsGraphNode>): string[] {
   const sorted: string[] = []
@@ -188,7 +248,28 @@ export function topologicalSort(graph: Map<string, ExtendsGraphNode>): string[] 
 }
 
 /**
- * Validate extends graph
+ * Validate extends graph for common errors.
+ *
+ * Checks for:
+ * - Missing extends targets
+ * - Circular extends relationships (unless in performance mode)
+ *
+ * @param graph - The extends graph to validate
+ * @param globalOptions - Global configuration options
+ * @returns Validation result with errors, warnings, and skipped checks
+ *
+ * @example
+ * ```ts
+ * const result = validateExtendsGraph(graph, globalOptions)
+ *
+ * if (result.errors.length > 0) {
+ *   console.error('Validation errors:', result.errors)
+ * }
+ *
+ * if (result.warnings.length > 0) {
+ *   console.warn('Validation warnings:', result.warnings)
+ * }
+ * ```
  */
 export function validateExtendsGraph(
   graph: Map<string, ExtendsGraphNode>,

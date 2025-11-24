@@ -25,7 +25,17 @@ export interface CodeGeneratorOptions {
 }
 
 /**
- * Code generator for converting parsed YAML to TypeScript using AST
+ * Code generator for converting parsed YAML to TypeScript using AST.
+ *
+ * This class generates clean, idiomatic TypeScript code from parsed GitLab CI YAML
+ * configuration. It creates code using the ConfigBuilder API.
+ *
+ * @example
+ * ```ts
+ * const parsed = parseYaml(yamlContent)
+ * const generator = new CodeGenerator({ asExtendedConfig: false })
+ * const tsCode = generator.generate(parsed)
+ * ```
  */
 export class CodeGenerator {
   private options: Required<CodeGeneratorOptions>
@@ -37,7 +47,23 @@ export class CodeGenerator {
   }
 
   /**
-   * Generate TypeScript code from parsed YAML
+   * Generate TypeScript code from parsed YAML.
+   *
+   * Takes parsed YAML configuration and generates equivalent TypeScript code
+   * using the ConfigBuilder API. The generated code can be either a standalone
+   * configuration or an extended config function.
+   *
+   * @param parsed - Parsed YAML object
+   * @returns Generated TypeScript code as a string
+   *
+   * @example
+   * ```ts
+   * const generator = new CodeGenerator()
+   * const tsCode = generator.generate({
+   *   stages: ['build', 'test'],
+   *   build: { stage: 'build', script: 'build.sh' }
+   * })
+   * ```
    */
   public generate(parsed: Record<string, unknown>): string {
     const statements: ts.Statement[] = []

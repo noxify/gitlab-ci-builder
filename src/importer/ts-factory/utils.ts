@@ -50,28 +50,83 @@ const SHELL_CONTROL_STRUCTURES = [
 ]
 
 /**
- * Check if a value is a valid job definition
+ * Check if a value is a valid job definition.
+ *
+ * A valid job definition is a non-null object that is not an array.
+ *
+ * @param value - The value to check
+ * @returns True if the value is a valid job definition
+ *
+ * @example
+ * ```ts
+ * isValidJobDefinition({ stage: 'build' }) // true
+ * isValidJobDefinition('not a job') // false
+ * isValidJobDefinition(['array']) // false
+ * ```
  */
 export function isValidJobDefinition(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
 /**
- * Check if a string contains shell-specific patterns
+ * Check if a string contains shell-specific patterns.
+ *
+ * Detects shell operators like pipes, redirects, and line continuations.
+ *
+ * @param value - The string to check
+ * @returns True if shell operators are detected
+ *
+ * @example
+ * ```ts
+ * hasShellOperators('echo hello | grep hello') // true
+ * hasShellOperators('echo hello > output.txt') // true
+ * hasShellOperators('npm run build') // false
+ * ```
  */
 export function hasShellOperators(value: string): boolean {
   return SHELL_OPERATOR_PATTERNS.some((pattern) => pattern.test(value))
 }
 
 /**
- * Check if a string contains shell control structures
+ * Check if a string contains shell control structures.
+ *
+ * Detects shell control structures like if/then, for/do, while/do, etc.
+ *
+ * @param value - The string to check
+ * @returns True if control structures are detected
+ *
+ * @example
+ * ```ts
+ * hasControlStructures('if [ -f file ]; then echo "exists"; fi') // true
+ * hasControlStructures('for i in 1 2 3; do echo $i; done') // true
+ * hasControlStructures('npm run build') // false
+ * ```
  */
 export function hasControlStructures(value: string): boolean {
   return SHELL_CONTROL_STRUCTURES.some((pattern) => pattern.test(value))
 }
 
 /**
- * Separate parsed YAML into top-level config and jobs
+ * Separate parsed YAML into top-level config and jobs.
+ *
+ * Splits the parsed YAML into top-level keywords (stages, variables, etc.)
+ * and job/template definitions.
+ *
+ * @param parsed - Parsed YAML object
+ * @returns Object with topLevel and jobs properties
+ *
+ * @example
+ * ```ts
+ * const parsed = {
+ *   stages: ['build', 'test'],
+ *   variables: { NODE_VERSION: '18' },
+ *   build: { stage: 'build', script: 'build.sh' }
+ * }
+ *
+ * const { topLevel, jobs } = separateTopLevelAndJobs(parsed)
+ * // topLevel: { stages: [...], variables: {...} }
+ * // jobs: { build: {...} }
+ * ```
  */
 export function separateTopLevelAndJobs(parsed: Record<string, unknown>): {
   topLevel: Record<string, unknown>
@@ -92,7 +147,25 @@ export function separateTopLevelAndJobs(parsed: Record<string, unknown>): {
 }
 
 /**
- * Categorize jobs into templates and regular jobs
+ * Categorize jobs into templates and regular jobs.
+ *
+ * Separates jobs based on whether their names start with a dot (templates)
+ * or not (regular jobs).
+ *
+ * @param jobs - Map of job definitions
+ * @returns Object with templates and regularJobs arrays
+ *
+ * @example
+ * ```ts
+ * const jobs = {
+ *   '.base': { script: 'base.sh' },
+ *   'build': { stage: 'build', script: 'build.sh' }
+ * }
+ *
+ * const { templates, regularJobs } = categorizeJobs(jobs)
+ * // templates: [['.base', {...}]]
+ * // regularJobs: [['build', {...}]]
+ * ```
  */
 export function categorizeJobs(jobs: Record<string, unknown>): {
   templates: [string, Record<string, unknown>][]

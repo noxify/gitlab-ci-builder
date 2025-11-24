@@ -116,7 +116,39 @@ function deepMerge<T>(parent: T | undefined, child: T | undefined): T | undefine
 }
 
 /**
- * Merge two job definitions using field-specific strategies
+ * Merge two job definitions using field-specific strategies.
+ *
+ * Applies GitLab CI merge semantics for job inheritance:
+ * - Scripts: concatenate (parent first, child appended)
+ * - Tags/Services: union (unique values only)
+ * - Variables/Artifacts/Cache: deep merge
+ * - Most other fields: child overrides parent
+ *
+ * @param parent - Parent job definition
+ * @param child - Child job definition
+ * @returns Merged job definition
+ *
+ * @example
+ * ```ts
+ * const parent = {
+ *   script: ['npm ci'],
+ *   variables: { NODE_ENV: 'production' }
+ * }
+ *
+ * const child = {
+ *   script: ['npm test'],
+ *   variables: { DEBUG: 'true' }
+ * }
+ *
+ * const merged = mergeJobDefinitions(parent, child)
+ * // Result:
+ * // {
+ * //   script: ['npm ci', 'npm test'],
+ * //   variables: { NODE_ENV: 'production', DEBUG: 'true' }
+ * // }
+ * ```
+ *
+ * @see https://docs.gitlab.com/ee/ci/yaml/#extends
  */
 export function mergeJobDefinitions(
   parent: JobDefinitionNormalized,
@@ -215,7 +247,23 @@ function mergeServices(
 }
 
 /**
- * Merge variables (child overrides parent keys)
+ * Merge variables (child overrides parent keys).
+ *
+ * Performs a shallow merge where child variable values override parent values
+ * for matching keys, while keeping unique keys from both.
+ *
+ * @param parent - Parent variables
+ * @param child - Child variables
+ * @returns Merged variables object
+ *
+ * @example
+ * ```ts
+ * const parent = { NODE_ENV: 'production', VERSION: '1.0' }
+ * const child = { NODE_ENV: 'development', DEBUG: 'true' }
+ *
+ * const merged = mergeVariables(parent, child)
+ * // Result: { NODE_ENV: 'development', VERSION: '1.0', DEBUG: 'true' }
+ * ```
  */
 export function mergeVariables(
   parent: JobDefinitionNormalized["variables"],

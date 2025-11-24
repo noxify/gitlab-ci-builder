@@ -389,7 +389,34 @@ export function generateMermaidDiagram({
 }
 
 /**
- * Generate ASCII tree from extends graph
+ * Generate ASCII tree representation from extends graph.
+ *
+ * Creates a hierarchical tree view showing job inheritance relationships.
+ * Root nodes (not extended by anyone) are shown at the top, with their
+ * extends relationships displayed as children.
+ *
+ * Features:
+ * - Shows template [T] and remote 🌐 indicators
+ * - Displays job stages when enabled
+ * - Detects and prevents infinite loops from circular extends
+ * - Shows missing templates with ⚠️ warning
+ * - Displays original unresolved extends when different from resolved
+ *
+ * @param params - Visualization parameters
+ * @param params.graph - Extends graph with node metadata
+ * @param params.resolvedConfig - Resolved pipeline configuration
+ * @param params.options - Visualization options (showRemote, showStages)
+ * @returns ASCII tree representation as string
+ *
+ * @example
+ * ```ts
+ * const output = generateAsciiTree({ graph, resolvedConfig })
+ * // Returns:
+ * // ├── build-job
+ * // │   └── .build-template [T]
+ * // └── test-job (test)
+ * //     └── .test-template [T]
+ * ```
  */
 export function generateAsciiTree({
   graph,
@@ -466,7 +493,36 @@ export function generateAsciiTree({
 }
 
 /**
- * Generate table with stages and jobs
+ * Generate formatted table showing stages and jobs.
+ *
+ * Creates a two-column table displaying:
+ * - Stage name in the first column
+ * - Job name with extends chain in the second column
+ *
+ * Features:
+ * - Groups jobs by stage
+ * - Shows complete extends inheritance chain
+ * - Displays remote 🌐 and template [T] indicators
+ * - Excludes template jobs (starting with .)
+ * - Shows full inheritance chain using ← arrows
+ *
+ * @param params - Visualization parameters
+ * @param params.graph - Extends graph with node metadata
+ * @param params.resolvedConfig - Resolved pipeline configuration
+ * @param params.options - Visualization options (showRemote)
+ * @returns Formatted table as string
+ *
+ * @example
+ * ```ts
+ * const table = generateStageTable({ graph, resolvedConfig })
+ * // Returns:
+ * // ┌───────┬─────────────────────────────────┐
+ * // │ STAGE │ JOB                             │
+ * // ├───────┼─────────────────────────────────┤
+ * // │ build │ build-job ← .build-template     │
+ * // │ test  │ test-job ← .test-template       │
+ * // └───────┴─────────────────────────────────┘
+ * ```
  */
 export function generateStageTable({
   graph,

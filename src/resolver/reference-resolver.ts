@@ -13,7 +13,19 @@ interface ReferenceTag {
 }
 
 /**
- * Check if value is a !reference tag object
+ * Check if value is a !reference tag object.
+ *
+ * !reference tags are parsed from YAML as objects with `kind: "reference"`
+ * and a `path` array containing the reference path segments.
+ *
+ * @param value - The value to check
+ * @returns True if value is a ReferenceTag object
+ *
+ * @example
+ * ```ts
+ * isReferenceTag({ kind: 'reference', path: ['.job', 'script'] }) // Returns: true
+ * isReferenceTag({ other: 'value' }) // Returns: false
+ * ```
  */
 function isReferenceTag(value: unknown): value is ReferenceTag {
   return (
@@ -27,7 +39,21 @@ function isReferenceTag(value: unknown): value is ReferenceTag {
 }
 
 /**
- * Resolve a single reference path
+ * Resolve a single reference path to its actual value.
+ *
+ * Navigates through the parsed YAML object following the path segments
+ * to find the referenced value.
+ *
+ * @param parsed - The complete parsed YAML object
+ * @param path - Array of path segments to follow (e.g., ['.template', 'script'])
+ * @returns The resolved value, or undefined if path doesn't exist
+ *
+ * @example
+ * ```ts
+ * const parsed = { '.template': { script: ['npm test'] } }
+ * resolveReference(parsed, ['.template', 'script'])
+ * // Returns: ['npm test']
+ * ```
  */
 function resolveReference(parsed: Record<string, unknown>, path: string[]): unknown {
   let current: unknown = parsed
@@ -43,7 +69,24 @@ function resolveReference(parsed: Record<string, unknown>, path: string[]): unkn
 }
 
 /**
- * Recursively resolve all !reference tags in an object
+ * Recursively resolve all !reference tags in a value.
+ *
+ * Traverses arrays, objects, and nested structures to find and resolve
+ * all !reference tags. Detects and prevents circular references by
+ * tracking visited paths.
+ *
+ * @param value - The value to process (can be any type)
+ * @param parsed - The complete parsed YAML object for reference resolution
+ * @param visited - Set of already visited reference paths to prevent cycles
+ * @returns A new value with all !reference tags resolved to their actual values
+ *
+ * @example
+ * ```ts
+ * const parsed = { '.base': { tags: ['docker'] } }
+ * const value = { tags: { kind: 'reference', path: ['.base', 'tags'] } }
+ * resolveReferencesInValue(value, parsed)
+ * // Returns: { tags: ['docker'] }
+ * ```
  */
 function resolveReferencesInValue(
   value: unknown,
@@ -83,10 +126,27 @@ function resolveReferencesInValue(
 }
 
 /**
- * Resolve all !reference tags in the parsed YAML
+ * Resolve all !reference tags in the parsed YAML.
  *
- * @param parsed - Parsed YAML object
- * @returns New object with all !reference tags resolved
+ * GitLab CI supports !reference tags that allow you to reuse configuration
+ * from other parts of the YAML file. This function resolves these references
+ * to their actual values.
+ *
+ * @param parsed - Parsed YAML object containing !reference tags
+ * @returns New object with all !reference tags resolved to their actual values
+ *
+ * @example
+ * ```ts
+ * const parsed = {
+ *   '.template': { script: ['echo hello', 'echo world'] },
+ *   build: { script: { kind: 'reference', path: ['.template', 'script'] } }
+ * }
+ *
+ * const resolved = resolveReferences(parsed)
+ * // resolved.build.script = ['echo hello', 'echo world']
+ * ```
+ *
+ * @see https://docs.gitlab.com/ee/ci/yaml/yaml_optimization.html#reference-tags
  */
 export function resolveReferences(parsed: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {}

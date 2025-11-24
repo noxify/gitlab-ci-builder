@@ -27,7 +27,23 @@ const referenceTag = new yaml.Type("!reference", {
 const CUSTOM_SCHEMA = yaml.DEFAULT_SCHEMA.extend({ explicit: [referenceTag] })
 
 /**
- * Process a value to convert !reference strings to proper FlowArray format
+ * Process a value to convert !reference strings to proper FlowArray format.
+ *
+ * Recursively traverses the value tree and converts string representations
+ * of !reference tags (e.g., "!reference [.template, script]") into FlowArray
+ * instances that will be serialized correctly by the custom YAML schema.
+ *
+ * @param value - The value to process (can be any type)
+ * @returns Processed value with !reference strings converted to FlowArray
+ *
+ * @example
+ * ```ts
+ * processReferences({ script: '!reference [.base, script]' })
+ * // Returns: { script: FlowArray('.base', 'script') }
+ *
+ * processReferences(['npm test', '!reference [.base, vars]'])
+ * // Returns: ['npm test', FlowArray('.base', 'vars')]
+ * ```
  */
 function processReferences(value: unknown): unknown {
   if (typeof value === "string" && value.startsWith("!reference [")) {
@@ -57,8 +73,28 @@ function processReferences(value: unknown): unknown {
 }
 
 /**
- * Order keys in a pipeline output for consistent YAML formatting
- * Order: workflow, include, default, variables, stages, then jobs (templates first, sorted alphabetically)
+ * Order keys in a pipeline output for consistent YAML formatting.
+ *
+ * Applies a canonical ordering to pipeline configuration keys:
+ * 1. Top-level keys in preferred order: workflow, include, default, variables, stages
+ * 2. Any other top-level keys not in the preferred order
+ * 3. Jobs section with templates first (starting with .), then regular jobs
+ * 4. Within each job group, keys are sorted alphabetically
+ *
+ * This ensures GitLab CI YAML files have a predictable, readable structure.
+ *
+ * @param pipeline - The pipeline output to order
+ * @returns New object with keys in canonical order
+ *
+ * @example
+ * ```ts
+ * orderPipelineKeys({
+ *   jobs: { 'test': {...}, '.template': {...}, 'build': {...} },
+ *   stages: ['build', 'test'],
+ *   workflow: {...}
+ * })
+ * // Returns: { workflow, stages, .template, build, test }
+ * ```
  */
 function orderPipelineKeys(pipeline: PipelineOutput): Record<string, unknown> {
   const { jobs, ...rest } = pipeline
@@ -101,7 +137,30 @@ function orderPipelineKeys(pipeline: PipelineOutput): Record<string, unknown> {
 }
 
 /**
- * Post-process YAML to convert multiline !reference to inline format
+ * Post-process YAML to convert multiline !reference to inline format.
+ *
+ * The js-yaml library serializes !reference tags in multi-line format:
+ * ```yaml
+ * - !reference
+ *   - .template
+ *   - script
+ * ```
+ *
+ * This function converts them to GitLab's inline format:
+ * ```yaml
+ * - !reference [.template, script]
+ * ```
+ *
+ * Handles both array contexts and scalar contexts (e.g., `image: !reference [...]`).
+ *
+ * @param yamlString - The YAML string to post-process
+ * @returns YAML string with !reference tags in inline format
+ *
+ * @example
+ * ```ts
+ * postProcessReferences('script:\n  - !reference\n    - .base\n    - script')
+ * // Returns: 'script:\n  - !reference [.base, script]'
+ * ```
  */
 function postProcessReferences(yamlString: string): string {
   const lines = yamlString.split("\n")
@@ -180,7 +239,22 @@ function postProcessReferences(yamlString: string): string {
 }
 
 /**
- * Add blank lines between top-level sections for better readability
+ * Add blank lines between top-level sections for better readability.
+ *
+ * Inserts blank lines between major sections (workflow, stages, jobs, etc.)
+ * to improve visual separation and readability of the generated YAML.
+ *
+ * Only adds separators between actual sections with content, avoiding
+ * excessive blank lines.
+ *
+ * @param yamlString - The YAML string to format
+ * @returns YAML string with section separators added
+ *
+ * @example
+ * ```ts
+ * addSectionSeparators('workflow:\n  rules: []\nstages:\n  - build')
+ * // Returns: 'workflow:\n  rules: []\n\nstages:\n  - build'
+ * ```
  */
 function addSectionSeparators(yamlString: string): string {
   const lines = yamlString.split("\n")

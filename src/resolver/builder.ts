@@ -20,7 +20,29 @@ interface ResolutionContext {
 }
 
 /**
- * Resolve extends for all jobs and templates
+ * Resolve extends relationships for all jobs and templates.
+ *
+ * This function performs the core extends resolution logic:
+ * 1. Builds the dependency graph
+ * 2. Validates for cycles and missing targets
+ * 3. Performs topological sort
+ * 4. Merges job definitions following the extends chain
+ *
+ * @param jobs - Map of job definitions
+ * @param templates - Map of template definitions
+ * @param jobOptionsMap - Job-specific options
+ * @param globalOptions - Global configuration options
+ * @returns Resolution result with resolved jobs, errors, and warnings
+ *
+ * @example
+ * ```ts
+ * const result = resolveExtends(jobs, templates, {}, globalOptions)
+ *
+ * if (result.errors.length === 0) {
+ *   // Use result.resolved for the final pipeline
+ *   console.log(result.resolved)
+ * }
+ * ```
  */
 export function resolveExtends(
   jobs: Record<string, JobDefinitionNormalized>,

@@ -5,8 +5,30 @@ import { referenceTag } from "./yaml-parser/reference"
 const CUSTOM_SCHEMA = yaml.DEFAULT_SCHEMA.extend({ explicit: [referenceTag] })
 
 /**
- * Parse YAML content with GitLab CI custom tags
- * Supports both single-document and multi-document YAML
+ * Parse YAML content with GitLab CI custom tags.
+ *
+ * Supports both single-document and multi-document YAML files.
+ * Handles GitLab-specific YAML tags like !reference.
+ *
+ * @param yamlContent - The YAML string to parse
+ * @returns Parsed YAML as a JavaScript object
+ *
+ * @example
+ * ```ts
+ * import { parseYaml } from '@noxify/gitlab-ci-builder'
+ *
+ * const yaml = `
+ * stages:
+ *   - build
+ *   - test
+ * build:
+ *   stage: build
+ *   script: npm run build
+ * `
+ *
+ * const parsed = parseYaml(yaml)
+ * console.log(parsed.stages) // ['build', 'test']
+ * ```
  */
 export function parseYaml(yamlContent: string): Record<string, unknown> {
   // Try to load all documents

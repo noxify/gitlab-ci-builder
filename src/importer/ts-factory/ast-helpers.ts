@@ -1,7 +1,23 @@
 import ts from "typescript"
 
 /**
- * Create an import declaration
+ * Create an import declaration AST node.
+ *
+ * Generates TypeScript import statements for the ConfigBuilder module.
+ *
+ * @param moduleSpecifier - The module path to import from
+ * @param isTypeOnly - Whether this is a type-only import
+ * @param namedImports - Array of named imports (optional)
+ * @returns TypeScript ImportDeclaration AST node
+ *
+ * @example
+ * ```ts
+ * // import { ConfigBuilder } from '@noxify/gitlab-ci-builder'
+ * createImportDeclaration('@noxify/gitlab-ci-builder', false, ['ConfigBuilder'])
+ *
+ * // import type { ConfigBuilder } from '@noxify/gitlab-ci-builder'
+ * createImportDeclaration('@noxify/gitlab-ci-builder', true, ['ConfigBuilder'])
+ * ```
  */
 export function createImportDeclaration(
   moduleSpecifier: string,
@@ -36,7 +52,23 @@ export function createImportDeclaration(
 }
 
 /**
- * Create a method call expression: config.method(...args)
+ * Create a method call expression AST node.
+ *
+ * Generates method call expressions like `config.stages('build', 'test')`.
+ *
+ * @param objectName - The object name (e.g., 'config')
+ * @param methodName - The method name (e.g., 'stages')
+ * @param args - Array of argument expressions
+ * @returns TypeScript CallExpression AST node
+ *
+ * @example
+ * ```ts
+ * // config.stages('build', 'test')
+ * createMethodCall('config', 'stages', [
+ *   ts.factory.createStringLiteral('build'),
+ *   ts.factory.createStringLiteral('test')
+ * ])
+ * ```
  */
 export function createMethodCall(
   objectName: string,
@@ -54,7 +86,20 @@ export function createMethodCall(
 }
 
 /**
- * Convert a JavaScript value to a TypeScript expression
+ * Convert a JavaScript value to a TypeScript expression AST node.
+ *
+ * Handles primitives, arrays, objects, and special values (null/undefined).
+ *
+ * @param value - The JavaScript value to convert
+ * @returns TypeScript Expression AST node
+ *
+ * @example
+ * ```ts
+ * valueToExpression('hello') // StringLiteral: "hello"
+ * valueToExpression(42) // NumericLiteral: 42
+ * valueToExpression(true) // BooleanLiteral: true
+ * valueToExpression(['a', 'b']) // ArrayLiteralExpression: ["a", "b"]
+ * ```
  */
 export function valueToExpression(value: unknown): ts.Expression {
   // null and undefined

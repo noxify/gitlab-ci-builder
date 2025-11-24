@@ -108,16 +108,56 @@ export class PipelineState {
   }
 
   // Setters
+  /**
+   * Set the pipeline stages, replacing any existing stages.
+   *
+   * @param stages - Array of stage names
+   *
+   * @example
+   * ```ts
+   * state.setStages(['build', 'test', 'deploy'])
+   * ```
+   *
+   * @see https://docs.gitlab.com/ci/yaml/#stages
+   */
   setStages(stages: string[]): void {
     this.stagesValue = [...stages]
   }
 
+  /**
+   * Add stages to the pipeline, merging with existing stages.
+   *
+   * Duplicate stages are automatically filtered out.
+   *
+   * @param stages - Array of stage names to add
+   *
+   * @example
+   * ```ts
+   * state.setStages(['build', 'test'])
+   * state.addStages(['test', 'deploy']) // Result: ['build', 'test', 'deploy']
+   * ```
+   */
   addStages(stages: string[]): void {
     const set = new Set(this.stagesValue)
     stages.forEach((s) => set.add(s))
     this.stagesValue = Array.from(set)
   }
 
+  /**
+   * Set a job definition in the pipeline.
+   *
+   * @param name - Job name
+   * @param definition - Normalized job definition
+   * @param options - Optional job metadata (remote flag, etc.)
+   *
+   * @example
+   * ```ts
+   * state.setJob('build', { stage: 'build', script: ['npm run build'] })
+   * state.setJob('remote-job', { script: ['test'] }, { remote: true })
+   * ```
+   *
+   * @see https://docs.gitlab.com/ci/jobs/
+   */
   setJob(name: string, definition: JobDefinitionNormalized, options: JobOptions = {}): void {
     this.jobsValue[name] = definition
     if (Object.keys(options).length > 0) {
@@ -125,6 +165,24 @@ export class PipelineState {
     }
   }
 
+  /**
+   * Set a template (hidden job) definition in the pipeline.
+   *
+   * Templates are jobs that start with `.` and are not executed directly.
+   *
+   * @param name - Template name (should start with `.`)
+   * @param definition - Normalized job definition
+   * @param options - Optional template metadata (remote flag, etc.)
+   *
+   * @example
+   * ```ts
+   * state.setTemplate('.build-template', {
+   *   script: ['npm run build']
+   * })
+   * ```
+   *
+   * @see https://docs.gitlab.com/ci/jobs/job_control.html#hide-jobs
+   */
   setTemplate(name: string, definition: JobDefinitionNormalized, options: JobOptions = {}): void {
     this.templatesValue[name] = definition
     if (Object.keys(options).length > 0) {
@@ -132,26 +190,109 @@ export class PipelineState {
     }
   }
 
+  /**
+   * Get a job or template definition by name.
+   *
+   * Checks both jobs and templates, returning the first match found.
+   *
+   * @param name - Job or template name
+   * @returns Job definition, or undefined if not found
+   *
+   * @example
+   * ```ts
+   * const job = state.getJob('build')
+   * const template = state.getJob('.build-template')
+   * ```
+   */
   getJob(name: string): JobDefinitionNormalized | undefined {
     return this.jobsValue[name] ?? this.templatesValue[name]
   }
 
+  /**
+   * Set the pipeline workflow configuration.
+   *
+   * @param workflow - Workflow rules and configuration
+   *
+   * @example
+   * ```ts
+   * state.setWorkflow({ rules: [{ if: '$CI_COMMIT_BRANCH == "main"' }] })
+   * ```
+   *
+   * @see https://docs.gitlab.com/ci/yaml/#workflow
+   */
   setWorkflow(workflow: Workflow): void {
     this.workflowValue = workflow
   }
 
+  /**
+   * Set default values for all jobs.
+   *
+   * @param defaults - Default configuration applied to all jobs
+   *
+   * @example
+   * ```ts
+   * state.setDefaults({ retry: 2, timeout: '1h' })
+   * ```
+   *
+   * @see https://docs.gitlab.com/ee/ci/yaml/#default
+   */
   setDefaults(defaults: Defaults): void {
     this.defaultValue = defaults
   }
 
+  /**
+   * Set global pipeline variables, replacing any existing variables.
+   *
+   * @param variables - Global variables as key-value pairs
+   *
+   * @example
+   * ```ts
+   * state.setVariables({ NODE_VERSION: '18', DEBUG: true })
+   * ```
+   *
+   * @see https://docs.gitlab.com/ci/yaml/#variables
+   */
   setVariables(variables: GlobalVariables): void {
     this.variablesValue = variables
   }
 
+  /**
+   * Set a single global variable.
+   *
+   * @param key - Variable name
+   * @param value - Variable value
+   *
+   * @example
+   * ```ts
+   * state.setVariable('NODE_VERSION', '18')
+   * state.setVariable('ENABLE_CACHE', true)
+   * ```
+   *
+   * @see https://docs.gitlab.com/ci/yaml/#variables
+   */
   setVariable(key: string, value: string | number | boolean | undefined): void {
     this.variablesValue[key] = value
   }
 
+  /**
+   * Get a variable value for a specific job.
+   *
+   * Checks job-specific variables first, then falls back to global variables.
+   * Handles both primitive values and complex variable objects with `value` property.
+   *
+   * @param jobName - Job name to get the variable for
+   * @param key - Variable name
+   * @returns Variable value, or undefined if not found
+   *
+   * @example
+   * ```ts
+   * state.setVariable('GLOBAL_VAR', 'global')
+   * state.setJob('build', { variables: { JOB_VAR: 'local' } })
+   *
+   * state.getVariable('build', 'JOB_VAR')    // Returns: 'local'
+   * state.getVariable('build', 'GLOBAL_VAR') // Returns: 'global'
+   * ```
+   */
   getVariable(jobName: string, key: string): string | number | boolean | undefined {
     const jobVariable = this.jobsValue[jobName]?.variables?.[key]
     const globalVariable = this.variablesValue[key]
@@ -173,38 +314,121 @@ export class PipelineState {
     return jobValue ?? globalValue
   }
 
+  /**
+   * Add an include entry to the pipeline.
+   *
+   * @param entry - Include entry (local, remote, project, template, or component)
+   *
+   * @example
+   * ```ts
+   * state.addInclude({ local: '.gitlab/ci/build.yml' })
+   * state.addInclude({ template: 'Security/SAST.gitlab-ci.yml' })
+   * ```
+   *
+   * @see https://docs.gitlab.com/ci/yaml/#include
+   */
   addInclude(entry: IncludeEntry): void {
     this.includeValue.push(entry)
   }
 
+  /**
+   * Update global options for the pipeline.
+   *
+   * Merges with existing options.
+   *
+   * @param options - Partial global options to update
+   *
+   * @example
+   * ```ts
+   * state.setGlobalOptions({ mergeExtends: false, performanceMode: true })
+   * ```
+   */
   setGlobalOptions(options: Partial<GlobalOptions>): void {
     this.globalOptionsValue = { ...this.globalOptionsValue, ...options }
   }
 
+  /**
+   * Set metadata options for a specific job.
+   *
+   * @param name - Job or template name
+   * @param options - Job metadata options
+   *
+   * @example
+   * ```ts
+   * state.setJobOptions('remote-job', { remote: true })
+   * ```
+   */
   setJobOptions(name: string, options: JobOptions): void {
     this.jobOptionsMapValue[name] = options
   }
 
+  /**
+   * Set the pipeline spec configuration.
+   *
+   * @param spec - Spec configuration
+   *
+   * @example
+   * ```ts
+   * state.setSpec({ inputs: { environment: { default: 'dev' } } })
+   * ```
+   *
+   * @see https://docs.gitlab.com/ci/yaml/#spec
+   */
   setSpec(spec: Spec): void {
     this.specValue = spec
   }
 
+  /**
+   * Set deprecated global image configuration.
+   *
+   * @deprecated Use `defaults.image` instead
+   * @param image - Docker image configuration
+   * @see https://docs.gitlab.com/ci/yaml/#image
+   */
   setDeprecatedImage(image: Image): void {
     this.deprecatedImageValue = image
   }
 
+  /**
+   * Set deprecated global services configuration.
+   *
+   * @deprecated Use `defaults.services` instead
+   * @param services - Services configuration
+   * @see https://docs.gitlab.com/ci/yaml/#services
+   */
   setDeprecatedServices(services: Services): void {
     this.deprecatedServicesValue = services
   }
 
+  /**
+   * Set deprecated global before_script configuration.
+   *
+   * @deprecated Use `defaults.before_script` instead
+   * @param script - Before script commands
+   * @see https://docs.gitlab.com/ci/yaml/#before_script
+   */
   setDeprecatedBeforeScript(script: Script): void {
     this.deprecatedBeforeScriptValue = script
   }
 
+  /**
+   * Set deprecated global after_script configuration.
+   *
+   * @deprecated Use `defaults.after_script` instead
+   * @param script - After script commands
+   * @see https://docs.gitlab.com/ci/yaml/#after_script
+   */
   setDeprecatedAfterScript(script: Script): void {
     this.deprecatedAfterScriptValue = script
   }
 
+  /**
+   * Set deprecated global cache configuration.
+   *
+   * @deprecated Use `defaults.cache` instead
+   * @param cache - Cache configuration
+   * @see https://docs.gitlab.com/ci/yaml/#cache
+   */
   setDeprecatedCache(cache: Cache): void {
     this.deprecatedCacheValue = cache
   }

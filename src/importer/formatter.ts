@@ -14,8 +14,25 @@ interface FormatOptions {
 }
 
 /**
- * Format a script value intelligently
- * Detects shell patterns and formats accordingly
+ * Format a script value intelligently.
+ *
+ * Detects shell patterns and formats accordingly:
+ * - Single-line strings are quoted
+ * - Multi-line strings with shell operators are kept as template literals
+ * - Simple multi-line strings are split into arrays
+ *
+ * @param value - The value to format (typically a script string)
+ * @returns Formatted TypeScript code string
+ *
+ * @example
+ * ```ts
+ * formatScriptValue('npm run build') // Returns: '"npm run build"'
+ *
+ * formatScriptValue('npm ci\nnpm test') // Returns: '["npm ci", "npm test"]'
+ *
+ * formatScriptValue('if [ -f package.json ]; then\n  npm ci\nfi')
+ * // Returns: template literal preserving shell syntax
+ * ```
  */
 export function formatScriptValue(value: unknown): string {
   if (typeof value !== "string") {
@@ -48,7 +65,20 @@ export function formatScriptValue(value: unknown): string {
 }
 
 /**
- * Format an array value
+ * Format an array value as TypeScript array literal.
+ *
+ * Handles both simple arrays (single line) and complex arrays (multi-line with proper indentation).
+ * Simple arrays contain only primitives, while complex arrays may contain nested objects or arrays.
+ *
+ * @param value - The array to format
+ * @param options - Formatting options (indentation level and extra indent flag)
+ * @returns Formatted TypeScript array literal string
+ *
+ * @example
+ * ```ts
+ * formatArray(['a', 'b'], { indentLevel: 0 }) // Returns: '["a", "b"]'
+ * formatArray([{ key: 'value' }], { indentLevel: 0 }) // Returns multi-line formatted array
+ * ```
  */
 function formatArray(value: unknown[], options: FormatOptions): string {
   if (value.length === 0) {
@@ -81,7 +111,23 @@ function formatArray(value: unknown[], options: FormatOptions): string {
 }
 
 /**
- * Flatten script arrays intelligently
+ * Flatten script arrays intelligently.
+ *
+ * Processes script arrays by expanding multi-line strings into individual commands
+ * when they don't contain shell operators. This creates cleaner, more maintainable
+ * script arrays in the generated code.
+ *
+ * @param items - Array of script items (strings or other values)
+ * @returns Array of formatted script command strings
+ *
+ * @example
+ * ```ts
+ * flattenScriptArray(['npm ci', 'npm test\nnpm run lint'])
+ * // Returns: ['"npm ci"', '"npm test"', '"npm run lint"']
+ *
+ * flattenScriptArray(['if test; then\n  echo ok\nfi'])
+ * // Returns: ['`if test; then\n  echo ok\nfi`'] (preserved as single item)
+ * ```
  */
 function flattenScriptArray(items: unknown[]): string[] {
   const flattened: string[] = []
@@ -126,7 +172,22 @@ function flattenScriptArray(items: unknown[]): string[] {
 }
 
 /**
- * Format an object value
+ * Format an object value as TypeScript object literal.
+ *
+ * Applies context-aware formatting based on property keys:
+ * - Script properties (script, before_script, after_script) use special script formatting
+ * - Single-value properties unwrap single-element arrays
+ * - Other properties are formatted according to their type
+ *
+ * @param value - The object to format
+ * @param options - Formatting options (indentation level and extra indent flag)
+ * @returns Formatted TypeScript object literal string
+ *
+ * @example
+ * ```ts
+ * formatObject({ stage: 'build', script: ['npm ci', 'npm test'] }, { indentLevel: 0 })
+ * // Returns: multi-line formatted object with proper script handling
+ * ```
  */
 function formatObject(value: Record<string, unknown>, options: FormatOptions): string {
   const entries = Object.entries(value)
@@ -165,7 +226,25 @@ function formatObject(value: Record<string, unknown>, options: FormatOptions): s
 }
 
 /**
- * Format a value as TypeScript code
+ * Format a value as TypeScript code.
+ *
+ * Handles various value types and converts them to proper TypeScript syntax:
+ * - Primitives: strings, numbers, booleans
+ * - Arrays: with proper formatting and indentation
+ * - Objects: with proper property formatting
+ *
+ * @param value - The value to format
+ * @param options - Formatting options
+ * @param options.indentLevel - Current indentation level
+ * @param options.addExtraIndent - Add extra indentation for nested structures
+ * @returns Formatted TypeScript code string
+ *
+ * @example
+ * ```ts
+ * formatValue('hello', { indentLevel: 0 }) // Returns: '"hello"'
+ * formatValue(42, { indentLevel: 0 }) // Returns: '42'
+ * formatValue(['a', 'b'], { indentLevel: 0 }) // Returns: '["a", "b"]'
+ * ```
  */
 export function formatValue(value: unknown, options: FormatOptions): string {
   if (value === null || value === undefined) {
