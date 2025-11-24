@@ -79,6 +79,45 @@ export function resolveExtends(
     // Start with empty definition
     let mergedDef: JobDefinitionNormalized = {}
 
+    // Collect all extends that should be kept (not merged)
+    const keptExtends: string[] = []
+
+    // Recursively collect non-template extends from merged templates
+    const collectNonTemplateExtends = (extendName: string, visited = new Set<string>()): void => {
+      if (visited.has(extendName)) return
+      visited.add(extendName)
+
+      const targetName = graph.has(extendName) ? extendName : `.${extendName}`
+      const targetNode = graph.get(targetName)
+
+      if (!targetNode?.extends) return
+
+      for (const nestedExtend of targetNode.extends) {
+        const nestedTargetName = graph.has(nestedExtend) ? nestedExtend : `.${nestedExtend}`
+        const nestedNode = graph.get(nestedTargetName)
+
+        if (!nestedNode) {
+          // Unknown extend, keep it
+          if (!keptExtends.includes(nestedExtend)) {
+            keptExtends.push(nestedExtend)
+          }
+        } else if (nestedNode.isRemote) {
+          // Remote extend, keep it
+          if (!keptExtends.includes(nestedExtend)) {
+            keptExtends.push(nestedExtend)
+          }
+        } else if (!nestedTargetName.startsWith(".")) {
+          // Normal job (not template), keep it
+          if (!keptExtends.includes(nestedExtend)) {
+            keptExtends.push(nestedExtend)
+          }
+        } else {
+          // It's a template, recurse into it
+          collectNonTemplateExtends(nestedExtend, visited)
+        }
+      }
+    }
+
     // Merge extends chain (ALWAYS resolve for merging, regardless of mergeExtends)
     if (node.extends.length > 0) {
       for (const extendName of node.extends) {
@@ -86,13 +125,20 @@ export function resolveExtends(
         const targetName = graph.has(extendName) ? extendName : `.${extendName}`
         const targetNode = graph.get(targetName)
 
-        if (!targetNode) continue
+        if (!targetNode) {
+          // Unknown target, keep in extends
+          keptExtends.push(extendName)
+          continue
+        }
 
         // Check if we should merge this extend
         const shouldMerge = resolveTemplatesOnly ? targetName.startsWith(".") : true
 
-        // Skip remote extends
-        if (targetNode.isRemote) continue
+        // Skip remote extends from merging
+        if (targetNode.isRemote) {
+          keptExtends.push(extendName)
+          continue
+        }
 
         if (shouldMerge) {
           // Use fully resolved definition (without extends field) for merging
@@ -102,6 +148,14 @@ export function resolveExtends(
           } else {
             mergedDef = mergeJobDefinitions(mergedDef, targetNode.definition)
           }
+
+          // If resolveTemplatesOnly and this is a template, collect non-template extends from it
+          if (resolveTemplatesOnly && targetName.startsWith(".")) {
+            collectNonTemplateExtends(extendName)
+          }
+        } else {
+          // Don't merge, but keep in extends (normal job when resolveTemplatesOnly: true)
+          keptExtends.push(extendName)
         }
       }
     }
@@ -119,10 +173,21 @@ export function resolveExtends(
       continue
     }
 
-    // Clean up extends field
-    const cleanedDef = cleanExtendsField(finalDef, node, graph, globalOptions, jobOpts)
+    // Add kept extends to final definition (or remove extends entirely if none kept)
+    let outputDef: JobDefinitionOutput
+    if (keptExtends.length > 0) {
+      if (keptExtends.length === 1) {
+        outputDef = { ...finalDef, extends: keptExtends[0] }
+      } else {
+        outputDef = { ...finalDef, extends: keptExtends }
+      }
+    } else {
+      // Remove extends field entirely if nothing to keep
+      const { extends: _extends, ...rest } = finalDef
+      outputDef = rest as JobDefinitionOutput
+    }
 
-    resolved.set(name, cleanedDef)
+    resolved.set(name, outputDef)
   }
 
   // Convert Map back to Record
@@ -137,62 +202,4 @@ export function resolveExtends(
     warnings: context.warnings,
     skippedChecks: context.skippedChecks,
   }
-}
-
-/**
- * Clean extends field after resolution
- * Remove local extends, keep only remote/external ones
- */
-function cleanExtendsField(
-  definition: JobDefinitionNormalized,
-  node: { extends: string[]; isRemote: boolean },
-  graph: Map<string, { isRemote: boolean }>,
-  globalOptions: GlobalOptions,
-  jobOpts?: JobOptions,
-): JobDefinitionOutput {
-  const mergeExtends = jobOpts?.mergeExtends ?? globalOptions.mergeExtends
-
-  if (mergeExtends === false) {
-    // Keep extends as-is, just optimize to string if single entry
-    if (definition.extends?.length === 1) {
-      return {
-        ...definition,
-        extends: definition.extends[0],
-      } as JobDefinitionOutput
-    }
-    return definition as JobDefinitionOutput
-  }
-
-  // Filter extends to keep only remote/external ones
-  if (definition.extends && definition.extends.length > 0) {
-    const filtered = definition.extends.filter((extendName) => {
-      const targetName = graph.has(extendName) ? extendName : `.${extendName}`
-      const targetNode = graph.get(targetName)
-
-      // Keep if remote or not found in local graph
-      return !targetNode || targetNode.isRemote
-    })
-
-    if (filtered.length === 0) {
-      // Remove extends field entirely
-      const { extends: _extends, ...rest } = definition
-      return rest as JobDefinitionOutput
-    }
-
-    if (filtered.length === 1) {
-      // Optimize to string
-      return {
-        ...definition,
-        extends: filtered[0],
-      } as JobDefinitionOutput
-    }
-
-    // Keep as array
-    return {
-      ...definition,
-      extends: filtered,
-    } as JobDefinitionOutput
-  }
-
-  return definition as JobDefinitionOutput
 }

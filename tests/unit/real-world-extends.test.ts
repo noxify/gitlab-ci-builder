@@ -148,7 +148,7 @@ describe("ConfigBuilder - Real-world extends scenario", () => {
       optional: true,
     })
 
-    // No extends in final output
+    // Templates are resolved, extends removed
     expect(job?.extends).toBeUndefined()
   })
 

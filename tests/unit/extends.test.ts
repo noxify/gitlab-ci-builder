@@ -55,7 +55,7 @@ describe("ConfigBuilder - extends", () => {
       paths: ["node_modules/"],
     })
     expect(testJob?.script).toEqual(["npm test"])
-    // Local extends are resolved and removed from output by default
+    // Template extends are resolved and removed from output
     expect(testJob?.extends).toBeUndefined()
   })
 

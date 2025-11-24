@@ -44,7 +44,8 @@ describe("Job Options", () => {
         script: ["template"],
         stage: "test",
       })
-      expect(result.jobs?.child?.extends).toBeUndefined()
+      // resolveTemplatesOnly: true means templates are merged but normal jobs remain in extends
+      expect(result.jobs?.child?.extends).toBe("basejob")
     })
 
     it("should allow job-level override of resolveTemplatesOnly", () => {
@@ -62,6 +63,7 @@ describe("Job Options", () => {
         script: ["template", "job"],
         stage: "test",
       })
+      // resolveTemplatesOnly: false means both templates and jobs are merged, no extends left
       expect(result.jobs?.child?.extends).toBeUndefined()
     })
   })
@@ -76,6 +78,7 @@ describe("Job Options", () => {
         script: ["base command"],
         stage: "test",
       })
+      // Template extends are fully resolved and removed
       expect(result.jobs?.child?.extends).toBeUndefined()
     })
 
@@ -130,6 +133,7 @@ describe("Job Options", () => {
         script: ["base command"],
         stage: "deploy",
       })
+      // Template extends are fully resolved when mergeExtends is true
       expect(result.jobs?.enabled?.extends).toBeUndefined()
     })
   })
@@ -260,6 +264,7 @@ describe("Job Options", () => {
 
       // job2: local override mergeExtends=true
       expect(result.jobs?.job2?.script).toEqual(["base"])
+      // Template extends are fully resolved
       expect(result.jobs?.job2?.extends).toBeUndefined()
 
       // job3: global mergeExisting=false, replaced

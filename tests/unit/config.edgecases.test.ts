@@ -54,8 +54,7 @@ describe("ConfigBuilder - edge cases and branches", () => {
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const consumer = out.jobs.consumer!
-    // Local `.local` should be removed from extends (because it refers to a local template),
-    // while `external` remains since it does not match any local job id.
+    // Local `.local` template is merged, only external unknown job remains in extends
     // Single extends is optimized to string format
     expect(consumer.extends).toEqual("external")
   })

@@ -76,7 +76,7 @@ describe("ConfigBuilder - template extends chain resolution", () => {
     // Should have stage from job definition
     expect(job?.stage).toBe("review")
 
-    // Should not have extends in final output (all resolved)
+    // Templates are resolved, extends removed
     expect(job?.extends).toBeUndefined()
   })
 
