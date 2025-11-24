@@ -1,5 +1,201 @@
 # @noxify/gitlab-ci-builder
 
+## 1.2.0
+
+### Minor Changes
+
+- 712ec0d: Fluent Job Builder API
+
+  **New Feature: Fluent Job Builder API**
+
+  Added a powerful fluent builder interface for defining jobs and templates with chainable methods:
+
+  **New Methods:**
+  - `addJob(name)` - Create a new job with fluent builder interface
+  - `addTemplate(name)` - Create a new template with fluent builder interface
+
+  **JobBuilder Methods:**
+  Common properties:
+  - `stage(stage)` - Set job stage
+  - `extends(extend)` - Set extends
+  - `image(image)` - Set image
+  - `script(script)` - Set script
+  - `beforeScript(script)` - Set before_script
+  - `afterScript(script)` - Set after_script
+  - `services(services)` - Set services
+  - `cache(cache)` - Set cache
+  - `artifacts(artifacts)` - Set artifacts
+  - `setVariables(vars)` - Set job variables
+  - `environment(env)` - Set environment
+  - `when(when)` - Set when condition
+  - `rules(rules)` - Set rules
+  - `needs(needs)` - Set needs
+  - `tags(tags)` - Set tags
+  - `allowFailure(bool)` - Set allow_failure
+  - `timeout(timeout)` - Set timeout
+  - `retry(retry)` - Set retry
+  - `parallel(parallel)` - Set parallel
+  - `trigger(trigger)` - Set trigger
+  - `coverage(pattern)` - Set coverage pattern
+  - `dependencies(deps)` - Set dependencies
+  - `resourceGroup(group)` - Set resource_group
+  - `release(release)` - Set release
+  - `interruptible(bool)` - Set interruptible
+  - `idTokens(tokens)` - Set id_tokens
+
+  Utility methods:
+  - `set(props)` - Bulk set multiple properties at once
+  - `jobOptions(opts)` - Set job options (remote, mergeExtends, etc.)
+  - `remote(bool)` - Mark job as remote
+  - `mergeExtends(bool)` - Control extends merging
+  - `resolveTemplatesOnly(bool)` - Control template resolution
+  - `done()` - Finalize job and return to ConfigBuilder
+
+  **Auto-Return Behavior:**
+  When you call `addJob()` or `addTemplate()` from a JobBuilder, the previous job is automatically saved and a new builder is returned:
+
+  ```typescript
+  const config = new ConfigBuilder()
+
+  // Fluent API with auto-return
+  config
+    .stages("build", "test", "deploy")
+    .addTemplate(".node")
+    .image("node:20")
+    .cache({ paths: ["node_modules/"] })
+    .addJob("test")
+    .stage("test")
+    .extends(".node")
+    .script(["npm test"])
+    .addJob("build")
+    .stage("build")
+    .extends(".node")
+    .script(["npm run build"])
+    .addJob("deploy")
+    .stage("deploy")
+    .extends("build")
+    .script(["kubectl apply -f k8s/"])
+    .when("manual")
+    .done()
+
+  // Or use done() to explicitly return to ConfigBuilder
+  config
+    .addJob("lint")
+    .stage("test")
+    .script(["npm run lint"])
+    .done()
+    .addJob("format")
+    .stage("test")
+    .script(["npm run format:check"])
+    .done()
+
+  // Bulk property updates with set()
+  config
+    .addJob("complex")
+    .set({
+      stage: "test",
+      image: "node:20",
+      script: ["npm test"],
+      cache: { paths: ["node_modules/"] },
+      artifacts: { paths: ["coverage/"] },
+    })
+    .done()
+  ```
+
+  **Benefits:**
+  - **Type-safe**: Full TypeScript support with autocomplete
+  - **Readable**: Clear, declarative pipeline definitions
+  - **Flexible**: Mix with existing `job()` and `template()` methods
+  - **Convenient**: Auto-return behavior reduces boilerplate
+  - **Powerful**: All job properties supported with dedicated methods
+
+  This fluent API is especially useful for complex pipelines with many jobs, making the code more maintainable and easier to read.
+
+- 712ec0d: Graph Visualization
+
+  **New Features: Graph Visualization**
+
+  Added powerful visualization capabilities to analyze and visualize extends relationships in your GitLab CI pipelines:
+
+  **New Methods:**
+  - `getExtendsGraph()` - Get the extends dependency graph for programmatic access
+  - `generateMermaidDiagram(options?)` - Generate Mermaid diagram for documentation/GitHub
+  - `generateAsciiTree(options?)` - Generate ASCII tree for terminal output
+  - `generateStageTable(options?)` - Generate CLI table with stages as columns
+
+  **Visualization Options:**
+  - `showRemote: boolean` - Show remote jobs with 🌐 indicator
+  - `showStages: boolean` - Include job stages in output
+  - `highlightCycles: boolean` - Highlight circular dependencies if detected
+
+  **Example Usage:**
+
+  ```javascript
+  const config = new ConfigBuilder()
+  // ... configure your pipeline ...
+
+  // Generate individual visualizations
+  const mermaid = config.generateMermaidDiagram({ showStages: true })
+  const ascii = config.generateAsciiTree({ showRemote: true })
+  const table = config.generateStageTable()
+
+  console.log(mermaid) // Mermaid diagram
+  console.log(ascii) // ASCII tree
+  console.log(table) // Stage table
+  ```
+
+  This feature is especially useful for:
+  - Documenting complex CI configurations
+  - Debugging extends chains and dependencies
+  - Understanding job relationships at a glance
+  - Detecting circular dependencies visually
+
+- 712ec0d: Enhanced Validation API
+
+  **New Feature: Enhanced Validation API**
+
+  Added dedicated validation methods for better control over pipeline validation:
+
+  **New Methods:**
+  - `validate()` - Validate pipeline and throw errors if validation fails (logs warnings to console)
+  - `safeValidate()` - Validate pipeline without throwing errors, returns validation result with `{ valid, errors, warnings }`
+
+  **Enhanced Methods:**
+  - `getPlainObject(options?)` - Now accepts `{ skipValidation?: boolean }` option to skip validation when you've already validated separately
+  - `toJSON(options?)` - Now accepts `{ skipValidation?: boolean }` option
+  - `toYaml(options?)` - Now accepts `{ skipValidation?: boolean }` option
+
+  **Breaking Changes:**
+  - `finalize()` is now `private` - use `safeValidate()` for programmatic validation or `validate()` for validation that throws errors
+
+  **Usage Examples:**
+
+  ```typescript
+  // Standard validation (throws on error)
+  config.validate()
+  const pipeline = config.getPlainObject({ skipValidation: true })
+
+  // Safe validation (no throw)
+  const result = config.safeValidate()
+  if (!result.valid) {
+    console.error("Validation errors:", result.errors)
+    return
+  }
+  if (result.warnings.length > 0) {
+    console.warn("Warnings:", result.warnings)
+  }
+  const pipeline = config.getPlainObject({ skipValidation: true })
+
+  // Quick validation (default behavior)
+  const pipeline = config.getPlainObject() // validates automatically
+  ```
+
+  **Benefits:**
+  - **Separation of concerns**: Validation is now separate from pipeline retrieval
+  - **Better error handling**: `safeValidate()` enables programmatic error handling without try/catch
+  - **Performance**: Skip validation when using multiple output methods (`toYaml()`, `toJSON()`, etc.)
+  - **Flexible**: Choose between throwing (`validate()`) or returning errors (`safeValidate()`)
+
 ## 1.1.1
 
 ### Patch Changes
