@@ -41,12 +41,13 @@ describe("ConfigBuilder - template extends chain resolution", () => {
       },
     })
 
-    const result = config.finalize()
+    const result = config.safeValidate()
+    const pipeline = config.getPlainObject({ skipValidation: true })
 
     expect(result.errors).toHaveLength(0)
     expect(result.warnings).toHaveLength(0)
 
-    const job = result.pipeline.jobs?.deploy_rds_review
+    const job = pipeline.jobs?.deploy_rds_review
     expect(job).toBeDefined()
 
     // Should have cache from .nodejs:cache (through .deploy_rds)
@@ -114,11 +115,12 @@ describe("ConfigBuilder - template extends chain resolution", () => {
       },
     })
 
-    const result = config.finalize()
+    const result = config.safeValidate()
+    const pipeline = config.getPlainObject({ skipValidation: true })
 
     expect(result.errors).toHaveLength(0)
 
-    const job = result.pipeline.jobs?.final_job
+    const job = pipeline.jobs?.final_job
 
     // Should have all variables merged
     expect(job?.variables).toEqual({
@@ -163,9 +165,8 @@ describe("ConfigBuilder - template extends chain resolution", () => {
       },
     })
 
-    const result = config.finalize()
-
-    const job = result.pipeline.jobs?.job
+    const pipeline = config.getPlainObject({ skipValidation: true })
+    const job = pipeline.jobs?.job
 
     // VAR1 should be overridden by job
     // VAR2 should keep base value
@@ -194,9 +195,8 @@ describe("ConfigBuilder - template extends chain resolution", () => {
       script: ["echo 'job'"],
     })
 
-    const result = config.finalize()
-
-    const job = result.pipeline.jobs?.job
+    const pipeline = config.getPlainObject({ skipValidation: true })
+    const job = pipeline.jobs?.job
 
     // Scripts should be concatenated in order: base -> middleware -> job
     expect(job?.script).toEqual(["echo 'base'", "echo 'middleware'", "echo 'job'"])

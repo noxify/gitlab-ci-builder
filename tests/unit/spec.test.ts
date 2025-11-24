@@ -29,20 +29,20 @@ describe("ConfigBuilder - spec", () => {
       },
     })
 
-    const result = config.finalize()
-    expect(result.pipeline.spec).toBeDefined()
-    expect(result.pipeline.spec?.inputs).toBeDefined()
-    expect(result.pipeline.spec?.inputs?.environment).toMatchObject({
+    const pipeline = config.getPlainObject({ skipValidation: true })
+    expect(pipeline.spec).toBeDefined()
+    expect(pipeline.spec?.inputs).toBeDefined()
+    expect(pipeline.spec?.inputs?.environment).toMatchObject({
       type: "string",
       default: "production",
       description: "Target environment",
       options: ["development", "staging", "production"],
     })
-    expect(result.pipeline.spec?.inputs?.version).toMatchObject({
+    expect(pipeline.spec?.inputs?.version).toMatchObject({
       type: "string",
       description: "Application version",
     })
-    expect(result.pipeline.spec?.inputs?.debug).toMatchObject({
+    expect(pipeline.spec?.inputs?.debug).toMatchObject({
       type: "boolean",
       default: false,
     })
@@ -51,8 +51,8 @@ describe("ConfigBuilder - spec", () => {
   it("should handle spec without inputs", () => {
     config.spec({})
 
-    const result = config.finalize()
-    expect(result.pipeline.spec).toBeDefined()
+    const pipeline = config.getPlainObject({ skipValidation: true })
+    expect(pipeline.spec).toBeDefined()
   })
 
   it("should handle spec with null input", () => {
@@ -62,8 +62,8 @@ describe("ConfigBuilder - spec", () => {
       },
     })
 
-    const result = config.finalize()
-    expect(result.pipeline.spec?.inputs?.optional_input).toBeNull()
+    const pipeline = config.getPlainObject({ skipValidation: true })
+    expect(pipeline.spec?.inputs?.optional_input).toBeNull()
   })
 })
 
@@ -115,8 +115,8 @@ describe("ConfigBuilder - reserved job names", () => {
       config.job("pages", { script: ["echo deploy"] })
     }).not.toThrow()
 
-    const result = config.finalize()
-    expect(result.pipeline.jobs).toHaveProperty("pages")
+    const pipeline = config.getPlainObject({ skipValidation: true })
+    expect(pipeline.jobs).toHaveProperty("pages")
   })
 
   it("should allow valid job names", () => {
@@ -126,10 +126,10 @@ describe("ConfigBuilder - reserved job names", () => {
       config.job("deploy", { script: ["echo deploy"] })
     }).not.toThrow()
 
-    const result = config.finalize()
-    expect(result.pipeline.jobs).toHaveProperty("build")
-    expect(result.pipeline.jobs).toHaveProperty("test")
-    expect(result.pipeline.jobs).toHaveProperty("deploy")
+    const pipeline = config.getPlainObject({ skipValidation: true })
+    expect(pipeline.jobs).toHaveProperty("build")
+    expect(pipeline.jobs).toHaveProperty("test")
+    expect(pipeline.jobs).toHaveProperty("deploy")
   })
 
   it("should allow template names starting with dot even if they match reserved keywords", () => {

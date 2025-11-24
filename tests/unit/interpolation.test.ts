@@ -122,9 +122,10 @@ describe("GitLab CI Interpolation", () => {
         })
       }).not.toThrow()
 
-      const result = config.finalize()
+      const result = config.safeValidate()
+      const pipeline = config.getPlainObject({ skipValidation: true })
       expect(result.errors).toHaveLength(0)
-      expect(result.pipeline.jobs?.["test-job"]?.stage).toBe("$[[ inputs.stage ]]")
+      expect(pipeline.jobs?.["test-job"]?.stage).toBe("$[[ inputs.stage ]]")
     })
 
     it("should validate job with interpolated parallel count", () => {
@@ -137,9 +138,10 @@ describe("GitLab CI Interpolation", () => {
         })
       }).not.toThrow()
 
-      const result = config.finalize()
+      const result = config.safeValidate()
+      const pipeline = config.getPlainObject({ skipValidation: true })
       expect(result.errors).toHaveLength(0)
-      expect(result.pipeline.jobs?.["parallel-job"]?.parallel).toBe("$[[ inputs.count ]]")
+      expect(pipeline.jobs?.["parallel-job"]?.parallel).toBe("$[[ inputs.count ]]")
     })
 
     it("should validate job with interpolated tags", () => {
@@ -152,9 +154,10 @@ describe("GitLab CI Interpolation", () => {
         })
       }).not.toThrow()
 
-      const result = config.finalize()
+      const result = config.safeValidate()
+      const pipeline = config.getPlainObject({ skipValidation: true })
       expect(result.errors).toHaveLength(0)
-      expect(result.pipeline.jobs?.["tagged-job"]?.tags).toBe("$[[ inputs.tags ]]")
+      expect(pipeline.jobs?.["tagged-job"]?.tags).toBe("$[[ inputs.tags ]]")
     })
 
     it("should validate job with interpolated cache policy", () => {
@@ -171,9 +174,10 @@ describe("GitLab CI Interpolation", () => {
         })
       }).not.toThrow()
 
-      const result = config.finalize()
+      const result = config.safeValidate()
+      const pipeline = config.getPlainObject({ skipValidation: true })
       expect(result.errors).toHaveLength(0)
-      expect(result.pipeline.jobs?.["cached-job"]?.cache).toMatchObject({
+      expect(pipeline.jobs?.["cached-job"]?.cache).toMatchObject({
         policy: "$[[ inputs.cache_policy ]]",
       })
     })

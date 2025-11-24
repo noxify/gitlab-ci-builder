@@ -49,16 +49,17 @@ describe("Integration: Multi-Document YAML", () => {
 
     // Verify we got a ConfigBuilder-like object with expected methods
     expect(config).toBeDefined()
-    expect(typeof config.finalize).toBe("function")
+    expect(typeof config.safeValidate).toBe("function")
 
     // Step 3: Build the pipeline to verify structure
-    const result = config.finalize()
-    expect(result.pipeline).toBeTruthy()
-    expect(result.pipeline.jobs).toBeDefined()
+    const result = config.safeValidate()
+    const pipeline = config.getPlainObject({ skipValidation: true })
+    expect(pipeline).toBeTruthy()
+    expect(pipeline.jobs).toBeDefined()
     expect(result.errors.length).toBe(0)
 
     // Verify pipeline structure matches expected jobs
-    const jobNames = Object.keys(result.pipeline.jobs ?? {})
+    const jobNames = Object.keys(pipeline.jobs ?? {})
     expect(jobNames).toContain("build")
     expect(jobNames).toContain("test:unit")
     expect(jobNames).toContain("test:integration")

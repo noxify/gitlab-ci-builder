@@ -53,21 +53,22 @@ describe("Integration: OpenTofu Component with spec.inputs", () => {
 
     // Verify we got a ConfigBuilder-like object
     expect(config).toBeDefined()
-    expect(typeof config.finalize).toBe("function")
+    expect(typeof config.safeValidate).toBe("function")
 
     // Step 3: Build the pipeline to verify structure
-    const result = config.finalize()
-    expect(result.pipeline).toBeTruthy()
+    const result = config.safeValidate()
+    const pipeline = config.getPlainObject({ skipValidation: true })
+    expect(pipeline).toBeTruthy()
 
     // With interpolation support, we should have no errors
     expect(result.errors.length).toBe(0)
 
     // Verify spec is present in pipeline
-    expect(result.pipeline.spec).toBeDefined()
-    expect(result.pipeline.spec?.inputs).toBeDefined()
+    expect(pipeline.spec).toBeDefined()
+    expect(pipeline.spec?.inputs).toBeDefined()
 
     // Verify expected spec inputs from OpenTofu template
-    const inputs = result.pipeline.spec?.inputs
+    const inputs = pipeline.spec?.inputs
     expect(inputs).toBeDefined()
 
     if (inputs) {
@@ -81,7 +82,7 @@ describe("Integration: OpenTofu Component with spec.inputs", () => {
     }
 
     // Verify jobs are present
-    const jobNames = Object.keys(result.pipeline.jobs ?? {})
+    const jobNames = Object.keys(pipeline.jobs ?? {})
     expect(jobNames.length).toBeGreaterThan(0)
 
     // Step 4: Export ConfigBuilder back to YAML
@@ -120,13 +121,14 @@ describe("Integration: OpenTofu Component with spec.inputs", () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       (reimportedModule.default ?? reimportedModule.config) as ConfigBuilder
 
-    const reimportedResult = reimportedConfig.finalize()
+    const reimportedResult = reimportedConfig.safeValidate()
+    const reimportedPipeline = reimportedConfig.getPlainObject({ skipValidation: true })
     expect(reimportedResult.errors.length).toBe(0)
-    expect(reimportedResult.pipeline.spec).toBeDefined()
+    expect(reimportedPipeline.spec).toBeDefined()
 
     // Verify input counts match
     const originalInputCount = Object.keys(inputs ?? {}).length
-    const reimportedInputCount = Object.keys(reimportedResult.pipeline.spec?.inputs ?? {}).length
+    const reimportedInputCount = Object.keys(reimportedPipeline.spec?.inputs ?? {}).length
     expect(reimportedInputCount).toBe(originalInputCount)
   })
 
@@ -181,11 +183,12 @@ test-job:
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const config: ConfigBuilder = (module.default ?? module.config) as ConfigBuilder
 
-    const result = config.finalize()
+    const result = config.safeValidate()
+    const pipeline = config.getPlainObject({ skipValidation: true })
     expect(result.errors.length).toBe(0)
 
     // Verify spec inputs
-    const inputs = result.pipeline.spec?.inputs
+    const inputs = pipeline.spec?.inputs
     expect(inputs).toBeDefined()
     expect(inputs?.stage).toBeDefined()
     expect(inputs?.parallel_count).toBeDefined()
@@ -254,11 +257,12 @@ deploy-job:
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const config: ConfigBuilder = (module.default ?? module.config) as ConfigBuilder
 
-    const result = config.finalize()
+    const result = config.safeValidate()
+    const pipeline = config.getPlainObject({ skipValidation: true })
     expect(result.errors.length).toBe(0)
 
     // Verify spec with options
-    const inputs = result.pipeline.spec?.inputs
+    const inputs = pipeline.spec?.inputs
     expect(inputs?.environment?.options).toBeDefined()
     expect(inputs?.environment?.options).toContain("staging")
     expect(inputs?.environment?.options).toContain("production")
@@ -270,7 +274,7 @@ deploy-job:
     expect(inputs?.version_pattern?.regex).toBe("^[0-9]+\\.[0-9]+\\.[0-9]+$")
 
     // Verify job variables with interpolation
-    expect(result.pipeline.jobs?.["deploy-job"]?.variables).toMatchObject({
+    expect(pipeline.jobs?.["deploy-job"]?.variables).toMatchObject({
       BASE_OS: "$[[ inputs.base_os ]]",
       VERSION: "$[[ inputs.version_pattern ]]",
     })
@@ -313,20 +317,21 @@ spec:
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const config: ConfigBuilder = (module.default ?? module.config) as ConfigBuilder
 
-    const result = config.finalize()
+    const result = config.safeValidate()
+    const pipeline = config.getPlainObject({ skipValidation: true })
     expect(result.errors.length).toBe(0)
 
     // Verify dynamic job name is preserved
     const jobName = "$[[ inputs.as ]]"
-    expect(result.pipeline.jobs?.[jobName]).toBeDefined()
+    expect(pipeline.jobs?.[jobName]).toBeDefined()
 
     // Verify resource_group with interpolation
-    expect(result.pipeline.jobs?.[jobName]?.resource_group).toBe(
+    expect(pipeline.jobs?.[jobName]?.resource_group).toBe(
       "$[[ inputs.resource_group_prefix ]]$[[ inputs.resource_group_name ]]",
     )
 
     // Verify variables with interpolation
-    expect(result.pipeline.jobs?.[jobName]?.variables).toMatchObject({
+    expect(pipeline.jobs?.[jobName]?.variables).toMatchObject({
       STATE: "$[[ inputs.state_name ]]",
     })
   })

@@ -60,7 +60,7 @@ export async function testTemplateRoundTrip(
   const config: ConfigBuilder = (module.default ?? module.config) as ConfigBuilder
 
   // Validate configuration
-  const result = config.finalize()
+  const result = config.safeValidate()
 
   // Filter errors based on options
   let criticalErrors = result.errors
@@ -97,7 +97,8 @@ export async function testTemplateRoundTrip(
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     reimportedModule.config) as ConfigBuilder
 
-  const reimportedResult = reimportedConfig.finalize()
+  const reimportedResult = reimportedConfig.safeValidate()
+  const reimportedPipeline = reimportedConfig.getPlainObject({ skipValidation: true })
 
   // Filter reimported errors
   let reimportedCriticalErrors = reimportedResult.errors
@@ -119,7 +120,7 @@ export async function testTemplateRoundTrip(
   }
 
   // Basic structure validation
-  expect(reimportedResult.pipeline).toBeDefined()
+  expect(reimportedPipeline).toBeDefined()
 
   return {
     originalConfig: config,

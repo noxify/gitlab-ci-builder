@@ -1,6 +1,7 @@
 import fs from "fs/promises"
 
 import type { PipelineOutput } from "../model"
+import type { ExtendsGraphNode, VisualizationOptions } from "../resolution"
 import type {
   Defaults,
   GlobalOptions,
@@ -16,7 +17,13 @@ import type {
 } from "../schema"
 import { mergeJobDefinitions } from "../merge"
 import { PipelineState } from "../model"
-import { resolveExtends } from "../resolution"
+import {
+  buildExtendsGraph,
+  generateAsciiTree,
+  generateMermaidDiagram,
+  generateStageTable,
+  resolveExtends,
+} from "../resolution"
 import {
   DefaultsSchema,
   IncludeSchema,
@@ -25,6 +32,7 @@ import {
   WorkflowSchema,
 } from "../schema"
 import { serializeToYaml } from "../serializer"
+import { JobBuilder } from "./JobBuilder"
 
 /**
  * Reserved top-level keywords that cannot be used as job names
@@ -72,6 +80,15 @@ export interface FinalizeResult {
   metadata: {
     skippedChecks: string[]
   }
+}
+
+/**
+ * Safe validation result
+ */
+export interface SafeValidationResult {
+  valid: boolean
+  errors: ValidationError[]
+  warnings: ValidationError[]
 }
 
 /**
@@ -244,6 +261,21 @@ export class ConfigBuilder {
   }
 
   /**
+   * Add a job with fluent builder interface
+   */
+  public addJob(name: string): JobBuilder {
+    return new JobBuilder(name, this, false)
+  }
+
+  /**
+   * Add a template with fluent builder interface
+   */
+  public addTemplate(name: string): JobBuilder {
+    const templateName = name.startsWith(".") ? name : `.${name}`
+    return new JobBuilder(templateName, this, true)
+  }
+
+  /**
    * Define a job or template
    */
   public job(name: string, definition: JobDefinitionInput, options: JobOptions = {}) {
@@ -372,9 +404,12 @@ export class ConfigBuilder {
   }
 
   /**
-   * Finalize the configuration and return the resolved pipeline
+   * Finalize the configuration and return the resolved pipeline with validation metadata
+   *
+   * This is an internal method. Use {@link safeValidate} for programmatic validation
+   * or {@link validate} for validation that throws errors.
    */
-  public finalize(): FinalizeResult {
+  private finalize(): FinalizeResult {
     // Get current state
     const plain = this.state.toPlainObject()
 
@@ -426,10 +461,53 @@ export class ConfigBuilder {
   }
 
   /**
-   * Get plain object (for backward compatibility)
-   * Same as finalize().pipeline but without validation metadata
+   * Validate the pipeline configuration without throwing errors
+   *
+   * Returns validation result with errors and warnings. Use this method for
+   * programmatic validation checks, testing, or when you want to handle
+   * validation errors yourself.
+   *
+   * To get the pipeline after validation, use `getPlainObject({ skipValidation: true })`.
+   *
+   * @returns Validation result with valid flag, errors, and warnings
+   *
+   * @example
+   * ```ts
+   * const result = config.safeValidate()
+   * if (!result.valid) {
+   *   console.error('Validation failed:', result.errors)
+   *   return
+   * }
+   * if (result.warnings.length > 0) {
+   *   console.warn('Warnings:', result.warnings)
+   * }
+   * const pipeline = config.getPlainObject({ skipValidation: true })
+   * ```
    */
-  public getPlainObject(): PipelineOutput {
+  public safeValidate(): SafeValidationResult {
+    const result = this.finalize()
+
+    return {
+      valid: result.errors.length === 0,
+      errors: result.errors,
+      warnings: result.warnings,
+    }
+  }
+
+  /**
+   * Validate the pipeline configuration
+   *
+   * Performs validation and logs warnings to console.
+   *
+   * @throws {Error} If validation fails
+   *
+   * @example
+   * ```ts
+   * config.validate()
+   * const pipeline = config.getPlainObject({ skipValidation: true })
+   * ```
+   */
+  public validate(): void {
     const result = this.finalize()
 
     // Log warnings to console
@@ -440,27 +518,59 @@ export class ConfigBuilder {
       }
     }
 
-    // Throw if there are errors (for backward compatibility)
+    // Throw if there are errors
     if (result.errors.length > 0) {
       const errorMessages = result.errors.map((e) => e.message).join("\n")
       throw new Error(`Pipeline validation failed:\n${errorMessages}`)
     }
+  }
 
-    return result.pipeline
+  /**
+   * Get plain object representation of the pipeline
+   *
+   * By default, validates the pipeline before returning it. Set `skipValidation: true`
+   * if you've already called `validate()` separately for performance optimization.
+   *
+   * @param options - Configuration options
+   * @param options.skipValidation - Skip validation (default: false). Use this if you've already called validate() separately.
+   * @returns The pipeline configuration
+   * @throws {Error} If validation fails and skipValidation is false
+   *
+   * @example
+   * ```ts
+   * // With validation (default - recommended)
+   * const pipeline = config.getPlainObject()
+   *
+   * // Skip validation (performance optimization)
+   * config.validate()
+   * const pipeline = config.getPlainObject({ skipValidation: true })
+   * ```
+   */
+  public getPlainObject(options?: { skipValidation?: boolean }): PipelineOutput {
+    if (options?.skipValidation !== true) {
+      this.validate()
+    }
+    return this.finalize().pipeline
   }
 
   /**
    * JSON.stringify helper
+   *
+   * @param options - Configuration options
+   * @param options.skipValidation - Skip validation (default: false)
    */
-  public toJSON(): PipelineOutput {
-    return this.getPlainObject()
+  public toJSON(options?: { skipValidation?: boolean }): PipelineOutput {
+    return this.getPlainObject(options)
   }
 
   /**
    * Serialize the pipeline to YAML string
+   *
+   * @param options - Configuration options
+   * @param options.skipValidation - Skip validation (default: false)
    */
-  public toYaml(): string {
-    const pipeline = this.getPlainObject()
+  public toYaml(options?: { skipValidation?: boolean }): string {
+    const pipeline = this.getPlainObject(options)
     return serializeToYaml(pipeline)
   }
 
@@ -473,6 +583,41 @@ export class ConfigBuilder {
   ): Promise<void> {
     const content = this.toYaml()
     await fs.writeFile(filePath, content, { encoding: options?.encoding ?? "utf8" })
+  }
+
+  /**
+   * Get the extends dependency graph for visualization and analysis
+   */
+  public getExtendsGraph(): Map<string, ExtendsGraphNode> {
+    const jobs = this.state.jobs
+    const templates = this.state.templates
+    const jobOptionsMap = this.state.jobOptionsMap
+
+    return buildExtendsGraph(jobs, templates, jobOptionsMap)
+  }
+
+  /**
+   * Generate Mermaid diagram from extends graph
+   */
+  public generateMermaidDiagram(options?: VisualizationOptions): string {
+    const graph = this.getExtendsGraph()
+    return generateMermaidDiagram(graph, options)
+  }
+
+  /**
+   * Generate ASCII tree from extends graph
+   */
+  public generateAsciiTree(options?: VisualizationOptions): string {
+    const graph = this.getExtendsGraph()
+    return generateAsciiTree(graph, options)
+  }
+
+  /**
+   * Generate stage table from extends graph
+   */
+  public generateStageTable(options?: VisualizationOptions): string {
+    const graph = this.getExtendsGraph()
+    return generateStageTable(graph, options)
   }
 }
 

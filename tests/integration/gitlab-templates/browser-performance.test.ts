@@ -52,11 +52,12 @@ describe("Integration: GitLab Browser Performance Template", () => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const config: ConfigBuilder = (module.default ?? module.config) as ConfigBuilder
 
-    const result = config.finalize()
+    const result = config.safeValidate()
+    const pipeline = config.getPlainObject({ skipValidation: true })
     expect(result.errors.length).toBe(0)
 
     // Verify artifacts structure
-    const job = result.pipeline.jobs?.browser_performance
+    const job = pipeline.jobs?.browser_performance
     expect(job).toBeDefined()
     expect(job?.artifacts?.paths).toEqual(["sitespeed-results/"])
     expect(job?.artifacts?.reports?.browser_performance).toBe("browser-performance.json")
@@ -87,10 +88,11 @@ describe("Integration: GitLab Browser Performance Template", () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       reimportedModule.config) as ConfigBuilder
 
-    const reimportedResult = reimportedConfig.finalize()
+    const reimportedResult = reimportedConfig.safeValidate()
+    const reimportedPipeline = reimportedConfig.getPlainObject({ skipValidation: true })
     expect(reimportedResult.errors.length).toBe(0)
     expect(
-      reimportedResult.pipeline.jobs?.browser_performance?.artifacts?.reports?.browser_performance,
+      reimportedPipeline.jobs?.browser_performance?.artifacts?.reports?.browser_performance,
     ).toBe("browser-performance.json")
   })
 
@@ -133,11 +135,12 @@ describe("Integration: GitLab Browser Performance Template", () => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const config: ConfigBuilder = (module.default ?? module.config) as ConfigBuilder
 
-    const result = config.finalize()
+    const result = config.safeValidate()
+    const pipeline = config.getPlainObject({ skipValidation: true })
     expect(result.errors.length).toBe(0)
 
     // Verify all report types
-    const reports = result.pipeline.jobs?.test_job?.artifacts?.reports
+    const reports = pipeline.jobs?.test_job?.artifacts?.reports
     expect(reports?.junit).toBe("test-results/junit.xml")
     expect(reports?.coverage_report).toMatchObject({
       coverage_format: "cobertura",

@@ -506,18 +506,20 @@ the runtime builder and are derived from the JSDoc on the source `ConfigBuilder`
 - `patch(callback: (plain: GitLabCi) => void): void`
   - Register a patcher callback that runs on the plain object before it is returned.
 
-- `getPlainObject(): PipelineOutput`
-  - Return a YAML-serializable pipeline object with resolved extends and applied patchers.
-    Returns the result of `finalize().pipeline`.
+- `validate(): void`
+  - Validate the configuration and throw an error if validation fails. Logs warnings to console.
 
-- `toJSON(): PipelineOutput`
+- `safeValidate(): SafeValidationResult`
+  - Validate the configuration without throwing. Returns `{ valid: boolean, errors: ValidationError[], warnings: ValidationError[] }`.
+
+- `getPlainObject(options?: { skipValidation?: boolean }): PipelineOutput`
+  - Return a YAML-serializable pipeline object with resolved extends and applied patchers.
+  - By default, validates before returning. Set `skipValidation: true` to skip validation (e.g., after calling `safeValidate()`).
+
+- `toJSON(options?: { skipValidation?: boolean }): PipelineOutput`
   - Alias for `getPlainObject()` (useful for `JSON.stringify`).
 
-- `finalize(): FinalizeResult`
-  - Finalize the configuration and return the resolved pipeline with validation metadata.
-  - Returns `{ pipeline: PipelineOutput, errors: ValidationError[], warnings: ValidationError[], metadata: { skippedChecks: string[] } }`
-
-- `toYaml(): string`
+- `toYaml(options?: { skipValidation?: boolean }): string`
   - Convert the configuration to a formatted YAML string.
 
 - `writeYamlFile(filePath: string): Promise<void>`

@@ -88,12 +88,13 @@ describe("ConfigBuilder - Real-world extends scenario", () => {
       ],
     })
 
-    const result = config.finalize()
+    const result = config.safeValidate()
+    const pipeline = config.getPlainObject({ skipValidation: true })
 
     expect(result.errors).toHaveLength(0)
     expect(result.warnings).toHaveLength(0)
 
-    const job = result.pipeline.jobs?.deploy_review_app
+    const job = pipeline.jobs?.deploy_review_app
     expect(job).toBeDefined()
 
     // Verify all expected properties are present
