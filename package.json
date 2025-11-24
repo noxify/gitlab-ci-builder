@@ -1,13 +1,28 @@
 {
   "name": "@noxify/gitlab-ci-builder",
   "version": "1.4.2",
-  "description": "Create GitLab CI pipelines with TypeScript.",
+  "description": "Build GitLab CI/CD pipelines programmatically with TypeScript. Fluent API for creating jobs, templates, and workflows. Import/export YAML, visualize with Mermaid diagrams, and resolve extends chains automatically.",
   "keywords": [
     "gitlab",
     "gitlab-ci",
+    "ci-cd",
     "continuous-integration",
+    "continuous-deployment",
     "pipeline",
-    "jobs"
+    "yaml",
+    "builder",
+    "typescript",
+    "devops",
+    "automation",
+    "infrastructure-as-code",
+    "gitops",
+    "configuration",
+    "configuration-management",
+    "visualization",
+    "mermaid",
+    "code-generation",
+    "fluent-api",
+    "extends-resolution"
   ],
   "repository": {
     "type": "git",
