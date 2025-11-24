@@ -164,8 +164,6 @@ All visualization formats show:
 - Remote job/template indicators (🌐)
 - Template markers ([T])
 
-````
-
 ## Import & Export
 
 ### Exporting to YAML
@@ -186,7 +184,7 @@ console.log(yamlString)
 
 // Or write directly to a file
 await config.writeYamlFile(".gitlab-ci.yml")
-````
+```
 
 The YAML output features:
 
