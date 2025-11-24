@@ -20,6 +20,31 @@ types, proper extends resolution, and a simple builder surface.
 - Comprehensive test coverage (241 tests, 86%+ coverage)
 - Small and dependency-light implementation
 
+## Limitations
+
+This builder focuses on **composing and generating** GitLab CI configurations programmatically. It is **not** a replacement for GitLab's CI/CD execution engine. Here's what it **cannot** do:
+
+- **Execute pipelines**: This library generates YAML configurations; it does not run jobs, scripts, or pipelines
+- **Validate GitLab-specific runtime behavior**: While it validates schema structure, it cannot check runtime requirements like Docker availability, GitLab Runner setup, or environment-specific constraints
+- **Access GitLab API for live data**: The library works with static configuration files and does not interact with GitLab's API to fetch live pipeline status, variables, or runner information
+- **Resolve complex variable interpolations**: GitLab CI supports advanced variable expansion and substitution at runtime; this builder only handles static variable definitions
+- **Handle all YAML edge cases**: While it supports most GitLab CI features, some advanced YAML constructs or GitLab-specific behaviors might not be fully supported
+- **Replace GitLab CI/CD**: This is a development tool for building configurations, not an alternative CI/CD platform
+
+**Use this library when you want to:**
+
+- Generate GitLab CI YAML programmatically with TypeScript
+- Maintain large, complex pipeline configurations with code reuse
+- Visualize and document pipeline structures
+- Convert between YAML and TypeScript representations
+- Validate configuration structure before committing
+
+**Do not use this library when you need to:**
+
+- Execute actual CI/CD pipelines (use GitLab CI/CD for that)
+- Interact with GitLab's runtime environment or API
+- Validate runtime-specific requirements
+
 ## Installation
 
 ```bash
