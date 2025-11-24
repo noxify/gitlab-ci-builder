@@ -1,5 +1,11 @@
 # @noxify/gitlab-ci-builder
 
+## 1.4.2
+
+### Patch Changes
+
+- ac8da01: Add "Limitations" section to README
+
 ## 1.4.1
 
 ### Patch Changes
