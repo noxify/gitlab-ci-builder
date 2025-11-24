@@ -1,6 +1,6 @@
 {
   "name": "@noxify/gitlab-ci-builder",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Create GitLab CI pipelines with TypeScript.",
   "keywords": [
     "gitlab",
