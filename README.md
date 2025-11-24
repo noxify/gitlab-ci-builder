@@ -473,20 +473,38 @@ console.log(mermaid)
 **Output:**
 
 ```mermaid
-graph TD
-  n0["build [build]"]:::job
-  n1[".base"]:::template
-  n2["test [test]"]:::job
-  n0 --> n1
-  n2 --> n1
+---
+config:
+  layout: elk
+---
+graph LR
   classDef template fill:#e1f5ff,stroke:#0366d6
   classDef job fill:#fff5e1,stroke:#fb8500
   classDef remote fill:#ffe1f5,stroke:#c026d3
+
+  subgraph Templates
+    n1[".build_template"]:::template
+    n2[".base"]:::template
+    n4[".test_template"]:::template
+  end
+
+  subgraph "build"
+    n0["build"]:::job
+  end
+
+  subgraph "test"
+    n3["test"]:::job
+  end
+
+  n0 --> n1
+  n1 --> n2
+  n3 --> n4
+  n4 --> n2
 ```
 
 #### ASCII Trees
 
-Generate hierarchical ASCII tree views of job inheritance:
+Generate hierarchical ASCII tree views of job inheritance using `oo-ascii-tree` for clean, professional box-drawing characters:
 
 ```ts
 const ascii = config.generateAsciiTree({
@@ -500,15 +518,19 @@ console.log(ascii)
 **Output:**
 
 ```
-└─ build (build)
-  └─ .base [T]
-└─ test (test)
-  └─ .base [T]
+build (build)
+ └─┬ .build_template [T]
+   └── .base [T]
+test (test)
+ └─┬ .test_template [T]
+   └── .base [T]
 ```
+
+The ASCII tree uses Unicode box-drawing characters for a clean, readable hierarchy that works great in terminal output and documentation.
 
 #### Stage Tables
 
-Generate tabular views showing jobs organized by stage:
+Generate formatted tables using `climt` showing jobs with their full inheritance chains:
 
 ```ts
 const table = config.generateStageTable({
@@ -521,10 +543,17 @@ console.log(table)
 **Output:**
 
 ```
-build         │ test         │ deploy
-──────────────┼──────────────┼─────────────
-build ← .base │ test ← .base │
+┌───────┬────────────────────────────────────────────┐
+│ STAGE │ JOB                                        │
+├───────┼────────────────────────────────────────────┤
+│ build │ build-frontend ← .build_template ← .base   │
+│ build │ build-backend ← .build_template ← .base    │
+│ test  │ test-unit ← .test_template ← .base         │
+│ test  │ test-e2e ← .test_template ← .base          │
+└───────┴────────────────────────────────────────────┘
 ```
+
+The table shows one job per row with its complete extends chain, making it easy to understand the full inheritance hierarchy at a glance.
 
 ### Visualization Options
 

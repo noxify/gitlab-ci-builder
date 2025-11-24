@@ -1,14 +1,42 @@
 import { readFileSync } from "node:fs"
 import { isAbsolute, resolve } from "node:path"
+import yaml from "js-yaml"
 
 import type { ConfigBuilder } from "../builder"
 import type { IncludeEntry } from "../schema"
+import { ConfigBuilder as Builder } from "../builder"
+import { referenceTagResolvable } from "../importer/yaml-parser/reference"
+import { resolveReferences } from "./reference-resolver"
+
+const RESOLVABLE_SCHEMA = yaml.DEFAULT_SCHEMA.extend({ explicit: [referenceTagResolvable] })
+
+/**
+ * Parse YAML with resolvable !reference tags (for resolution, not import)
+ */
+function parseYamlResolvable(yamlContent: string): Record<string, unknown> {
+  const documents = yaml.loadAll(yamlContent, null, { schema: RESOLVABLE_SCHEMA })
+
+  if (documents.length === 1) {
+    return documents[0] as Record<string, unknown>
+  }
+
+  const merged: Record<string, unknown> = {}
+  for (const doc of documents) {
+    if (doc && typeof doc === "object") {
+      Object.assign(merged, doc)
+    }
+  }
+
+  return merged
+}
 
 export interface ResolverOptions {
   gitlabToken?: string
   gitlabUrl?: string
   maxDepth?: number
   basePath?: string
+  /** Resolve !reference tags in YAML (needed for visualization, default: false) */
+  resolveReferences?: boolean
 }
 
 /**
@@ -46,7 +74,9 @@ export async function resolveIncludes(
       if (!content) continue
 
       // Parse the included YAML
-      const includedConfig = await convertYamlToConfig(content)
+      const includedConfig = convertYamlToConfig(content, {
+        resolveReferences: options.resolveReferences,
+      })
 
       // Recursively resolve nested includes first
       await resolveRecursive(includedConfig, depth + 1)
@@ -174,53 +204,61 @@ async function resolveInclude(
 /**
  * Convert YAML content to a ConfigBuilder instance
  */
-async function convertYamlToConfig(yamlContent: string): Promise<ConfigBuilder> {
-  const { load: parseYaml } = await import("js-yaml")
-  const { ConfigBuilder } = await import("../builder")
+function convertYamlToConfig(
+  yamlContent: string,
+  options?: { resolveReferences?: boolean },
+): ConfigBuilder {
+  const parsed = parseYamlResolvable(yamlContent)
 
-  const parsed = parseYaml(yamlContent) as Record<string, unknown>
-  const config = new ConfigBuilder()
+  // Optionally resolve !reference tags before validation (needed for visualization)
+  const resolved = options?.resolveReferences ? resolveReferences(parsed) : parsed
+
+  const config = new Builder()
 
   // Add stages if present
-  if (parsed.stages) {
+  if (resolved.stages) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    config.stages(...(Array.isArray(parsed.stages) ? parsed.stages : [parsed.stages]))
+    config.stages(...(Array.isArray(resolved.stages) ? resolved.stages : [resolved.stages]))
   }
 
   // Add variables if present
-  if (parsed.variables && typeof parsed.variables === "object") {
-    config.variables(parsed.variables as Record<string, string | number | boolean>)
+  if (resolved.variables && typeof resolved.variables === "object") {
+    config.variables(resolved.variables as Record<string, string | number | boolean>)
   }
 
   // Add workflow if present
-  if (parsed.workflow && typeof parsed.workflow === "object") {
+  if (resolved.workflow && typeof resolved.workflow === "object") {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-    config.workflow(parsed.workflow as any)
+    config.workflow(resolved.workflow as any)
   }
 
   // Add defaults if present
-  if (parsed.default && typeof parsed.default === "object") {
+  if (resolved.default && typeof resolved.default === "object") {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-    config.defaults(parsed.default as any)
+    config.defaults(resolved.default as any)
   }
 
   // Add includes if present (needed for nested resolution)
-  if (parsed.include) {
+  if (resolved.include) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-    config.include(parsed.include as any)
+    config.include(resolved.include as any)
   }
 
   // Add jobs and templates (mark as remote for visualization)
-  for (const [name, definition] of Object.entries(parsed)) {
+  for (const [name, definition] of Object.entries(resolved)) {
     if (
       typeof definition === "object" &&
       definition !== null &&
       !["stages", "variables", "workflow", "include", "default", "spec"].includes(name)
     ) {
-      if (name.startsWith(".")) {
-        config.template(name, definition, { remote: true })
-      } else {
-        config.job(name, definition, { remote: true })
+      try {
+        if (name.startsWith(".")) {
+          config.template(name, definition, { remote: true })
+        } else {
+          config.job(name, definition, { remote: true })
+        }
+      } catch {
+        // Silently skip jobs with validation errors during include resolution
       }
     }
   }

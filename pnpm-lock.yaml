@@ -11,6 +11,9 @@ importers:
       '@commander-js/extra-typings':
         specifier: ^14.0.0
         version: 14.0.0(commander@14.0.2)
+      climt:
+        specifier: ^0.2.0
+        version: 0.2.0
       commander:
         specifier: ^14.0.2
         version: 14.0.2
@@ -20,6 +23,9 @@ importers:
       js-yaml:
         specifier: 4.1.1
         version: 4.1.1
+      oo-ascii-tree:
+        specifier: ^1.120.0
+        version: 1.120.0
       read-pkg:
         specifier: ^10.0.0
         version: 10.0.0
@@ -1095,6 +1101,10 @@ packages:
     resolution: {integrity: sha512-ouuZd4/dm2Sw5Gmqy6bGyNNNe1qt9RpmxveLSO7KcgsTnU7RXfsw+/bukWGo1abgBiMAic068rclZsO4IWmmxQ==}
     engines: {node: '>= 12'}
 
+  climt@0.2.0:
+    resolution: {integrity: sha512-HfTdM6iwfEbYMTOg3OGaYHssbFJYa0lm8hipvOo+nNzDy+I/ZxVCb0h0SmQfXEmDvvC+xq3FB3NsnZdt+N3obw==}
+    hasBin: true
+
   cliui@8.0.1:
     resolution: {integrity: sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ==}
     engines: {node: '>=12'}
@@ -1931,6 +1941,10 @@ packages:
 
   obug@2.1.1:
     resolution: {integrity: sha512-uTqF9MuPraAQ+IsnPf366RG4cP9RtUi7MLO1N3KEc+wb0a6yKpeL0lmk2IB1jY5KHPAlTc6T/JRdC/YqxHNwkQ==}
+
+  oo-ascii-tree@1.120.0:
+    resolution: {integrity: sha512-8aZZbPwoizq9fGRcn7MkCmYdZ2G4RSA/k2s8OlF4ijbbGFzxhG2jt4xVw4uRPpt9aLOgU051h/t0LePFBVppsQ==}
+    engines: {node: '>= 14.17.0'}
 
   optionator@0.9.4:
     resolution: {integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==}
@@ -3681,6 +3695,8 @@ snapshots:
 
   cli-width@4.1.0: {}
 
+  climt@0.2.0: {}
+
   cliui@8.0.1:
     dependencies:
       string-width: 4.2.3
@@ -4620,6 +4636,8 @@ snapshots:
       es-object-atoms: 1.1.1
 
   obug@2.1.1: {}
+
+  oo-ascii-tree@1.120.0: {}
 
   optionator@0.9.4:
     dependencies:

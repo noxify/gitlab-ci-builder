@@ -82,6 +82,8 @@ Examples:
         if (result.mermaid) {
           // eslint-disable-next-line no-console
           console.log("\n=== Mermaid Diagram ===\n")
+          // eslint-disable-next-line no-console
+          console.log(result.mermaid)
         }
 
         if (result.ascii) {
@@ -99,7 +101,7 @@ Examples:
         }
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.error("Error:", error instanceof Error ? error.message : String(error))
+        console.error("Error:", error)
         process.exit(1)
       }
     })

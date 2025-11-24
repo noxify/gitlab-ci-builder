@@ -8,6 +8,8 @@ export interface ExtendsGraphNode {
   name: string
   definition: JobDefinitionNormalized
   extends: string[]
+  /** Original unresolved extends before include resolution */
+  unresolvedExtends?: string[]
   isTemplate: boolean
   isRemote: boolean
 }

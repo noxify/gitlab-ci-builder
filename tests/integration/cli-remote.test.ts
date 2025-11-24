@@ -59,7 +59,7 @@ describe("visualizeYaml function", () => {
     const result = await visualizeYaml(yaml, { format: "mermaid" })
 
     expect(result.mermaid).toBeDefined()
-    expect(result.mermaid).toContain("graph TD")
+    expect(result.mermaid).toContain("graph LR")
     expect(result.mermaid).toContain("build")
     expect(result.mermaid).toContain("test")
     expect(result.mermaid).toContain("deploy")

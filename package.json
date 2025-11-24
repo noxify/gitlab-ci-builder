@@ -52,9 +52,11 @@
   "prettier": "./prettier.config.mjs",
   "dependencies": {
     "@commander-js/extra-typings": "^14.0.0",
+    "climt": "^0.2.0",
     "commander": "^14.0.2",
     "deepmerge": "4.3.1",
     "js-yaml": "4.1.1",
+    "oo-ascii-tree": "^1.120.0",
     "read-pkg": "^10.0.0",
     "tinyglobby": "0.2.15",
     "typescript": "5.9.3",
