@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { ConfigBuilder } from "../../src/builder/ConfigBuilder"
+import { ConfigBuilder } from "../../src"
 
 describe("Fluent Job Builder API", () => {
   it("should support addJob with chaining", () => {

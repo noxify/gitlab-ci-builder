@@ -9,9 +9,12 @@ types, proper extends resolution, and a simple builder surface.
 ## Features
 
 - Fluent TypeScript API to declare `stages`, `jobs`, `templates`, `variables` and `include` entries
+- **Command-line interface**: Visualize pipelines directly from the terminal with `gitlab-ci-builder visualize`
 - **Import existing YAML**: Convert `.gitlab-ci.yml` files to TypeScript code using the builder API
 - **Export to YAML**: Generate properly formatted YAML with customizable key ordering and spacing
 - **Robust extends resolution**: Proper topological sorting, cycle detection, and merge strategies
+- **Visualization tools**: Generate Mermaid diagrams, ASCII trees, and stage tables to visualize pipeline structure
+- **Authentication support**: Access private repositories and includes with GitLab tokens
 - Supports reusable template jobs (hidden jobs starting with `.`) with deep-merge semantics
 - Dynamic TypeScript-based includes: import other files and apply their configuration functions
 - Comprehensive test coverage (241 tests, 86%+ coverage)
@@ -52,6 +55,92 @@ const plain = config.getPlainObject()
 console.log(JSON.stringify(plain, null, 2))
 ```
 
+## Command-Line Interface
+
+The `gitlab-ci-builder` CLI provides tools for visualizing GitLab CI pipeline structure directly from the terminal.
+
+### Installation
+
+The CLI is included with the package:
+
+```bash
+pnpm add @noxify/gitlab-ci-builder
+```
+
+Or install globally:
+
+```bash
+pnpm add -g @noxify/gitlab-ci-builder
+```
+
+### Visualize Command
+
+Generate visual representations of your pipeline structure:
+
+```bash
+# Visualize a local file (all formats)
+gitlab-ci-builder visualize .gitlab-ci.yml
+
+# Visualize a remote file with authentication
+gitlab-ci-builder visualize https://gitlab.com/group/project/-/raw/main/.gitlab-ci.yml -t glpat-xxxx
+
+# Generate only Mermaid diagram
+gitlab-ci-builder visualize .gitlab-ci.yml -f mermaid
+
+# Use environment variables for authentication
+export GITLAB_TOKEN=glpat-xxxxxxxxxxxx
+export GITLAB_HOST=gitlab.company.com
+gitlab-ci-builder visualize https://gitlab.company.com/project/.gitlab-ci.yml
+
+# Self-hosted GitLab instance
+gitlab-ci-builder visualize pipeline.yml --host gitlab.company.com -t <token>
+```
+
+**Options:**
+
+- `-f, --format <format>` - Output format: `mermaid`, `ascii`, `table`, `all` (default: `all`)
+- `--show-stages` - Show stage information (default: `true`)
+- `--show-remotes` - Show remote template sources (default: `true`)
+- `-t, --token <token>` - Authentication token for private repositories (or use `GITLAB_TOKEN` env var)
+- `--host <host>` - GitLab host for project/template includes (default: `gitlab.com`, or use `GITLAB_HOST` env var)
+- `-h, --help` - Display help information
+- `-v, --version` - Display version number
+
+**Examples:**
+
+```bash
+# ASCII tree only
+gitlab-ci-builder visualize .gitlab-ci.yml -f ascii
+
+# Table view without remote indicators
+gitlab-ci-builder visualize .gitlab-ci.yml -f table --show-remotes=false
+
+# Private repository with token
+gitlab-ci-builder visualize https://gitlab.com/private/repo/-/raw/main/.gitlab-ci.yml \
+  -t glpat-xxxxxxxxxxxx
+
+# Self-hosted GitLab with project includes
+gitlab-ci-builder visualize pipeline.yml \
+  --host gitlab.company.com \
+  -t glpat-xxxxxxxxxxxx
+```
+
+**Note:** The token is used for:
+
+- Fetching remote YAML files from private repositories
+- Resolving `project:` includes recursively
+- Resolving `remote:` includes to private URLs
+- Accessing GitLab CI/CD templates from private instances
+
+All visualization formats show:
+
+- Job inheritance chains (extends relationships)
+- Stage assignments
+- Remote job/template indicators (🌐)
+- Template markers ([T])
+
+````
+
 ## Import & Export
 
 ### Exporting to YAML
@@ -72,7 +161,7 @@ console.log(yamlString)
 
 // Or write directly to a file
 await config.writeYamlFile(".gitlab-ci.yml")
-```
+````
 
 The YAML output features:
 
@@ -348,6 +437,209 @@ export default function (config: ConfigBuilder) {
 
 **Note:** If both default and named exports are present, the default export takes precedence.
 
+## Visualization
+
+The builder provides powerful visualization tools to help understand and document your pipeline structure. You can generate Mermaid diagrams, ASCII trees, and stage tables that show job relationships, inheritance chains, and stage organization.
+
+### Available Visualizations
+
+All visualization functions accept a unified parameter object with:
+
+- `graph`: The extends graph containing job metadata
+- `resolvedConfig`: The resolved pipeline configuration with job definitions
+- `options`: Visualization options (optional)
+
+#### Mermaid Diagrams
+
+Generate [Mermaid](https://mermaid.js.org/) flowchart diagrams showing job relationships and inheritance:
+
+```ts
+import { ConfigBuilder } from "@noxify/gitlab-ci-builder"
+
+const config = new ConfigBuilder()
+  .stages("build", "test", "deploy")
+  .template(".base", { image: "node:22" })
+  .extends(".base", "build", { stage: "build", script: ["npm run build"] })
+  .extends(".base", "test", { stage: "test", script: ["npm test"] })
+
+const mermaid = config.generateMermaidDiagram({
+  showStages: true,
+  showRemote: true,
+})
+
+console.log(mermaid)
+```
+
+**Output:**
+
+```mermaid
+graph TD
+  n0["build [build]"]:::job
+  n1[".base"]:::template
+  n2["test [test]"]:::job
+  n0 --> n1
+  n2 --> n1
+  classDef template fill:#e1f5ff,stroke:#0366d6
+  classDef job fill:#fff5e1,stroke:#fb8500
+  classDef remote fill:#ffe1f5,stroke:#c026d3
+```
+
+#### ASCII Trees
+
+Generate hierarchical ASCII tree views of job inheritance:
+
+```ts
+const ascii = config.generateAsciiTree({
+  showStages: true,
+  showRemote: true,
+})
+
+console.log(ascii)
+```
+
+**Output:**
+
+```
+└─ build (build)
+  └─ .base [T]
+└─ test (test)
+  └─ .base [T]
+```
+
+#### Stage Tables
+
+Generate tabular views showing jobs organized by stage:
+
+```ts
+const table = config.generateStageTable({
+  showRemote: true,
+})
+
+console.log(table)
+```
+
+**Output:**
+
+```
+build         │ test         │ deploy
+──────────────┼──────────────┼─────────────
+build ← .base │ test ← .base │
+```
+
+### Visualization Options
+
+All visualization methods accept optional configuration:
+
+```ts
+interface VisualizationOptions {
+  showRemote?: boolean // Show remote jobs/templates with 🌐 indicator
+  showStages?: boolean // Show stage information in output
+  highlightCycles?: boolean // Highlight circular dependencies (future)
+}
+```
+
+### Using Visualization Functions Directly
+
+You can also use the visualization functions directly with the extends graph and resolved config:
+
+```ts
+import {
+  ConfigBuilder,
+  generateAsciiTree,
+  generateMermaidDiagram,
+  generateStageTable,
+} from "@noxify/gitlab-ci-builder"
+
+const config = new ConfigBuilder()
+// ... configure jobs ...
+
+const graph = config.getExtendsGraph()
+const resolvedConfig = config.getPlainObject({ skipValidation: true })
+
+// Generate visualizations
+const mermaid = generateMermaidDiagram({
+  graph,
+  resolvedConfig,
+  options: { showStages: true },
+})
+
+const ascii = generateAsciiTree({
+  graph,
+  resolvedConfig,
+  options: { showRemote: true },
+})
+
+const table = generateStageTable({
+  graph,
+  resolvedConfig,
+  options: { showStages: false },
+})
+```
+
+### Visualizing YAML with Includes
+
+The `visualizeYaml` function can parse YAML content and generate visualizations, including support for resolving `project:` and `remote:` includes with authentication:
+
+```ts
+import { visualizeYaml } from "@noxify/gitlab-ci-builder"
+
+const yamlContent = `
+include:
+  - project: 'my-group/my-project'
+    file: '/templates/common.yml'
+  - remote: 'https://gitlab.company.com/shared/base.yml'
+
+stages: [build, test, deploy]
+
+build:
+  stage: build
+  script: npm run build
+`
+
+// Visualize with authentication for private includes
+const result = await visualizeYaml(yamlContent, {
+  format: "mermaid",
+  showStages: true,
+  showRemotes: true,
+  gitlabToken: "glpat-xxxxxxxxxxxx", // For private repositories
+  gitlabUrl: "https://gitlab.company.com", // For self-hosted instances
+})
+
+console.log(result.mermaid)
+
+// Generate all formats at once
+const allFormats = await visualizeYaml(yamlContent, {
+  format: "all",
+  gitlabToken: process.env.GITLAB_TOKEN,
+})
+
+console.log(allFormats.mermaid)
+console.log(allFormats.ascii)
+console.log(allFormats.table)
+```
+
+**Authentication Options:**
+
+- `gitlabToken` - Authentication token for resolving private `project:` and `remote:` includes
+- `gitlabUrl` - GitLab host URL for `project:` includes (default: `https://gitlab.com`)
+
+The token is passed recursively through all include levels, so nested includes in private repositories are also resolved correctly.
+
+### Remote Job/Template Indicators
+
+When working with remote includes, jobs and templates can be marked with the `🌐` indicator when `showRemote: true`:
+
+```ts
+const config = new ConfigBuilder()
+  .template(".remote-base", { image: "alpine" }, { remote: true })
+  .extends(".remote-base", "local-job", { script: ["echo hello"] })
+
+const ascii = config.generateAsciiTree({ showRemote: true })
+// Output shows: .remote-base [T] 🌐
+```
+
+This helps distinguish between locally-defined and remotely-included configurations when debugging complex pipelines.
+
 ## Job Options & Global Settings
 
 ### Job Options
@@ -519,6 +811,21 @@ the runtime builder and are derived from the JSDoc on the source `ConfigBuilder`
 - `toJSON(options?: { skipValidation?: boolean }): PipelineOutput`
   - Alias for `getPlainObject()` (useful for `JSON.stringify`).
 
+- `getExtendsGraph(): Map<string, ExtendsGraphNode>`
+  - Return the extends graph containing job metadata and relationships.
+
+- `generateMermaidDiagram(options?: VisualizationOptions): string`
+  - Generate a Mermaid flowchart diagram showing job relationships and inheritance.
+  - Options: `{ showStages?: boolean, showRemote?: boolean, highlightCycles?: boolean }`
+
+- `generateAsciiTree(options?: VisualizationOptions): string`
+  - Generate an ASCII tree view of job inheritance hierarchy.
+  - Options: `{ showStages?: boolean, showRemote?: boolean, highlightCycles?: boolean }`
+
+- `generateStageTable(options?: VisualizationOptions): string`
+  - Generate a tabular view showing jobs organized by stage.
+  - Options: `{ showStages?: boolean, showRemote?: boolean, highlightCycles?: boolean }`
+
 - `toYaml(options?: { skipValidation?: boolean }): string`
   - Convert the configuration to a formatted YAML string.
 
@@ -543,6 +850,20 @@ the runtime builder and are derived from the JSDoc on the source `ConfigBuilder`
 - `importYamlFile(yamlPath: string, outputPath?: string): Promise<string>`
   - Read a GitLab CI YAML file and convert it to TypeScript code. If `outputPath` is provided,
     the generated code is written to that file. Returns the generated TypeScript code.
+
+### Visualization Functions
+
+- `generateMermaidDiagram({ graph, resolvedConfig, options? }): string`
+  - Generate a Mermaid flowchart diagram from an extends graph and resolved configuration.
+  - Parameters: `{ graph: Map<string, ExtendsGraphNode>, resolvedConfig: ResolvedPipelineConfig, options?: VisualizationOptions }`
+
+- `generateAsciiTree({ graph, resolvedConfig, options? }): string`
+  - Generate an ASCII tree view from an extends graph and resolved configuration.
+  - Parameters: `{ graph: Map<string, ExtendsGraphNode>, resolvedConfig: ResolvedPipelineConfig, options?: VisualizationOptions }`
+
+- `generateStageTable({ graph, resolvedConfig, options? }): string`
+  - Generate a stage table from an extends graph and resolved configuration.
+  - Parameters: `{ graph: Map<string, ExtendsGraphNode>, resolvedConfig: ResolvedPipelineConfig, options?: VisualizationOptions }`
 
 ## Testing
 

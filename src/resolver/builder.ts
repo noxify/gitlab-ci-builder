@@ -6,7 +6,7 @@ import type {
   ValidationError,
 } from "../schema"
 import { mergeJobDefinitions } from "../merge"
-import { buildExtendsGraph, topologicalSort, validateExtendsGraph } from "./graph"
+import { buildExtendsGraph, topologicalSort, validateExtendsGraph } from "../resolution/graph"
 
 /**
  * Resolution context for tracking metadata during extends resolution

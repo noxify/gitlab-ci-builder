@@ -1,4 +1,39 @@
+import { load as parseYaml } from "js-yaml"
+
+import type { IncludeInput, Stage, Workflow } from "../schema"
+import type { BaseJob } from "../schema/job"
 import type { ExtendsGraphNode } from "./graph"
+import { ConfigBuilder } from "../builder/ConfigBuilder"
+
+/**
+ * Visualization format types
+ */
+export type VisualizationFormat = "mermaid" | "ascii" | "table" | "all"
+
+/**
+ * Options for visualization generation
+ */
+export interface VisualizeOptions {
+  /** Output format */
+  format?: VisualizationFormat
+  /** Show job stages in output */
+  showStages?: boolean
+  /** Show remote template sources */
+  showRemotes?: boolean
+  /** GitLab authentication token for resolving project/template includes */
+  gitlabToken?: string
+  /** GitLab host URL for project/template includes (default: https://gitlab.com) */
+  gitlabUrl?: string
+}
+
+/**
+ * Result object containing requested visualizations
+ */
+export interface VisualizationResult {
+  mermaid?: string
+  ascii?: string
+  table?: string
+}
 
 /**
  * Visualization options
@@ -13,12 +48,131 @@ export interface VisualizationOptions {
 }
 
 /**
+ * Resolved pipeline configuration with job definitions
+ */
+export interface ResolvedPipelineConfig {
+  /** Job definitions with resolved properties */
+  jobs?: Record<string, Pick<BaseJob, "stage">>
+}
+
+/**
+ * Parameters for visualization functions
+ */
+export interface VisualizationParams {
+  /** Extends graph with node metadata */
+  graph: Map<string, ExtendsGraphNode>
+  /** Resolved pipeline configuration */
+  resolvedConfig: ResolvedPipelineConfig
+  /** Visualization options */
+  options?: VisualizationOptions
+}
+
+/**
+ * Generate visualizations from a GitLab CI YAML content
+ *
+ * @param yamlContent - The YAML content as string
+ * @param options - Visualization options
+ * @returns Object containing the requested visualization formats
+ *
+ * @example
+ * ```ts
+ * const yaml = `
+ * stages: [build, test]
+ * build:
+ *   stage: build
+ *   script: npm run build
+ * `
+ * const result = await visualizeYaml(yaml, { format: 'ascii' })
+ * console.log(result.ascii)
+ * ```
+ */
+export async function visualizeYaml(
+  yamlContent: string,
+  options: VisualizeOptions = { format: "all" },
+): Promise<VisualizationResult> {
+  const parsed = parseYaml(yamlContent) as Record<string, unknown>
+  const config = new ConfigBuilder()
+
+  // Add stages if present
+  if (parsed.stages) {
+    config.stages(...((Array.isArray(parsed.stages) ? parsed.stages : [parsed.stages]) as Stage[]))
+  }
+
+  // Add includes if present (must be added before resolving)
+  if (parsed.include) {
+    config.include(parsed.include as IncludeInput | IncludeInput[])
+  }
+
+  // Resolve includes BEFORE adding jobs/templates
+  if (parsed.include) {
+    const { resolveIncludes } = await import("../resolver/cli")
+    await resolveIncludes(config, {
+      gitlabToken: options.gitlabToken,
+      gitlabUrl: options.gitlabUrl,
+    })
+  }
+
+  // Add variables if present
+  if (parsed.variables && typeof parsed.variables === "object") {
+    config.variables(parsed.variables as Record<string, string | number | boolean>)
+  }
+
+  // Add workflow if present
+  if (parsed.workflow && typeof parsed.workflow === "object") {
+    config.workflow(parsed.workflow as Workflow)
+  }
+
+  // Add jobs and templates AFTER resolving includes
+  for (const [name, definition] of Object.entries(parsed)) {
+    if (
+      typeof definition === "object" &&
+      definition !== null &&
+      !["stages", "variables", "workflow", "include", "default", "spec"].includes(name)
+    ) {
+      if (name.startsWith(".")) {
+        config.template(name, definition)
+      } else {
+        config.job(name, definition)
+      }
+    }
+  }
+
+  const graph = config.getExtendsGraph()
+  const resolvedConfig = config.getPlainObject({ skipValidation: true })
+  const { generateMermaidDiagram, generateAsciiTree, generateStageTable } = await import(
+    "../resolution"
+  )
+
+  const vizOptions = {
+    showStages: options.showStages,
+    showRemotes: options.showRemotes,
+  }
+
+  const result: VisualizationResult = {}
+
+  if (options.format === "all" || options.format === "mermaid") {
+    result.mermaid = generateMermaidDiagram({ graph, resolvedConfig, options: vizOptions })
+  }
+
+  if (options.format === "all" || options.format === "ascii") {
+    result.ascii = generateAsciiTree({ graph, resolvedConfig, options: vizOptions })
+  }
+
+  if (options.format === "all" || options.format === "table") {
+    result.table = generateStageTable({ graph, resolvedConfig, options: vizOptions })
+  }
+
+  return result
+}
+
+/**
  * Generate Mermaid diagram from extends graph
  */
-export function generateMermaidDiagram(
-  graph: Map<string, ExtendsGraphNode>,
-  options: VisualizationOptions = {},
-): string {
+export function generateMermaidDiagram({
+  graph,
+  resolvedConfig,
+  options = {},
+}: VisualizationParams): string {
   const lines: string[] = ["graph TD"]
 
   // Define node styles
@@ -39,7 +193,9 @@ export function generateMermaidDiagram(
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const nodeId = nodeIds.get(name)!
     const label = name.replace(/"/g, '\\"')
-    const stage = options.showStages && node.definition.stage ? ` [${node.definition.stage}]` : ""
+    // Use resolved stage from resolvedConfig for jobs, fallback to graph definition for templates
+    const resolvedStage = resolvedConfig.jobs?.[name]?.stage ?? node.definition.stage
+    const stage = options.showStages && resolvedStage ? ` [${resolvedStage}]` : ""
     const remote = options.showRemote && node.isRemote ? " 🌐" : ""
 
     let nodeClass = ""
@@ -75,10 +231,11 @@ export function generateMermaidDiagram(
 /**
  * Generate ASCII tree from extends graph
  */
-export function generateAsciiTree(
-  graph: Map<string, ExtendsGraphNode>,
-  options: VisualizationOptions = {},
-): string {
+export function generateAsciiTree({
+  graph,
+  resolvedConfig,
+  options = {},
+}: VisualizationParams): string {
   const lines: string[] = []
   const visited = new Set<string>()
 
@@ -94,7 +251,9 @@ export function generateAsciiTree(
     const connector = isLast ? "└─" : "├─"
     const remote = options.showRemote && node.isRemote ? " 🌐" : ""
     const template = node.isTemplate ? " [T]" : ""
-    const stage = options.showStages && node.definition.stage ? ` (${node.definition.stage})` : ""
+    // Use resolved stage from resolvedConfig for jobs, fallback to graph definition for templates
+    const resolvedStage = resolvedConfig.jobs?.[name]?.stage ?? node.definition.stage
+    const stage = options.showStages && resolvedStage ? ` (${resolvedStage})` : ""
 
     lines.push(`${prefix}${connector} ${name}${template}${remote}${stage}`)
 
@@ -142,15 +301,16 @@ export function generateAsciiTree(
 /**
  * Generate CLI table with stages as columns
  */
-export function generateStageTable(
-  graph: Map<string, ExtendsGraphNode>,
-  options: VisualizationOptions = {},
-): string {
-  // Collect all stages
+export function generateStageTable({
+  graph,
+  resolvedConfig,
+  options = {},
+}: VisualizationParams): string {
+  // Collect all stages from resolved jobs (resolvedConfig) instead of graph
   const stagesSet = new Set<string>()
-  for (const node of graph.values()) {
-    if (node.definition.stage) {
-      stagesSet.add(node.definition.stage)
+  for (const job of Object.values(resolvedConfig.jobs ?? {})) {
+    if (job.stage) {
+      stagesSet.add(job.stage)
     }
   }
 
@@ -159,18 +319,21 @@ export function generateStageTable(
     return "No stages defined"
   }
 
-  // Group jobs by stage
+  // Group jobs by stage using resolved jobs from resolvedConfig
   const jobsByStage = new Map<string, string[]>()
   for (const stage of stages) {
     jobsByStage.set(stage, [])
   }
 
-  for (const [name, node] of graph.entries()) {
-    const stage = node.definition.stage
-    if (stage && jobsByStage.has(stage)) {
-      const remote = options.showRemote && node.isRemote ? " 🌐" : ""
-      const template = node.isTemplate ? " [T]" : ""
-      const extends_ = node.extends.length > 0 ? ` ← ${node.extends.join(", ")}` : ""
+  for (const [name, job] of Object.entries(resolvedConfig.jobs ?? {})) {
+    const stage = job.stage ?? "test"
+    if (jobsByStage.has(stage)) {
+      // Look up metadata from graph
+      const node = graph.get(name)
+      const remote = options.showRemote && node?.isRemote ? " 🌐" : ""
+      const template = node?.isTemplate ? " [T]" : ""
+      const extends_ =
+        node?.extends && node.extends.length > 0 ? ` ← ${node.extends.join(", ")}` : ""
       const stageJobs = jobsByStage.get(stage)
       if (stageJobs) {
         stageJobs.push(`${name}${template}${remote}${extends_}`)
@@ -205,22 +368,4 @@ export function generateStageTable(
   }
 
   return lines.join("\n")
-}
-
-/**
- * Generate all visualizations
- */
-export function generateAllVisualizations(
-  graph: Map<string, ExtendsGraphNode>,
-  options: VisualizationOptions = {},
-): {
-  mermaid: string
-  ascii: string
-  table: string
-} {
-  return {
-    mermaid: generateMermaidDiagram(graph, options),
-    ascii: generateAsciiTree(graph, options),
-    table: generateStageTable(graph, options),
-  }
 }

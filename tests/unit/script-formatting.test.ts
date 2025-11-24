@@ -1,39 +1,40 @@
+import dedent from "dedent"
 import { describe, expect, it } from "vitest"
 
 import { fromYaml } from "../../src/import"
 
 describe("Script formatting", () => {
   it("should format simple single-line script as string", () => {
-    const yaml = `
-test:
-  script:
-    - echo "hello world"
-`
+    const yaml = dedent`
+      test:
+        script:
+          - echo "hello world"
+    `
     const result = fromYaml(yaml)
     expect(result).toContain('script: ["echo \\"hello world\\""]')
   })
 
   it("should format simple multi-line commands as array", () => {
-    const yaml = `
-test:
-  script:
-    - |
-      echo "step1"
-      echo "step2"
-      echo "step3"
-`
+    const yaml = dedent`
+      test:
+        script:
+          - |
+            echo "step1"
+            echo "step2"
+            echo "step3"
+    `
     const result = fromYaml(yaml)
     expect(result).toContain('script: ["echo \\"step1\\"", "echo \\"step2\\"", "echo \\"step3\\""]')
     expect(result).not.toContain("script: [[")
   })
 
   it("should preserve line continuation with backslash as template literal", () => {
-    const yaml = `
+    const yaml = String.raw`
 test:
   script:
     - |
-      apk update && \\
-          apk add --no-cache libc6-compat aws-cli jq && \\
+      apk update && \
+          apk add --no-cache libc6-compat aws-cli jq && \
           rm -rf /var/cache/apk/*
 `
     const result = fromYaml(yaml)
@@ -44,15 +45,15 @@ test:
   })
 
   it("should preserve heredoc as template literal", () => {
-    const yaml = `
-test:
-  script:
-    - |
-      cat <<EOF
-      line1
-      line2
-      EOF
-`
+    const yaml = dedent`
+      test:
+        script:
+          - |
+            cat <<EOF
+            line1
+            line2
+            EOF
+    `
     const result = fromYaml(yaml)
     expect(result).toContain("script: [`cat <<EOF")
     expect(result).toContain("line1")
@@ -62,26 +63,26 @@ test:
   })
 
   it("should preserve pipe operators as template literal", () => {
-    const yaml = `
-test:
-  script:
-    - |
-      cat file.txt | grep "pattern" | sort
-`
+    const yaml = dedent`
+      test:
+        script:
+          - |
+            cat file.txt | grep "pattern" | sort
+    `
     const result = fromYaml(yaml)
     expect(result).toContain('script: [`cat file.txt | grep "pattern" | sort')
     expect(result).toContain("`]")
   })
 
   it("should preserve output redirection as template literal", () => {
-    const yaml = `
-test:
-  script:
-    - |
-      echo "output" > file.txt
-      echo "append" >> file.txt
-      command 2> error.log
-`
+    const yaml = dedent`
+      test:
+        script:
+          - |
+            echo "output" > file.txt
+            echo "append" >> file.txt
+            command 2> error.log
+    `
     const result = fromYaml(yaml)
     expect(result).toContain("script: [`echo")
     expect(result).toContain("> file.txt")
@@ -91,7 +92,7 @@ test:
   })
 
   it("should handle mixed script array with different formats", () => {
-    const yaml = `
+    const yaml = String.raw`
 test:
   script:
     - echo "simple"
@@ -99,7 +100,7 @@ test:
       echo "multi1"
       echo "multi2"
     - |
-      complex && \\
+      complex && \
           continuation
 `
     const result = fromYaml(yaml)
@@ -110,14 +111,14 @@ test:
   })
 
   it("should handle before_script with shell operators", () => {
-    const yaml = `
-test:
-  before_script:
-    - |
-      mkdir ~/.npm-global
-      export PATH=$PATH:~/.npm-global/bin
-      npm i -g pnpm@10.22.0
-`
+    const yaml = dedent`
+      test:
+        before_script:
+          - |
+            mkdir ~/.npm-global
+            export PATH=$PATH:~/.npm-global/bin
+            npm i -g pnpm@10.22.0
+    `
     const result = fromYaml(yaml)
     expect(result).toContain("before_script:")
     expect(result).toContain(
@@ -126,11 +127,11 @@ test:
   })
 
   it("should handle after_script with continuations", () => {
-    const yaml = `
+    const yaml = String.raw`
 test:
   after_script:
     - |
-      cleanup && \\
+      cleanup && \
           remove_temp
 `
     const result = fromYaml(yaml)
@@ -140,13 +141,13 @@ test:
   })
 
   it("should handle logical operators correctly", () => {
-    const yaml = `
-test:
-  script:
-    - |
-      command1 || echo "fallback"
-      command2 && echo "success"
-`
+    const yaml = dedent`
+      test:
+        script:
+          - |
+            command1 || echo "fallback"
+            command2 && echo "success"
+    `
     const result = fromYaml(yaml)
     // || and && are logical operators, not pipes - should be split into array
     expect(result).toContain(
@@ -155,48 +156,48 @@ test:
   })
 
   it("should escape backticks in template literals", () => {
-    const yaml = `
-test:
-  script:
-    - |
-      echo \`date\` > file.txt
-`
+    const yaml = dedent`
+      test:
+        script:
+          - |
+            echo \`date\` > file.txt
+    `
     const result = fromYaml(yaml)
     expect(result).toContain("\\`date\\`")
   })
 
   it("should escape template expressions in template literals", () => {
-    const yaml = `
-test:
-  script:
-    - |
-      echo "\${VAR}" > file.txt
-`
+    const yaml = dedent`
+      test:
+        script:
+          - |
+            echo "\${VAR}" > file.txt
+    `
     const result = fromYaml(yaml)
     expect(result).toContain("\\${VAR}")
   })
 
   it("should handle empty lines in multiline scripts", () => {
-    const yaml = `
-test:
-  script:
-    - |
-      echo "line1"
+    const yaml = dedent`
+      test:
+        script:
+          - |
+            echo "line1"
 
-      echo "line2"
-`
+            echo "line2"
+    `
     const result = fromYaml(yaml)
     // Empty lines should be filtered out when splitting
     expect(result).toContain('["echo \\"line1\\"", "echo \\"line2\\""]')
   })
 
   it("should handle input redirection", () => {
-    const yaml = `
-test:
-  script:
-    - |
-      command < input.txt
-`
+    const yaml = dedent`
+      test:
+        script:
+          - |
+            command < input.txt
+    `
     const result = fromYaml(yaml)
     expect(result).toContain("`command < input.txt")
     expect(result).toContain("`]")

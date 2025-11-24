@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest"
 
 import type { JobDefinitionNormalized } from "../../src/schema"
-import { buildExtendsGraph } from "../../src/resolution/graph"
 import {
-  generateAllVisualizations,
+  buildExtendsGraph,
   generateAsciiTree,
   generateMermaidDiagram,
   generateStageTable,
-} from "../../src/resolution/visualization"
+} from "../../src"
 
 describe("Graph Visualization", () => {
   it("should generate Mermaid diagram", () => {
@@ -39,7 +38,8 @@ describe("Graph Visualization", () => {
     }
 
     const graph = buildExtendsGraph(jobs, templates)
-    const mermaid = generateMermaidDiagram(graph, { showStages: true })
+    const resolvedConfig = { jobs }
+    const mermaid = generateMermaidDiagram({ graph, resolvedConfig, options: { showStages: true } })
 
     expect(mermaid).toContain("graph TD")
     expect(mermaid).toContain("build [build]")
@@ -72,7 +72,8 @@ describe("Graph Visualization", () => {
     }
 
     const graph = buildExtendsGraph(jobs, templates)
-    const ascii = generateAsciiTree(graph, { showStages: true })
+    const resolvedConfig = { jobs }
+    const ascii = generateAsciiTree({ graph, resolvedConfig, options: { showStages: true } })
 
     expect(ascii).toContain("build")
     expect(ascii).toContain("test")
@@ -106,7 +107,8 @@ describe("Graph Visualization", () => {
     }
 
     const graph = buildExtendsGraph(jobs, templates)
-    const table = generateStageTable(graph, { showRemote: true })
+    const resolvedConfig = { jobs, stages: ["build", "test", "deploy"] }
+    const table = generateStageTable({ graph, resolvedConfig, options: { showRemote: true } })
 
     expect(table).toContain("build")
     expect(table).toContain("test")
@@ -130,8 +132,9 @@ describe("Graph Visualization", () => {
     }
 
     const graph = buildExtendsGraph(jobs, {}, jobOptions)
-    const mermaid = generateMermaidDiagram(graph, { showRemote: true })
-    const ascii = generateAsciiTree(graph, { showRemote: true })
+    const resolvedConfig = { jobs }
+    const mermaid = generateMermaidDiagram({ graph, resolvedConfig, options: { showRemote: true } })
+    const ascii = generateAsciiTree({ graph, resolvedConfig, options: { showRemote: true } })
 
     expect(mermaid).toContain("🌐")
     expect(ascii).toContain("🌐")
@@ -146,39 +149,12 @@ describe("Graph Visualization", () => {
     }
 
     const graph = buildExtendsGraph(jobs, {})
-    const ascii = generateAsciiTree(graph)
+    const resolvedConfig = { jobs }
+    const ascii = generateAsciiTree({ graph, resolvedConfig })
 
     expect(ascii).toContain("missing-job")
     expect(ascii).toContain("⚠️")
     expect(ascii).toContain("(missing)")
-  })
-
-  it("should generate all visualizations at once", () => {
-    const jobs: Record<string, JobDefinitionNormalized> = {
-      build: {
-        stage: "build",
-        script: ["npm run build"],
-        extends: [".node"],
-      },
-      test: {
-        stage: "test",
-        script: ["npm test"],
-        extends: [".node"],
-      },
-    }
-
-    const templates: Record<string, JobDefinitionNormalized> = {
-      ".node": {
-        image: "node:20",
-      },
-    }
-
-    const graph = buildExtendsGraph(jobs, templates)
-    const all = generateAllVisualizations(graph, { showStages: true, showRemote: true })
-
-    expect(all.mermaid).toContain("graph TD")
-    expect(all.ascii).toContain("build")
-    expect(all.table).toContain("build")
   })
 
   it("should handle complex extends chains in visualizations", () => {
@@ -205,8 +181,9 @@ describe("Graph Visualization", () => {
     }
 
     const graph = buildExtendsGraph(jobs, templates)
-    const ascii = generateAsciiTree(graph, { showStages: true })
-    const mermaid = generateMermaidDiagram(graph, { showStages: true })
+    const resolvedConfig = { jobs }
+    const ascii = generateAsciiTree({ graph, resolvedConfig, options: { showStages: true } })
+    const mermaid = generateMermaidDiagram({ graph, resolvedConfig, options: { showStages: true } })
 
     expect(ascii).toContain(".base")
     expect(ascii).toContain(".node")

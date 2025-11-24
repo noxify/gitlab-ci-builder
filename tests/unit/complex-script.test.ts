@@ -1,3 +1,4 @@
+import dedent from "dedent"
 import { vol } from "memfs"
 import { describe, expect, it } from "vitest"
 
@@ -6,18 +7,18 @@ import { ConfigBuilder, fromYaml } from "../../src"
 describe("Complex script handling", () => {
   describe("Import", () => {
     it("should handle multiline script with heredoc-style block", () => {
-      const yaml = `
-release:
-  before_script:
-    - npm ci --cache .npm --prefer-offline
-    - |
-      {
-        echo "@\${CI_PROJECT_ROOT_NAMESPACE}:registry=\${CI_API_V4_URL}/projects/\${CI_PROJECT_ID}/packages/npm/"
-        echo "\${CI_API_V4_URL#https?}/projects/\${CI_PROJECT_ID}/packages/npm/:_authToken=\${CI_JOB_TOKEN}"
-      } | tee -a .npmrc
-  script:
-    - npx semantic-release
-`
+      const yaml = dedent`
+        release:
+          before_script:
+            - npm ci --cache .npm --prefer-offline
+            - |
+              {
+                echo "@\${CI_PROJECT_ROOT_NAMESPACE}:registry=\${CI_API_V4_URL}/projects/\${CI_PROJECT_ID}/packages/npm/"
+                echo "\${CI_API_V4_URL#https?}/projects/\${CI_PROJECT_ID}/packages/npm/:_authToken=\${CI_JOB_TOKEN}"
+              } | tee -a .npmrc
+          script:
+            - npx semantic-release
+      `
 
       const ts = fromYaml(yaml)
 
@@ -37,12 +38,12 @@ release:
     })
 
     it("should handle GitLab CI variable references in scripts", () => {
-      const yaml = `
-test:
-  script:
-    - 'echo "Branch: $CI_COMMIT_BRANCH"'
-    - 'echo "Tag: \${CI_COMMIT_TAG}"'
-`
+      const yaml = dedent`
+        test:
+          script:
+            - 'echo "Branch: $CI_COMMIT_BRANCH"'
+            - 'echo "Tag: \${CI_COMMIT_TAG}"'
+      `
 
       const ts = fromYaml(yaml)
 
@@ -86,17 +87,18 @@ test:
     })
 
     it("should handle round-trip conversion with complex scripts", () => {
-      const originalYaml = `release:
-  before_script:
-    - npm ci --cache .npm --prefer-offline
-    - |
-      {
-        echo "@\${CI_PROJECT_ROOT_NAMESPACE}:registry=\${CI_API_V4_URL}/projects/\${CI_PROJECT_ID}/packages/npm/"
-        echo "\${CI_API_V4_URL#https?}/projects/\${CI_PROJECT_ID}/packages/npm/:_authToken=\${CI_JOB_TOKEN}"
-      } | tee -a .npmrc
-  script:
-    - npx semantic-release
-`
+      const originalYaml = dedent`
+        release:
+          before_script:
+            - npm ci --cache .npm --prefer-offline
+            - |
+              {
+                echo "@\${CI_PROJECT_ROOT_NAMESPACE}:registry=\${CI_API_V4_URL}/projects/\${CI_PROJECT_ID}/packages/npm/"
+                echo "\${CI_API_V4_URL#https?}/projects/\${CI_PROJECT_ID}/packages/npm/:_authToken=\${CI_JOB_TOKEN}"
+              } | tee -a .npmrc
+          script:
+            - npx semantic-release
+      `
 
       // Step 1: Import YAML -> TypeScript
       const ts = fromYaml(originalYaml)

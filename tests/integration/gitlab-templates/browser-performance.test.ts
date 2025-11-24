@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs"
 import { join } from "node:path"
+import dedent from "dedent"
 import { describe, expect, it } from "vitest"
 
 import type { ConfigBuilder } from "../../../src"
@@ -11,29 +12,30 @@ const { generatedDir } = setupTemplateTest(import.meta.dirname, "browser-perform
 
 describe("Integration: GitLab Browser Performance Template", () => {
   it("should handle browser_performance artifact report", async () => {
-    const yaml = `browser_performance:
-  stage: performance
-  image: docker:27.3
-  allow_failure: true
-  variables:
-    DOCKER_TLS_CERTDIR: ""
-    SITESPEED_IMAGE: sitespeedio/sitespeed.io
-    SITESPEED_VERSION: 35.0.0
-    SITESPEED_OPTIONS: ''
-  services:
-    - name: docker:27.3-dind
-      command: ['--tls=false', '--host=tcp://0.0.0.0:2375']
-  script:
-    - echo "Running performance tests"
-    - mv sitespeed-results/data/performance.json browser-performance.json
-  artifacts:
-    paths:
-      - sitespeed-results/
-    reports:
-      browser_performance: browser-performance.json
-  rules:
-    - if: '$CI_COMMIT_TAG || $CI_COMMIT_BRANCH'
-`
+    const yaml = dedent`
+      browser_performance:
+        stage: performance
+        image: docker:27.3
+        allow_failure: true
+        variables:
+          DOCKER_TLS_CERTDIR: ""
+          SITESPEED_IMAGE: sitespeedio/sitespeed.io
+          SITESPEED_VERSION: 35.0.0
+          SITESPEED_OPTIONS: ''
+        services:
+          - name: docker:27.3-dind
+            command: ['--tls=false', '--host=tcp://0.0.0.0:2375']
+        script:
+          - echo "Running performance tests"
+          - mv sitespeed-results/data/performance.json browser-performance.json
+        artifacts:
+          paths:
+            - sitespeed-results/
+          reports:
+            browser_performance: browser-performance.json
+        rules:
+          - if: '$CI_COMMIT_TAG || $CI_COMMIT_BRANCH'
+    `
 
     // Import YAML
     const tsCode = fromYaml(yaml)
@@ -97,30 +99,31 @@ describe("Integration: GitLab Browser Performance Template", () => {
   })
 
   it("should handle all artifact report types", async () => {
-    const yaml = `test_job:
-  stage: test
-  script:
-    - echo "Running tests"
-  artifacts:
-    paths:
-      - coverage/
-      - test-results/
-    reports:
-      junit: test-results/junit.xml
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage/cobertura.xml
-      codequality: gl-code-quality-report.json
-      browser_performance: performance.json
-      load_performance: load-performance.json
-      sast: gl-sast-report.json
-      dependency_scanning: gl-dependency-scanning-report.json
-      container_scanning: gl-container-scanning-report.json
-      dast: gl-dast-report.json
-      terraform: tfplan.json
-      dotenv: build.env
-      metrics: metrics.txt
-`
+    const yaml = dedent`
+      test_job:
+        stage: test
+        script:
+          - echo "Running tests"
+        artifacts:
+          paths:
+            - coverage/
+            - test-results/
+          reports:
+            junit: test-results/junit.xml
+            coverage_report:
+              coverage_format: cobertura
+              path: coverage/cobertura.xml
+            codequality: gl-code-quality-report.json
+            browser_performance: performance.json
+            load_performance: load-performance.json
+            sast: gl-sast-report.json
+            dependency_scanning: gl-dependency-scanning-report.json
+            container_scanning: gl-container-scanning-report.json
+            dast: gl-dast-report.json
+            terraform: tfplan.json
+            dotenv: build.env
+            metrics: metrics.txt
+    `
 
     const tsCode = fromYaml(yaml)
     expect(tsCode).toContain('config.job("test_job"')

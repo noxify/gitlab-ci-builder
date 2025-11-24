@@ -1,4 +1,5 @@
 import fs from "fs/promises"
+import dedent from "dedent"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { fromYaml, importYamlFile } from "../../src/import"
@@ -6,16 +7,16 @@ import { fromYaml, importYamlFile } from "../../src/import"
 describe("YAML Import", () => {
   describe("fromYaml() - Basic Conversion", () => {
     it("should convert simple YAML to TypeScript config", () => {
-      const yaml = `
-stages:
-  - build
-  - test
+      const yaml = dedent`
+        stages:
+          - build
+          - test
 
-build-job:
-  stage: build
-  script:
-    - npm run build
-`
+        build-job:
+          stage: build
+          script:
+            - npm run build
+      `
 
       const ts = fromYaml(yaml)
 
@@ -29,17 +30,17 @@ build-job:
     })
 
     it("should handle templates (hidden jobs)", () => {
-      const yaml = `
-.template:
-  image: node:22
-  tags:
-    - docker
+      const yaml = dedent`
+        .template:
+          image: node:22
+          tags:
+            - docker
 
-build:
-  extends: .template
-  script:
-    - npm run build
-`
+        build:
+          extends: .template
+          script:
+            - npm run build
+      `
 
       const ts = fromYaml(yaml)
 
@@ -50,18 +51,18 @@ build:
     })
 
     it("should normalize single-element array extends to string", () => {
-      const yaml = `
-.base-cache:
-  cache:
-    key: my-cache
-    paths:
-      - node_modules/
+      const yaml = dedent`
+        .base-cache:
+          cache:
+            key: my-cache
+            paths:
+              - node_modules/
 
-test:
-  extends: [.base-cache]
-  script:
-    - npm test
-`
+        test:
+          extends: [.base-cache]
+          script:
+            - npm test
+      `
 
       const ts = fromYaml(yaml)
 
@@ -73,16 +74,16 @@ test:
     })
 
     it("should handle workflow", () => {
-      const yaml = `
-workflow:
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-      when: always
+      const yaml = dedent`
+        workflow:
+          rules:
+            - if: $CI_COMMIT_BRANCH == "main"
+              when: always
 
-test:
-  script:
-    - echo test
-`
+        test:
+          script:
+            - echo test
+      `
 
       const ts = fromYaml(yaml)
 
@@ -93,16 +94,16 @@ test:
     })
 
     it("should handle variables", () => {
-      const yaml = `
-variables:
-  NODE_ENV: production
-  DEBUG: false
-  PORT: 3000
+      const yaml = dedent`
+        variables:
+          NODE_ENV: production
+          DEBUG: false
+          PORT: 3000
 
-test:
-  script:
-    - echo test
-`
+        test:
+          script:
+            - echo test
+      `
 
       const ts = fromYaml(yaml)
 
@@ -113,15 +114,15 @@ test:
     })
 
     it("should handle includes", () => {
-      const yaml = `
-include:
-  - local: local.yml
-  - remote: https://example.com/template.yml
+      const yaml = dedent`
+        include:
+          - local: local.yml
+          - remote: https://example.com/template.yml
 
-test:
-  script:
-    - echo test
-`
+        test:
+          script:
+            - echo test
+      `
 
       const ts = fromYaml(yaml)
 
@@ -131,16 +132,16 @@ test:
     })
 
     it("should handle default configuration", () => {
-      const yaml = `
-default:
-  image: node:22
-  tags:
-    - docker
+      const yaml = dedent`
+        default:
+          image: node:22
+          tags:
+            - docker
 
-test:
-  script:
-    - echo test
-`
+        test:
+          script:
+            - echo test
+      `
 
       const ts = fromYaml(yaml)
 
@@ -150,19 +151,19 @@ test:
     })
 
     it("should handle complex job definitions", () => {
-      const yaml = `
-deploy:
-  stage: deploy
-  script:
-    - kubectl apply -f k8s/
-  environment:
-    name: production
-    url: https://example.com
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-  tags:
-    - kubernetes
-`
+      const yaml = dedent`
+        deploy:
+          stage: deploy
+          script:
+            - kubectl apply -f k8s/
+          environment:
+            name: production
+            url: https://example.com
+          rules:
+            - if: $CI_COMMIT_BRANCH == "main"
+          tags:
+            - kubernetes
+      `
 
       const ts = fromYaml(yaml)
 
@@ -177,11 +178,11 @@ deploy:
     })
 
     it("should handle empty stages array", () => {
-      const yaml = `
-test:
-  script:
-    - echo test
-`
+      const yaml = dedent`
+        test:
+          script:
+            - echo test
+      `
 
       const ts = fromYaml(yaml)
 
@@ -190,18 +191,18 @@ test:
     })
 
     it("should order templates before jobs", () => {
-      const yaml = `
-build:
-  script:
-    - npm run build
+      const yaml = dedent`
+        build:
+          script:
+            - npm run build
 
-.template:
-  image: node:22
+        .template:
+          image: node:22
 
-test:
-  script:
-    - npm test
-`
+        test:
+          script:
+            - npm test
+      `
 
       const ts = fromYaml(yaml)
 
@@ -220,16 +221,16 @@ test:
 
   describe("fromYaml() - Extended Config Mode", () => {
     it("should use type-only import and function export when asExtendedConfig is true", () => {
-      const yaml = `
-stages:
-  - build
-  - test
+      const yaml = dedent`
+        stages:
+          - build
+          - test
 
-build-job:
-  stage: build
-  script:
-    - npm run build
-`
+        build-job:
+          stage: build
+          script:
+            - npm run build
+      `
 
       const ts = fromYaml(yaml, { asExtendedConfig: true })
 
@@ -245,10 +246,10 @@ build-job:
     })
 
     it("should use regular import and direct export by default", () => {
-      const yaml = `
-stages:
-  - build
-`
+      const yaml = dedent`
+        stages:
+          - build
+      `
 
       const ts = fromYaml(yaml)
 
@@ -261,18 +262,18 @@ stages:
     })
 
     it("should properly indent all config calls when asExtendedConfig is true", () => {
-      const yaml = `
-variables:
-  NODE_ENV: production
+      const yaml = dedent`
+        variables:
+          NODE_ENV: production
 
-.base:
-  image: node:22
+        .base:
+          image: node:22
 
-test:
-  extends: .base
-  script:
-    - npm test
-`
+        test:
+          extends: .base
+          script:
+            - npm test
+      `
 
       const ts = fromYaml(yaml, { asExtendedConfig: true })
 
@@ -286,14 +287,14 @@ test:
 
   describe("fromYaml() - Script Handling", () => {
     it("should handle multiline scripts", () => {
-      const yaml = `
-build:
-  script:
-    - echo "Building..."
-    - npm install
-    - npm run build
-    - echo "Done"
-`
+      const yaml = dedent`
+        build:
+          script:
+            - echo "Building..."
+            - npm install
+            - npm run build
+            - echo "Done"
+      `
 
       const ts = fromYaml(yaml)
 
@@ -304,16 +305,16 @@ build:
     })
 
     it("should preserve shell control structures (if/then/else/fi)", () => {
-      const yaml = `
-deploy:
-  script:
-    - |
-      if [ "$MANUAL_PROD_DEPLOYMENT" = "true" ]; then
-        echo "🚨 MANUAL PRODUCTION DEPLOYMENT TRIGGERED 🚨"
-      else
-        echo "📦 Automated production deployment via changeset release"
-      fi
-`
+      const yaml = dedent`
+        deploy:
+          script:
+            - |
+              if [ "$MANUAL_PROD_DEPLOYMENT" = "true" ]; then
+                echo "🚨 MANUAL PRODUCTION DEPLOYMENT TRIGGERED 🚨"
+              else
+                echo "📦 Automated production deployment via changeset release"
+              fi
+      `
 
       const ts = fromYaml(yaml)
 
@@ -328,14 +329,14 @@ deploy:
     })
 
     it("should preserve shell for loops", () => {
-      const yaml = `
-job:
-  script:
-    - |
-      for i in 1 2 3; do
-        echo "Item $i"
-      done
-`
+      const yaml = dedent`
+        job:
+          script:
+            - |
+              for i in 1 2 3; do
+                echo "Item $i"
+              done
+      `
 
       const ts = fromYaml(yaml)
 
@@ -346,19 +347,19 @@ job:
     })
 
     it("should preserve shell case statements", () => {
-      const yaml = `
-job:
-  script:
-    - |
-      case $ENV in
-        prod)
-          echo "Production"
-          ;;
-        dev)
-          echo "Development"
-          ;;
-      esac
-`
+      const yaml = dedent`
+        job:
+          script:
+            - |
+              case $ENV in
+                prod)
+                  echo "Production"
+                  ;;
+                dev)
+                  echo "Development"
+                  ;;
+              esac
+      `
 
       const ts = fromYaml(yaml)
 
@@ -368,14 +369,14 @@ job:
     })
 
     it("should handle multi-line scripts with shell operators as template literals", () => {
-      const yaml = `
-build:
-  script:
-    - |
-      if [ -f package.json ]; then
-        npm install
-      fi
-`
+      const yaml = dedent`
+        build:
+          script:
+            - |
+              if [ -f package.json ]; then
+                npm install
+              fi
+      `
 
       const ts = fromYaml(yaml)
 
@@ -389,15 +390,15 @@ build:
 
   describe("fromYaml() - Advanced Features", () => {
     it("should handle extends with strings", () => {
-      const yaml = `
-.base:
-  image: node:22
+      const yaml = dedent`
+        .base:
+          image: node:22
 
-build:
-  extends: .base
-  script:
-    - npm run build
-`
+        build:
+          extends: .base
+          script:
+            - npm run build
+      `
 
       const ts = fromYaml(yaml)
 
@@ -407,21 +408,21 @@ build:
     })
 
     it("should handle extends with arrays", () => {
-      const yaml = `
-.base1:
-  image: node:22
+      const yaml = dedent`
+        .base1:
+          image: node:22
 
-.base2:
-  tags:
-    - docker
+        .base2:
+          tags:
+            - docker
 
-build:
-  extends:
-    - .base1
-    - .base2
-  script:
-    - npm run build
-`
+        build:
+          extends:
+            - .base1
+            - .base2
+          script:
+            - npm run build
+      `
 
       const ts = fromYaml(yaml)
 
@@ -432,23 +433,23 @@ build:
     })
 
     it("should handle needs with optional property", () => {
-      const yaml = `
-generate_version:
-  script:
-    - echo version
+      const yaml = dedent`
+        generate_version:
+          script:
+            - echo version
 
-unit_tests:
-  script:
-    - npm test
+        unit_tests:
+          script:
+            - npm test
 
-deploy:
-  script:
-    - echo deploying
-  needs:
-    - job: generate_version
-      optional: true
-    - job: unit_tests
-`
+        deploy:
+          script:
+            - echo deploying
+          needs:
+            - job: generate_version
+              optional: true
+            - job: unit_tests
+      `
 
       const ts = fromYaml(yaml)
 
@@ -460,15 +461,15 @@ deploy:
     })
 
     it("should handle artifacts.reports.annotations as single string", () => {
-      const yaml = `
-test:
-  script:
-    - npm test
-  artifacts:
-    reports:
-      annotations:
-        - branding.json
-`
+      const yaml = dedent`
+        test:
+          script:
+            - npm test
+          artifacts:
+            reports:
+              annotations:
+                - branding.json
+      `
 
       const ts = fromYaml(yaml)
 
@@ -479,16 +480,16 @@ test:
     })
 
     it("should handle artifacts.reports.annotations as array", () => {
-      const yaml = `
-test:
-  script:
-    - npm test
-  artifacts:
-    reports:
-      annotations:
-        - file1.json
-        - file2.json
-`
+      const yaml = dedent`
+        test:
+          script:
+            - npm test
+          artifacts:
+            reports:
+              annotations:
+                - file1.json
+                - file2.json
+      `
 
       const ts = fromYaml(yaml)
 
@@ -499,16 +500,16 @@ test:
     })
 
     it("should handle !reference tags", () => {
-      const yaml = `
-.base:
-  script:
-    - npm install
+      const yaml = dedent`
+        .base:
+          script:
+            - npm install
 
-build:
-  script:
-    - !reference [.base, script]
-    - npm run build
-`
+        build:
+          script:
+            - !reference [.base, script]
+            - npm run build
+      `
 
       const ts = fromYaml(yaml)
 
@@ -517,37 +518,37 @@ build:
     })
 
     it("should handle anchors", () => {
-      const yaml = `
-.tags_test: &tags_test
-  - test1
-  - test2
+      const yaml = dedent`
+        .tags_test: &tags_test
+          - test1
+          - test2
 
-.job_template: &job_configuration
-  script:
-    - test project
-  tags:
-    - dev
+        .job_template: &job_configuration
+          script:
+            - test project
+          tags:
+            - dev
 
-.postgres_services:
-  services: &postgres_configuration
-    - postgres
-    - ruby
+        .postgres_services:
+          services: &postgres_configuration
+            - postgres
+            - ruby
 
-.mysql_services:
-  services: &mysql_configuration
-    - mysql
-    - ruby
+        .mysql_services:
+          services: &mysql_configuration
+            - mysql
+            - ruby
 
-test:postgres:
-  <<: *job_configuration
-  services: *postgres_configuration
-  tags:
-    - postgres
+        test:postgres:
+          <<: *job_configuration
+          services: *postgres_configuration
+          tags:
+            - postgres
 
-test:mysql:
-  <<: *job_configuration
-  services: *mysql_configuration
-  `
+        test:mysql:
+          <<: *job_configuration
+          services: *mysql_configuration
+      `
 
       const ts = fromYaml(yaml)
 
@@ -572,77 +573,77 @@ test:mysql:
 
   describe("fromYaml() - Complex Examples", () => {
     it("should handle a complex GitLab CI YAML", () => {
-      const yaml = `
-.tags_test: &tags_test
-  - test1
-  - test2
+      const yaml = dedent`
+        .tags_test: &tags_test
+          - test1
+          - test2
 
-download_node_modules:
-  stage: init
-  tags: *tags_test
-  image: $NODE_ALPINE_IMAGE
-  script:
-    - !reference [.pnpm_install_template, script]
-  cache:
-    - key: \${NPM_CACHE_KEY}
-      paths:
-        - /node_modules
-        - /.pnpm-store
-      policy: pull-push
-  variables:
-    APP_DIR: "."
-    NPM_CACHE_KEY: default
+        download_node_modules:
+          stage: init
+          tags: *tags_test
+          image: $NODE_ALPINE_IMAGE
+          script:
+            - !reference [.pnpm_install_template, script]
+          cache:
+            - key: \${NPM_CACHE_KEY}
+              paths:
+                - /node_modules
+                - /.pnpm-store
+              policy: pull-push
+          variables:
+            APP_DIR: "."
+            NPM_CACHE_KEY: default
 
-deploy-job:
-  stage: deploy
-  script:
-    - echo "Deploying..."
-  environment:
-    name: production
-    url: https://example.com
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-      when: always
-`
+        deploy-job:
+          stage: deploy
+          script:
+            - echo "Deploying..."
+          environment:
+            name: production
+            url: https://example.com
+          rules:
+            - if: $CI_COMMIT_BRANCH == "main"
+              when: always
+      `
 
       const ts = fromYaml(yaml)
       expect(ts).toContain('"!reference [.pnpm_install_template, script]"')
     })
 
     it("should handle complex YAML with all features", () => {
-      const yaml = `
-workflow:
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+      const yaml = dedent`
+        workflow:
+          rules:
+            - if: $CI_COMMIT_BRANCH == "main"
 
-variables:
-  NODE_VERSION: "20"
+        variables:
+          NODE_VERSION: "20"
 
-default:
-  image: node:$NODE_VERSION
-  cache:
-    paths:
-      - node_modules/
+        default:
+          image: node:$NODE_VERSION
+          cache:
+            paths:
+              - node_modules/
 
-.base:
-  before_script:
-    - npm install
+        .base:
+          before_script:
+            - npm install
 
-build:
-  extends: .base
-  stage: build
-  script:
-    - npm run build
-  artifacts:
-    paths:
-      - dist/
+        build:
+          extends: .base
+          stage: build
+          script:
+            - npm run build
+          artifacts:
+            paths:
+              - dist/
 
-test:
-  extends: .base
-  stage: test
-  script:
-    - npm test
-`
+        test:
+          extends: .base
+          stage: test
+          script:
+            - npm test
+      `
 
       const ts = fromYaml(yaml)
 
@@ -661,15 +662,15 @@ test:
     const testOutputPath = "/tmp/test-config.ts"
 
     beforeEach(() => {
-      vi.spyOn(fs, "readFile").mockResolvedValue(`
-stages:
-  - build
+      vi.spyOn(fs, "readFile").mockResolvedValue(dedent`
+        stages:
+          - build
 
-build:
-  stage: build
-  script:
-    - npm run build
-`)
+        build:
+          stage: build
+          script:
+            - npm run build
+      `)
       vi.spyOn(fs, "writeFile").mockResolvedValue()
     })
 

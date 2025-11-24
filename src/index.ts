@@ -5,5 +5,6 @@ export * from "./model"
 export * from "./builder"
 export * from "./serializer"
 export * from "./importer"
-
+export * from "./cli"
+export * from "./resolver"
 export { ConfigBuilder } from "./builder/ConfigBuilder"

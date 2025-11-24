@@ -22,8 +22,8 @@ import {
   generateAsciiTree,
   generateMermaidDiagram,
   generateStageTable,
-  resolveExtends,
 } from "../resolution"
+import { resolveExtends } from "../resolver"
 import {
   DefaultsSchema,
   IncludeSchema,
@@ -601,7 +601,8 @@ export class ConfigBuilder {
    */
   public generateMermaidDiagram(options?: VisualizationOptions): string {
     const graph = this.getExtendsGraph()
-    return generateMermaidDiagram(graph, options)
+    const resolvedConfig = this.getPlainObject({ skipValidation: true })
+    return generateMermaidDiagram({ graph, resolvedConfig, options })
   }
 
   /**
@@ -609,7 +610,8 @@ export class ConfigBuilder {
    */
   public generateAsciiTree(options?: VisualizationOptions): string {
     const graph = this.getExtendsGraph()
-    return generateAsciiTree(graph, options)
+    const resolvedConfig = this.getPlainObject({ skipValidation: true })
+    return generateAsciiTree({ graph, resolvedConfig, options })
   }
 
   /**
@@ -617,7 +619,8 @@ export class ConfigBuilder {
    */
   public generateStageTable(options?: VisualizationOptions): string {
     const graph = this.getExtendsGraph()
-    return generateStageTable(graph, options)
+    const resolvedConfig = this.getPlainObject({ skipValidation: true })
+    return generateStageTable({ graph, resolvedConfig, options })
   }
 }
 
