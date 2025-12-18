@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
+import { PipelineState } from "../../src/model/pipeline"
 
 describe("PipelineState - Additional Coverage", () => {
   describe("addStage", () => {
@@ -136,6 +137,121 @@ describe("PipelineState - Additional Coverage", () => {
       expect(result.default?.image).toBe("node:20")
       expect(result.default?.tags).toEqual(["docker"])
       expect(result.default?.retry).toEqual({ max: 2 })
+    })
+  })
+
+  describe("deprecated global options", () => {
+    it("should set and get deprecated image", () => {
+      const state = new PipelineState()
+      state.setDeprecatedImage("node:20")
+
+      expect(state.deprecatedImage).toBe("node:20")
+    })
+
+    it("should set deprecated services", () => {
+      const state = new PipelineState()
+      state.setDeprecatedServices(["postgres:14", "redis:7"])
+
+      expect(state.deprecatedServices).toEqual(["postgres:14", "redis:7"])
+    })
+
+    it("should set deprecated before_script", () => {
+      const state = new PipelineState()
+      state.setDeprecatedBeforeScript(["npm ci"])
+
+      expect(state.deprecatedBeforeScript).toEqual(["npm ci"])
+    })
+
+    it("should set deprecated after_script", () => {
+      const state = new PipelineState()
+      state.setDeprecatedAfterScript(["cleanup.sh"])
+
+      expect(state.deprecatedAfterScript).toEqual(["cleanup.sh"])
+    })
+
+    it("should set deprecated cache", () => {
+      const state = new PipelineState()
+      state.setDeprecatedCache({
+        key: "${CI_COMMIT_REF_SLUG}",
+        paths: ["node_modules/"],
+      })
+
+      expect(state.deprecatedCache).toEqual({
+        key: "${CI_COMMIT_REF_SLUG}",
+        paths: ["node_modules/"],
+      })
+    })
+  })
+
+  describe("toPlainObject()", () => {
+    it("should create plain object with all fields", () => {
+      const state = new PipelineState()
+      state.setStages(["build", "test"])
+      state.setVariables({ NODE_ENV: "production" })
+      state.addInclude({ local: "template.yml" })
+      state.setSpec({ inputs: { env: { type: "string" } } })
+
+      const plain = state.toPlainObject()
+
+      expect(plain.stages).toEqual(["build", "test"])
+      expect(plain.variables).toEqual({ NODE_ENV: "production" })
+      expect(plain.include).toEqual([{ local: "template.yml" }])
+      expect(plain.spec).toEqual({ inputs: { env: { type: "string" } } })
+    })
+
+    it("should include deprecated globals when set", () => {
+      const state = new PipelineState()
+      state.setDeprecatedImage("alpine:latest")
+      state.setDeprecatedServices(["postgres:14"])
+
+      const plain = state.toPlainObject()
+
+      expect(plain.image).toBe("alpine:latest")
+      expect(plain.services).toEqual(["postgres:14"])
+    })
+
+    it("should include workflow and default when set", () => {
+      const state = new PipelineState()
+      state.setWorkflow({ rules: [{ if: "$CI_COMMIT_BRANCH" }] })
+      state.setDefaults({ image: "node:20" })
+
+      const plain = state.toPlainObject()
+
+      expect(plain.workflow).toEqual({ rules: [{ if: "$CI_COMMIT_BRANCH" }] })
+      expect(plain.default).toEqual({ image: "node:20" })
+    })
+  })
+
+  describe("clone()", () => {
+    it("should create deep copy of state", () => {
+      const state = new PipelineState()
+      state.setStages(["build", "test"])
+      state.setVariables({ NODE_ENV: "production" })
+      state.addInclude({ local: "template.yml" })
+
+      const cloned = state.clone()
+
+      expect(cloned.stages).toEqual(state.stages)
+      expect(cloned.variables).toEqual(state.variables)
+      expect(cloned.include).toEqual(state.include)
+
+      // Verify it's a deep copy
+      cloned.addStages(["deploy"])
+      expect(state.stages).not.toContain("deploy")
+      expect(cloned.stages).toContain("deploy")
+    })
+
+    it("should clone deprecated options", () => {
+      const state = new PipelineState()
+      state.setDeprecatedImage("alpine:latest")
+      state.setDeprecatedServices(["postgres:14"])
+      state.setDeprecatedCache({ key: "cache", paths: ["node_modules/"] })
+
+      const cloned = state.clone()
+
+      expect(cloned.deprecatedImage).toBe("alpine:latest")
+      expect(cloned.deprecatedServices).toEqual(["postgres:14"])
+      expect(cloned.deprecatedCache).toEqual({ key: "cache", paths: ["node_modules/"] })
     })
   })
 })

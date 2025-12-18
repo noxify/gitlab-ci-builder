@@ -9,15 +9,16 @@ types, proper extends resolution, and a simple builder surface.
 ## Features
 
 - Fluent TypeScript API to declare `stages`, `jobs`, `templates`, `variables` and `include` entries
+- **Child pipeline support**: Define and manage child pipelines programmatically with callback-based API
+- **Multi-file output**: Generate parent and child pipeline YAML files with `writeYamlFiles()`
 - **Command-line interface**: Visualize pipelines directly from the terminal with `gitlab-ci-builder visualize`
 - **Import existing YAML**: Convert `.gitlab-ci.yml` files to TypeScript code using the builder API
 - **Export to YAML**: Generate properly formatted YAML with customizable key ordering and spacing
 - **Robust extends resolution**: Proper topological sorting, cycle detection, and merge strategies
-- **Visualization tools**: Generate Mermaid diagrams, ASCII trees, and stage tables to visualize pipeline structure
+- **Visualization tools**: Generate Mermaid diagrams, ASCII trees, and stage tables to visualize pipeline structure (including child pipelines)
 - **Authentication support**: Access private repositories and includes with GitLab tokens
 - Supports reusable template jobs (hidden jobs starting with `.`) with deep-merge semantics
 - Dynamic TypeScript-based includes: import other files and apply their configuration functions
-- Comprehensive test coverage (241 tests, 86%+ coverage)
 - Small and dependency-light implementation
 
 ## Limitations
@@ -459,6 +460,156 @@ export default function (config: ConfigBuilder) {
 - **Type safety**: Full TypeScript support with autocomplete and type checking
 
 **Note:** If both default and named exports are present, the default export takes precedence.
+
+## Child Pipelines
+
+Define child pipelines programmatically using a callback-based API. This eliminates the need to manually manage separate YAML files and automatically generates the trigger jobs.
+
+### Basic Example
+
+```ts
+import { ConfigBuilder } from "@noxify/gitlab-ci-builder"
+
+const config = new ConfigBuilder().stages("build", "test", "deploy").job("build", {
+  stage: "build",
+  script: ["npm run build"],
+})
+
+// Define a child pipeline with callback
+config.childPipeline("security-scan", (child) => {
+  child.stages("scan", "report")
+  child.job("sast", {
+    stage: "scan",
+    script: ["npm audit", "npm run security-scan"],
+  })
+  child.job("report", {
+    stage: "report",
+    script: ["npm run generate-report"],
+  })
+})
+
+// Write parent and all child pipeline files
+const files = await config.writeYamlFiles("./pipelines")
+// Returns: { parent: "pipelines/.gitlab-ci.yml", children: ["pipelines/security-scan-pipeline.yml"] }
+```
+
+### Advanced Configuration
+
+Customize child pipeline behavior with options:
+
+```ts
+config.childPipeline(
+  "deploy-environments",
+  (child) => {
+    child.stages("dev", "staging", "prod")
+    child.job("deploy-dev", {
+      stage: "dev",
+      script: ["deploy.sh dev"],
+    })
+    child.job("deploy-staging", {
+      stage: "staging",
+      script: ["deploy.sh staging"],
+      when: "manual",
+    })
+    child.job("deploy-prod", {
+      stage: "prod",
+      script: ["deploy.sh production"],
+      when: "manual",
+    })
+  },
+  {
+    // Custom output path for child pipeline YAML
+    outputPath: "pipelines/deploy.yml",
+
+    // Strategy for parent pipeline to wait for child
+    strategy: "depend", // or "mirror"
+
+    // Forward variables to child pipeline
+    forward: {
+      pipelineVariables: true,
+      yamlVariables: ["CI_ENVIRONMENT", "DEPLOY_TOKEN"],
+    },
+
+    // Additional trigger job options
+    jobOptions: {
+      stage: "deploy",
+      rules: [{ if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" }],
+    },
+  },
+)
+```
+
+### Dynamic Child Pipelines
+
+Generate child pipelines dynamically based on runtime conditions:
+
+```ts
+interface Application {
+  name: string
+  enabled: boolean
+  scanType: string
+}
+
+const applications: Application[] = [
+  { name: "web-app", enabled: true, scanType: "sast" },
+  { name: "api-service", enabled: true, scanType: "dast" },
+  { name: "mobile-app", enabled: false, scanType: "sast" },
+]
+
+const config = new ConfigBuilder().stages("scan")
+
+// Generate child pipelines for enabled applications only
+applications
+  .filter((app) => app.enabled)
+  .forEach((app) => {
+    config.childPipeline(`scan-${app.name}`, (child) => {
+      child.stages("prepare", "scan", "report")
+      child.job(`${app.scanType}-scan`, {
+        stage: "scan",
+        script: [`run-${app.scanType}-scan.sh ${app.name}`],
+      })
+      child.job("upload-results", {
+        stage: "report",
+        script: ["upload-results.sh"],
+        artifacts: { reports: { [app.scanType]: "results.json" } },
+      })
+    })
+  })
+```
+
+### Accessing Child Pipelines
+
+Retrieve child pipeline configurations programmatically:
+
+```ts
+// Get specific child pipeline
+const childConfig = config.getChildPipeline("security-scan")
+if (childConfig) {
+  console.log(childConfig.jobs) // Access jobs map
+  console.log(childConfig.stages) // Access stages array
+}
+
+// Access all child pipelines
+const allChildren = config.childPipelines
+allChildren.forEach(([name, child]) => {
+  console.log(`Child: ${name}, Jobs: ${child.builder.jobs.size}`)
+})
+```
+
+### Visualization Integration
+
+Child pipelines are automatically included in all visualization formats:
+
+```ts
+// Mermaid diagram shows child pipelines as subgraphs
+const mermaid = config.generateMermaidDiagram()
+
+// ASCII tree shows child pipelines with 🔀 indicator
+const ascii = config.generateAsciiTree()
+
+// Stage table separates child pipelines with headers
+const table = config.generateStageTable()
+```
 
 ## Visualization
 

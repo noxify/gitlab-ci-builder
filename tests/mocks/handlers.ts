@@ -122,6 +122,7 @@ export const handlers = [
         - remote: https://example.com/ci/shared/base.yml
 
       .root-template:
+        extends: .shared-base
         image: alpine:latest
     `)
   }),
@@ -129,8 +130,8 @@ export const handlers = [
   http.get("https://example.com/ci/shared/base.yml", () => {
     return HttpResponse.text(dedent`
       .shared-base:
-        retry:
-          max: 2
+        tags:
+          - docker
     `)
   }),
 
@@ -140,7 +141,9 @@ export const handlers = [
         - remote: https://example.com/ci/level2.yml
 
       .level1:
-        image: alpine:latest
+        extends: .level2
+        before_script:
+          - echo "level1"
     `)
   }),
 
@@ -150,8 +153,9 @@ export const handlers = [
         - remote: https://example.com/ci/level3.yml
 
       .level2:
-        tags:
-          - docker
+        extends: .level3
+        before_script:
+          - echo "level2"
     `)
   }),
 
