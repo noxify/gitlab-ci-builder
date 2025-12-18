@@ -7,6 +7,7 @@ import type { TrackedChildPipeline } from "./child-pipeline"
 import type { ExtendsGraphNode } from "./graph"
 import { ConfigBuilder } from "../builder/ConfigBuilder"
 import { parseYaml } from "../importer/parser"
+import { resolveIncludes } from "../resolver/cli"
 import { extractChildPipelines } from "./child-pipeline"
 
 /**
@@ -137,7 +138,6 @@ export async function visualizeYaml(
 
   // Resolve includes BEFORE adding jobs/templates
   if (parsed.include) {
-    const { resolveIncludes } = await import("../resolver/cli")
     await resolveIncludes(config, {
       gitlabToken: options.gitlabToken,
       gitlabUrl: options.gitlabUrl,
@@ -189,9 +189,6 @@ export async function visualizeYaml(
   }
 
   const resolvedConfig = config.getPlainObject({ skipValidation: true })
-  const { generateMermaidDiagram, generateAsciiTree, generateStageTable } = await import(
-    "../resolution"
-  )
 
   const vizOptions = {
     showStages: options.showStages,

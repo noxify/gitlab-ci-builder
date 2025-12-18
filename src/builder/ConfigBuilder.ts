@@ -1,4 +1,6 @@
 import fs from "fs/promises"
+import path from "path"
+import { globSync } from "tinyglobby"
 
 import type { PipelineOutput } from "../model"
 import type { ExtendsGraphNode, VisualizationOptions } from "../resolution"
@@ -835,8 +837,6 @@ export class ConfigBuilder {
    * ```
    */
   public async dynamicInclude(cwd: string, globs: string[]): Promise<this> {
-    const { globSync } = await import("tinyglobby")
-
     for (const glob of globs) {
       const files = globSync(glob, {
         absolute: true,
@@ -1181,9 +1181,6 @@ export class ConfigBuilder {
     parent: string
     children: string[]
   }> {
-    const { writeFile, mkdir } = await import("fs/promises")
-    const pathModule = await import("path")
-
     const parentFilename = options?.parentFilename ?? ".gitlab-ci.yml"
     const writtenFiles: { parent: string; children: string[] } = {
       parent: "",
@@ -1191,21 +1188,21 @@ export class ConfigBuilder {
     }
 
     // Write parent pipeline
-    const parentPath = pathModule.join(outputDir, parentFilename)
+    const parentPath = path.join(outputDir, parentFilename)
     const parentYaml = this.toYaml({ skipValidation: options?.skipValidation })
-    await mkdir(pathModule.dirname(parentPath), { recursive: true })
-    await writeFile(parentPath, parentYaml, "utf-8")
+    await fs.mkdir(path.dirname(parentPath), { recursive: true })
+    await fs.writeFile(parentPath, parentYaml, "utf-8")
     writtenFiles.parent = parentPath
 
     // Write child pipelines
     for (const childConfig of this.state.childPipelines.values()) {
-      const childPath = pathModule.join(outputDir, childConfig.outputPath)
+      const childPath = path.join(outputDir, childConfig.outputPath)
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       const childYaml = childConfig.builder.toYaml({ skipValidation: options?.skipValidation })
 
-      await mkdir(pathModule.dirname(childPath), { recursive: true })
+      await fs.mkdir(path.dirname(childPath), { recursive: true })
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      await writeFile(childPath, childYaml, "utf-8")
+      await fs.writeFile(childPath, childYaml, "utf-8")
       writtenFiles.children.push(childPath)
     }
 
