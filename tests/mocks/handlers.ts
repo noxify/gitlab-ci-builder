@@ -68,6 +68,126 @@ export const handlers = [
     `)
   }),
 
+  // Mock ci/* URLs for visualization tests
+  http.get("https://example.com/ci/base.yml", () => {
+    return HttpResponse.text(dedent`
+      .base-template:
+        image: alpine:latest
+        tags:
+          - docker
+        retry:
+          max: 2
+    `)
+  }),
+
+  http.get("https://example.com/ci/node.yml", () => {
+    return HttpResponse.text(dedent`
+      .node-base:
+        extends: .base-template
+        image: node:20
+        cache:
+          key: \${CI_COMMIT_REF_SLUG}
+          paths:
+            - node_modules/
+    `)
+  }),
+
+  http.get("https://example.com/ci/deploy.yml", () => {
+    return HttpResponse.text(dedent`
+      .deploy-job:
+        stage: deploy
+        rules:
+          - if: $CI_COMMIT_BRANCH == "main"
+        environment:
+          name: production
+    `)
+  }),
+
+  http.get("https://example.com/ci/team-a.yml", () => {
+    return HttpResponse.text(dedent`
+      .team-a-template:
+        image: node:20
+        tags:
+          - team-a
+    `)
+  }),
+
+  http.get("https://example.com/ci/missing.yml", () => {
+    return HttpResponse.text("", { status: 404 })
+  }),
+
+  http.get("https://example.com/ci/root.yml", () => {
+    return HttpResponse.text(dedent`
+      include:
+        - remote: https://example.com/ci/shared/base.yml
+
+      .root-template:
+        extends: .shared-base
+        image: alpine:latest
+    `)
+  }),
+
+  http.get("https://example.com/ci/shared/base.yml", () => {
+    return HttpResponse.text(dedent`
+      .shared-base:
+        tags:
+          - docker
+    `)
+  }),
+
+  http.get("https://example.com/ci/level1.yml", () => {
+    return HttpResponse.text(dedent`
+      include:
+        - remote: https://example.com/ci/level2.yml
+
+      .level1:
+        extends: .level2
+        before_script:
+          - echo "level1"
+    `)
+  }),
+
+  http.get("https://example.com/ci/level2.yml", () => {
+    return HttpResponse.text(dedent`
+      include:
+        - remote: https://example.com/ci/level3.yml
+
+      .level2:
+        extends: .level3
+        before_script:
+          - echo "level2"
+    `)
+  }),
+
+  http.get("https://example.com/ci/level3.yml", () => {
+    return HttpResponse.text(dedent`
+      .level3:
+        retry:
+          max: 3
+    `)
+  }),
+
+  http.get("https://example.com/ci/circular-a.yml", () => {
+    return HttpResponse.text(dedent`
+      include:
+        - remote: https://example.com/ci/circular-b.yml
+
+      .circular-a:
+        image: alpine:latest
+    `)
+  }),
+
+  http.get("https://example.com/ci/circular-b.yml", () => {
+    return HttpResponse.text(dedent`
+      include:
+        - remote: https://example.com/ci/circular-a.yml
+
+      .circular-b:
+        tags:
+          - docker
+    `)
+  }),
+
   http.get("https://example.com/templates/base.yml", () => {
     return HttpResponse.text(dedent`
       .base:

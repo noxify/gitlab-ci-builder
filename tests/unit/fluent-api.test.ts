@@ -192,4 +192,91 @@ describe("Fluent Job Builder API", () => {
     expect(plain.jobs?.build).toBeDefined()
     expect(plain.jobs?.test).toBeDefined()
   })
+
+  describe("job properties coverage", () => {
+    it("should set parallel as number", () => {
+      const config = new ConfigBuilder().stages("test").job("test", {
+        stage: "test",
+        parallel: 5,
+        script: ["test.sh"],
+      })
+
+      const yaml = config.toYaml()
+      expect(yaml).toContain("parallel: 5")
+    })
+
+    it("should set trigger as string (project path)", () => {
+      const config = new ConfigBuilder().stages("deploy").job("trigger-downstream", {
+        stage: "deploy",
+        trigger: "my-group/my-project",
+      })
+
+      const yaml = config.toYaml()
+      expect(yaml).toContain("trigger: my-group/my-project")
+    })
+
+    it("should set trigger as object with include", () => {
+      const config = new ConfigBuilder().stages("deploy").job("trigger-child", {
+        stage: "deploy",
+        trigger: {
+          include: ".gitlab-ci-child.yml",
+          strategy: "depend",
+        },
+      })
+
+      const yaml = config.toYaml()
+      expect(yaml).toContain("trigger:")
+      expect(yaml).toContain("include: .gitlab-ci-child.yml")
+      expect(yaml).toContain("strategy: depend")
+    })
+
+    it("should set trigger with project object", () => {
+      const config = new ConfigBuilder().stages("deploy").job("trigger", {
+        stage: "deploy",
+        trigger: {
+          project: "group/project",
+          branch: "main",
+        },
+      })
+
+      const yaml = config.toYaml()
+      expect(yaml).toContain("project: group/project")
+      expect(yaml).toContain("branch: main")
+    })
+
+    it("should set id_tokens configuration", () => {
+      const config = new ConfigBuilder().stages("deploy").job("deploy", {
+        stage: "deploy",
+        script: ["deploy.sh"],
+        id_tokens: {
+          ID_TOKEN: {
+            aud: "https://example.com",
+          },
+        },
+      })
+
+      const yaml = config.toYaml()
+      expect(yaml).toContain("id_tokens:")
+      expect(yaml).toContain("ID_TOKEN:")
+      expect(yaml).toContain("aud: https://example.com")
+    })
+
+    it("should set parallel with matrix", () => {
+      const config = new ConfigBuilder().stages("test").job("test", {
+        stage: "test",
+        script: ["test.sh"],
+        parallel: {
+          matrix: [
+            { PROVIDER: "aws", STACK: ["monitoring"] },
+            { PROVIDER: "gcp", STACK: ["backup"] },
+          ],
+        },
+      })
+
+      const yaml = config.toYaml()
+      expect(yaml).toContain("parallel:")
+      expect(yaml).toContain("matrix:")
+      expect(yaml).toContain("PROVIDER: aws")
+    })
+  })
 })

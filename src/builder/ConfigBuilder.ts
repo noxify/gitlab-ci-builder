@@ -1,4 +1,6 @@
 import fs from "fs/promises"
+import path from "path"
+import { globSync } from "tinyglobby"
 
 import type { PipelineOutput } from "../model"
 import type { ExtendsGraphNode, VisualizationOptions } from "../resolution"
@@ -743,6 +745,29 @@ export class ConfigBuilder {
   }
 
   /**
+   * Get a tracked child pipeline configuration by job name.
+   *
+   * Returns the child pipeline configuration if it exists, or undefined otherwise.
+   *
+   * @param jobName - The trigger job name
+   * @returns The child pipeline configuration or undefined
+   *
+   * @example
+   * ```ts
+   * config.childPipeline("trigger:deploy", (child) => {
+   *   child.job("deploy", { script: ["deploy.sh"] })
+   *   return child
+   * })
+   *
+   * const childConfig = config.getChildPipeline("trigger:deploy")
+   * console.log(childConfig?.outputPath) // "ci/trigger-deploy-pipeline.yml"
+   * ```
+   */
+  public getChildPipeline(jobName: string) {
+    return this.state.getChildPipeline(jobName)
+  }
+
+  /**
    * Register a patcher callback for last-minute modifications.
    *
    * Patchers run after all configuration is built and extends are resolved,
@@ -812,8 +837,6 @@ export class ConfigBuilder {
    * ```
    */
   public async dynamicInclude(cwd: string, globs: string[]): Promise<this> {
-    const { globSync } = await import("tinyglobby")
-
     for (const glob of globs) {
       const files = globSync(glob, {
         absolute: true,
@@ -841,6 +864,89 @@ export class ConfigBuilder {
         await extendFn(this)
       }
     }
+
+    return this
+  }
+
+  /**
+   * Define a child pipeline that is triggered by a job.
+   *
+   * Child pipelines run in the same project as the parent pipeline and can
+   * share variables, artifacts, and configuration. The child pipeline is
+   * built using a callback function that receives a new ConfigBuilder instance.
+   *
+   * @param jobName - Name of the trigger job
+   * @param callback - Function that builds the child pipeline configuration
+   * @param options - Optional configuration for the child pipeline
+   * @param options.outputPath - Output file path for child pipeline YAML (default: auto-generated from job name)
+   * @param options.strategy - Trigger strategy: 'depend' waits for completion, 'mirror' mirrors status
+   * @param options.forward - Variables to forward to child pipeline
+   * @param options.jobOptions - Additional job options like stage, rules, etc.
+   * @returns The ConfigBuilder instance for method chaining
+   *
+   * @example
+   * ```ts
+   * const config = new ConfigBuilder()
+   *   .stages('build', 'trigger')
+   *   .job('build', { script: ['npm run build'] })
+   *   .childPipeline('trigger:deploy', (child) => {
+   *     child.stages('deploy')
+   *     child.job('deploy:staging', {
+   *       script: ['./deploy.sh staging']
+   *     })
+   *     return child
+   *   }, {
+   *     strategy: 'depend',
+   *     outputPath: 'ci/deploy-pipeline.yml'
+   *   })
+   *
+   * await config.writeYamlFiles('.')
+   * // Writes: .gitlab-ci.yml + ci/deploy-pipeline.yml
+   * ```
+   *
+   * @see https://docs.gitlab.com/ci/yaml/#trigger
+   * @see https://docs.gitlab.com/ci/pipelines/downstream_pipelines.html#parent-child-pipelines
+   */
+  public childPipeline(
+    jobName: string,
+    callback: (child: ConfigBuilder) => ConfigBuilder,
+    options?: {
+      outputPath?: string
+      strategy?: "depend" | "mirror"
+      forward?: {
+        yaml_variables?: boolean
+        pipeline_variables?: boolean
+      }
+      jobOptions?: Partial<JobDefinitionNormalized>
+    },
+  ): this {
+    // Create child config builder
+    const childConfig = callback(new ConfigBuilder(this.state.globalOptions))
+
+    // Generate output path if not provided
+    const outputPath =
+      options?.outputPath ?? `ci/${jobName.replace(/[^a-zA-Z0-9-]/g, "-")}-pipeline.yml`
+
+    // Store child pipeline config
+    this.state.addChildPipeline(jobName, {
+      jobName,
+      builder: childConfig,
+      outputPath,
+      strategy: options?.strategy,
+      forward: options?.forward,
+    })
+
+    // Create trigger job in parent pipeline
+    const triggerJob: JobDefinitionNormalized = {
+      trigger: {
+        include: { local: outputPath },
+        strategy: options?.strategy,
+        forward: options?.forward,
+      },
+      ...options?.jobOptions,
+    }
+
+    this.job(jobName, triggerJob)
 
     return this
   }
@@ -1039,6 +1145,71 @@ export class ConfigBuilder {
   }
 
   /**
+   * Write parent pipeline and all child pipelines to YAML files.
+   *
+   * This method writes the parent pipeline to the specified output file and
+   * all child pipelines to their respective output paths (relative to outputDir).
+   *
+   * @param outputDir - Directory where files should be written
+   * @param options - Optional configuration
+   * @param options.parentFilename - Filename for parent pipeline (default: '.gitlab-ci.yml')
+   * @param options.skipValidation - Skip validation before writing (default: false)
+   * @returns Promise that resolves to an object with written file paths
+   *
+   * @example
+   * ```ts
+   * const config = new ConfigBuilder()
+   *   .stages('build', 'trigger')
+   *   .job('build', { script: ['npm run build'] })
+   *   .childPipeline('trigger:deploy', (child) => {
+   *     child.job('deploy', { script: ['./deploy.sh'] })
+   *     return child
+   *   })
+   *
+   * const files = await config.writeYamlFiles('.')
+   * // files.parent: './.gitlab-ci.yml'
+   * // files.children: ['./ci/trigger-deploy-pipeline.yml']
+   * ```
+   */
+  public async writeYamlFiles(
+    outputDir: string,
+    options?: {
+      parentFilename?: string
+      skipValidation?: boolean
+    },
+  ): Promise<{
+    parent: string
+    children: string[]
+  }> {
+    const parentFilename = options?.parentFilename ?? ".gitlab-ci.yml"
+    const writtenFiles: { parent: string; children: string[] } = {
+      parent: "",
+      children: [],
+    }
+
+    // Write parent pipeline
+    const parentPath = path.join(outputDir, parentFilename)
+    const parentYaml = this.toYaml({ skipValidation: options?.skipValidation })
+    await fs.mkdir(path.dirname(parentPath), { recursive: true })
+    await fs.writeFile(parentPath, parentYaml, "utf-8")
+    writtenFiles.parent = parentPath
+
+    // Write child pipelines
+    for (const childConfig of this.state.childPipelines.values()) {
+      const childPath = path.join(outputDir, childConfig.outputPath)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      const childYaml = childConfig.builder.toYaml({ skipValidation: options?.skipValidation })
+
+      await fs.mkdir(path.dirname(childPath), { recursive: true })
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      await fs.writeFile(childPath, childYaml, "utf-8")
+      writtenFiles.children.push(childPath)
+    }
+
+    return writtenFiles
+  }
+
+  /**
    * Write the pipeline configuration to a YAML file.
    *
    * Validates the configuration and writes it to the specified file path.
@@ -1094,6 +1265,42 @@ export class ConfigBuilder {
   }
 
   /**
+   * Get jobs from the pipeline state
+   *
+   * @returns Readonly record of job definitions
+   */
+  public get jobs(): Readonly<Record<string, JobDefinitionNormalized>> {
+    return this.state.jobs
+  }
+
+  /**
+   * Get templates from the pipeline state
+   *
+   * @returns Readonly record of template definitions
+   */
+  public get templates(): Readonly<Record<string, JobDefinitionNormalized>> {
+    return this.state.templates
+  }
+
+  /**
+   * Get stages from the pipeline state
+   *
+   * @returns Readonly array of stage names
+   */
+  public getStages(): readonly string[] {
+    return this.state.stages
+  }
+
+  /**
+   * Get job options map from the pipeline state
+   *
+   * @returns Readonly record of job-specific options
+   */
+  public get jobOptionsMap(): Readonly<Record<string, JobOptions>> {
+    return this.state.jobOptionsMap
+  }
+
+  /**
    * Generate a Mermaid diagram from the extends graph.
    *
    * Creates a visual flowchart representation of jobs, templates, and their relationships.
@@ -1122,7 +1329,12 @@ export class ConfigBuilder {
   public generateMermaidDiagram(options?: VisualizationOptions): string {
     const graph = this.getExtendsGraph()
     const resolvedConfig = this.getPlainObject({ skipValidation: true })
-    return generateMermaidDiagram({ graph, resolvedConfig, options })
+    return generateMermaidDiagram({
+      graph,
+      resolvedConfig,
+      options,
+      trackedChildPipelines: this.state.childPipelines,
+    })
   }
 
   /**
@@ -1154,7 +1366,12 @@ export class ConfigBuilder {
   public generateAsciiTree(options?: VisualizationOptions): string {
     const graph = this.getExtendsGraph()
     const resolvedConfig = this.getPlainObject({ skipValidation: true })
-    return generateAsciiTree({ graph, resolvedConfig, options })
+    return generateAsciiTree({
+      graph,
+      resolvedConfig,
+      options,
+      trackedChildPipelines: this.state.childPipelines,
+    })
   }
 
   /**
@@ -1191,7 +1408,12 @@ export class ConfigBuilder {
   public generateStageTable(options?: VisualizationOptions): string {
     const graph = this.getExtendsGraph()
     const resolvedConfig = this.getPlainObject({ skipValidation: true })
-    return generateStageTable({ graph, resolvedConfig, options })
+    return generateStageTable({
+      graph,
+      resolvedConfig,
+      options,
+      trackedChildPipelines: this.state.childPipelines,
+    })
   }
 }
 

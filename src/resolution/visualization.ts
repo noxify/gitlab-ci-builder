@@ -3,9 +3,12 @@ import { AsciiTree } from "oo-ascii-tree"
 
 import type { IncludeInput, Stage, Workflow } from "../schema"
 import type { BaseJob } from "../schema/job"
+import type { TrackedChildPipeline } from "./child-pipeline"
 import type { ExtendsGraphNode } from "./graph"
 import { ConfigBuilder } from "../builder/ConfigBuilder"
 import { parseYaml } from "../importer/parser"
+import { resolveIncludes } from "../resolver/cli"
+import { extractChildPipelines } from "./child-pipeline"
 
 /**
  * Visualization format types
@@ -22,6 +25,10 @@ export interface VisualizeOptions {
   showStages?: boolean
   /** Show remote template sources */
   showRemotes?: boolean
+  /** Show child pipelines triggered by jobs */
+  showChildPipelines?: boolean
+  /** Base path for resolving local child pipeline files */
+  basePath?: string
   /** GitLab authentication token for resolving project/template includes */
   gitlabToken?: string
   /** GitLab host URL for project/template includes (default: https://gitlab.com) */
@@ -47,6 +54,10 @@ export interface VisualizationOptions {
   showStages?: boolean
   /** Highlight cycles if detected */
   highlightCycles?: boolean
+  /** Show child pipelines triggered by jobs */
+  showChildPipelines?: boolean
+  /** Base path for resolving local child pipeline files */
+  basePath?: string
 }
 
 /**
@@ -69,6 +80,8 @@ export interface VisualizationParams {
   resolvedConfig: ResolvedPipelineConfig
   /** Visualization options */
   options?: VisualizationOptions
+  /** Tracked child pipelines from ConfigBuilder state */
+  trackedChildPipelines?: ReadonlyMap<string, TrackedChildPipeline>
 }
 
 /**
@@ -125,7 +138,6 @@ export async function visualizeYaml(
 
   // Resolve includes BEFORE adding jobs/templates
   if (parsed.include) {
-    const { resolveIncludes } = await import("../resolver/cli")
     await resolveIncludes(config, {
       gitlabToken: options.gitlabToken,
       gitlabUrl: options.gitlabUrl,
@@ -177,9 +189,6 @@ export async function visualizeYaml(
   }
 
   const resolvedConfig = config.getPlainObject({ skipValidation: true })
-  const { generateMermaidDiagram, generateAsciiTree, generateStageTable } = await import(
-    "../resolution"
-  )
 
   const vizOptions = {
     showStages: options.showStages,
@@ -210,6 +219,7 @@ export function generateMermaidDiagram({
   graph,
   resolvedConfig,
   options = {},
+  trackedChildPipelines,
 }: VisualizationParams): string {
   const lines: string[] = ["---", "config:", "  layout: elk", "---", "graph LR"]
 
@@ -385,6 +395,66 @@ export function generateMermaidDiagram({
     }
   }
 
+  // Add child pipelines if enabled
+  if (options.showChildPipelines) {
+    lines.push("  classDef childPipeline fill:#e1ffe8,stroke:#22c55e")
+
+    const childPipelines = extractChildPipelines(graph, options.basePath, trackedChildPipelines)
+
+    for (const child of childPipelines) {
+      const parentNodeId = nodeIds.get(child.parentJob)
+      if (!parentNodeId) continue
+
+      const subgraphId = `child_${child.parentJob.replace(/[^a-zA-Z0-9_]/g, "_")}`
+      const subgraphLabel = `Child Pipeline: ${child.source}`
+
+      lines.push(`  subgraph ${subgraphId}["${subgraphLabel}"]`)
+
+      // Add child pipeline nodes
+      for (const [childJobName, childNode] of child.graph.entries()) {
+        const childNodeId = `n${counter++}`
+        nodeIds.set(`${child.parentJob}:${childJobName}`, childNodeId)
+
+        const label = childJobName.replace(/"/g, '\\"')
+        const stage =
+          options.showStages && childNode.definition.stage ? ` [${childNode.definition.stage}]` : ""
+
+        let nodeClass = ""
+        if (childNode.isTemplate) {
+          nodeClass = ":::template"
+        } else {
+          nodeClass = ":::childPipeline"
+        }
+
+        lines.push(`    ${childNodeId}["${label}${stage}"]${nodeClass}`)
+      }
+
+      lines.push("  end")
+
+      // Add trigger connection from parent to first job in child
+      const firstChildJob = Array.from(child.graph.keys())[0]
+      if (firstChildJob) {
+        const firstChildNodeId = nodeIds.get(`${child.parentJob}:${firstChildJob}`)
+        if (firstChildNodeId) {
+          lines.push(`  ${parentNodeId} -.->|"triggers"| ${firstChildNodeId}`)
+        }
+      }
+
+      // Add extends relationships within child pipeline
+      for (const [childJobName, childNode] of child.graph.entries()) {
+        const childNodeId = nodeIds.get(`${child.parentJob}:${childJobName}`)
+        if (!childNodeId) continue
+
+        for (const extendName of childNode.extends) {
+          const targetId = nodeIds.get(`${child.parentJob}:${extendName}`)
+          if (targetId) {
+            lines.push(`    ${childNodeId} --> ${targetId}`)
+          }
+        }
+      }
+    }
+  }
+
   return lines.join("\n")
 }
 
@@ -422,6 +492,7 @@ export function generateAsciiTree({
   graph,
   resolvedConfig,
   options = {},
+  trackedChildPipelines,
 }: VisualizationParams): string {
   function buildNode(name: string, visited = new Set<string>()): AsciiTree | null {
     const node = graph.get(name)
@@ -489,6 +560,59 @@ export function generateAsciiTree({
     }
   }
 
+  // Add child pipelines if enabled
+  if (options.showChildPipelines) {
+    const childPipelines = extractChildPipelines(graph, options.basePath, trackedChildPipelines)
+
+    for (const child of childPipelines) {
+      const parentNode = graph.get(child.parentJob)
+      if (!parentNode) continue
+
+      const childPipelineLabel = `🔀 Child Pipeline: ${child.source}`
+      const childPipelineNode = new AsciiTree(childPipelineLabel)
+
+      // Build tree for child pipeline jobs
+      const childExtendedNodes = new Set<string>()
+      for (const node of child.graph.values()) {
+        for (const ext of node.extends) {
+          const targetName = child.graph.has(ext) ? ext : `.${ext}`
+          childExtendedNodes.add(targetName)
+        }
+      }
+
+      const childRootNodes = Array.from(child.graph.keys()).filter(
+        (name) => !childExtendedNodes.has(name),
+      )
+
+      for (const childRootName of childRootNodes) {
+        const childNode = child.graph.get(childRootName)
+        if (!childNode) continue
+
+        const childTemplate = childNode.isTemplate ? " [T]" : ""
+        const childStage =
+          options.showStages && childNode.definition.stage ? ` (${childNode.definition.stage})` : ""
+        const childTreeNode = new AsciiTree(`${childRootName}${childTemplate}${childStage}`)
+
+        // Add extends for child jobs
+        for (const extendName of childNode.extends) {
+          const targetNode = child.graph.get(extendName)
+          if (targetNode) {
+            const targetTemplate = targetNode.isTemplate ? " [T]" : ""
+            const targetStage =
+              options.showStages && targetNode.definition.stage
+                ? ` (${targetNode.definition.stage})`
+                : ""
+            childTreeNode.add(new AsciiTree(`${extendName}${targetTemplate}${targetStage}`))
+          }
+        }
+
+        childPipelineNode.add(childTreeNode)
+      }
+
+      root.add(childPipelineNode)
+    }
+  }
+
   return root.toString()
 }
 
@@ -528,6 +652,7 @@ export function generateStageTable({
   graph,
   resolvedConfig,
   options = {},
+  trackedChildPipelines,
 }: VisualizationParams): string {
   // Collect all stages from resolved jobs
   const stagesSet = new Set<string>()
@@ -560,6 +685,7 @@ export function generateStageTable({
       const node = graph.get(name)
       const remote = options.showRemote && node?.isRemote ? " 🌐" : ""
       const template = node?.isTemplate ? " [T]" : ""
+      const trigger = node?.trigger?.include ? " 🔀" : ""
 
       // Build full extends chain
       let extendsChain = ""
@@ -589,7 +715,7 @@ export function generateStageTable({
 
       const stageJobs = jobsByStage.get(stage)
       if (stageJobs) {
-        stageJobs.push(`${name}${template}${remote}${extendsChain}`)
+        stageJobs.push(`${name}${template}${remote}${trigger}${extendsChain}`)
       }
     }
   }
@@ -603,6 +729,76 @@ export function generateStageTable({
         stage,
         job,
       })
+    }
+  }
+
+  // Add child pipeline jobs if enabled
+  if (options.showChildPipelines) {
+    const childPipelines = extractChildPipelines(graph, options.basePath, trackedChildPipelines)
+
+    for (const child of childPipelines) {
+      // Add separator for child pipeline
+      tableData.push({
+        stage: "─".repeat(15),
+        job: "─".repeat(50),
+      })
+
+      tableData.push({
+        stage: "CHILD PIPELINE",
+        job: `🔀 ${child.source} (triggered by ${child.parentJob})`,
+      })
+
+      // Group child jobs by stage
+      const childStagesSet = new Set<string>()
+      for (const job of Object.values(child.resolvedConfig.jobs ?? {})) {
+        if (job.stage) {
+          childStagesSet.add(job.stage)
+        }
+      }
+
+      const childStages = Array.from(childStagesSet)
+
+      // Group child jobs by stage
+      const childJobsByStage = new Map<string, string[]>()
+      for (const childStage of childStages) {
+        childJobsByStage.set(childStage, [])
+      }
+
+      for (const [childName, childJob] of Object.entries(child.resolvedConfig.jobs ?? {})) {
+        const childStage = childJob.stage ?? "test"
+
+        // Skip templates
+        if (childName.startsWith(".")) {
+          continue
+        }
+
+        if (childJobsByStage.has(childStage)) {
+          const childNode = child.graph.get(childName)
+          const childTemplate = childNode?.isTemplate ? " [T]" : ""
+
+          let childExtendsChain = ""
+          if (childNode?.extends && childNode.extends.length > 0) {
+            const uniqueExtends = Array.from(new Set(childNode.extends))
+            childExtendsChain = ` ← ${uniqueExtends.join(" ← ")}`
+          }
+
+          const stageJobs = childJobsByStage.get(childStage)
+          if (stageJobs) {
+            stageJobs.push(`  ${childName}${childTemplate}${childExtendsChain}`)
+          }
+        }
+      }
+
+      // Add child jobs to table
+      for (const childStage of childStages) {
+        const childJobs = childJobsByStage.get(childStage) ?? []
+        for (const childJob of childJobs) {
+          tableData.push({
+            stage: childStage,
+            job: childJob,
+          })
+        }
+      }
     }
   }
 
