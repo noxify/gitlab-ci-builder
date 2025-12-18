@@ -15,6 +15,29 @@ import type {
 } from "../schema"
 
 /**
+ * Child pipeline configuration tracked during build
+ */
+export interface ChildPipelineConfig {
+  /** Job name that triggers this child pipeline */
+  jobName: string
+  /** Callback that builds the child pipeline */
+  builder: ConfigBuilder
+  /** Output file path for the child pipeline YAML (relative to parent) */
+  outputPath: string
+  /** Trigger strategy: 'depend' waits for completion, 'mirror' mirrors status */
+  strategy?: "depend" | "mirror"
+  /** Variables to forward to child pipeline */
+  forward?: {
+    yaml_variables?: boolean
+    pipeline_variables?: boolean
+  }
+}
+
+// Forward declaration to avoid circular dependency
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ConfigBuilder = any
+
+/**
  * Pipeline state - the internal model that holds all configuration
  */
 export class PipelineState {
@@ -28,6 +51,7 @@ export class PipelineState {
   private globalOptionsValue: GlobalOptions
   private jobOptionsMapValue: Record<string, JobOptions> = {}
   private specValue?: Spec
+  private childPipelinesValue = new Map<string, ChildPipelineConfig>()
   // Deprecated global options (use defaults instead)
   private deprecatedImageValue?: Image
   private deprecatedServicesValue?: Services
@@ -85,6 +109,10 @@ export class PipelineState {
 
   get spec(): Spec | undefined {
     return this.specValue
+  }
+
+  get childPipelines(): ReadonlyMap<string, ChildPipelineConfig> {
+    return this.childPipelinesValue
   }
 
   get deprecatedImage(): Image | undefined {
@@ -420,6 +448,26 @@ export class PipelineState {
    */
   setDeprecatedAfterScript(script: Script): void {
     this.deprecatedAfterScriptValue = script
+  }
+
+  /**
+   * Add a child pipeline configuration.
+   *
+   * @param jobName - Name of the trigger job
+   * @param config - Child pipeline configuration
+   */
+  addChildPipeline(jobName: string, config: ChildPipelineConfig): void {
+    this.childPipelinesValue.set(jobName, config)
+  }
+
+  /**
+   * Get a child pipeline configuration by job name.
+   *
+   * @param jobName - Name of the trigger job
+   * @returns Child pipeline config or undefined
+   */
+  getChildPipeline(jobName: string): ChildPipelineConfig | undefined {
+    return this.childPipelinesValue.get(jobName)
   }
 
   /**

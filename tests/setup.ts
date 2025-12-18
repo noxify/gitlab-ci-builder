@@ -4,7 +4,19 @@ import { afterAll, afterEach, beforeAll, vi } from "vitest"
 import { server } from "./mocks/server"
 
 // Setup memfs mocks before any tests run
-vi.mock("fs/promises", () => ({ default: fs.promises }))
+vi.mock("node:fs/promises", () => ({
+  default: fs.promises,
+  writeFile: fs.promises.writeFile,
+  mkdir: fs.promises.mkdir,
+  readFile: fs.promises.readFile,
+}))
+vi.mock("node:fs", () => fs)
+vi.mock("fs/promises", () => ({
+  default: fs.promises,
+  writeFile: fs.promises.writeFile,
+  mkdir: fs.promises.mkdir,
+  readFile: fs.promises.readFile,
+}))
 vi.mock("fs", () => fs)
 
 // Setup MSW server for mocking HTTP requests

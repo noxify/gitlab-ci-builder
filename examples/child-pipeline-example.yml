@@ -1,0 +1,19 @@
+stages:
+  - test
+  - deploy
+
+test:unit:
+  stage: test
+  script:
+    - npm run test:unit
+
+test:e2e:
+  stage: test
+  script:
+    - npm run test:e2e
+
+deploy:staging:
+  stage: deploy
+  script:
+    - npm run deploy:staging
+  environment: staging

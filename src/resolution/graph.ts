@@ -2,6 +2,18 @@ import type { GlobalOptions, JobDefinitionNormalized, JobOptions, ValidationErro
 import { createValidationError, ValidationErrorCode } from "../schema"
 
 /**
+ * Trigger configuration for child/downstream pipelines
+ */
+export interface TriggerInfo {
+  /** Project path for downstream pipeline */
+  project?: string
+  /** Include configuration for child pipeline */
+  include?: unknown
+  /** Strategy: 'depend' waits for completion, 'mirror' mirrors status */
+  strategy?: "depend" | "mirror"
+}
+
+/**
  * Graph node representing a job or template with extends relationships
  */
 export interface ExtendsGraphNode {
@@ -12,6 +24,8 @@ export interface ExtendsGraphNode {
   unresolvedExtends?: string[]
   isTemplate: boolean
   isRemote: boolean
+  /** Trigger configuration if this job triggers a pipeline */
+  trigger?: TriggerInfo
 }
 
 /**
@@ -72,12 +86,29 @@ export function buildExtendsGraph(
   // Add all jobs to graph
   for (const [name, definition] of Object.entries(jobs)) {
     const jobOpts = jobOptionsMap[name]
+
+    // Extract trigger info if present
+    let triggerInfo: TriggerInfo | undefined
+    if (definition.trigger) {
+      if (typeof definition.trigger === "string") {
+        triggerInfo = { project: definition.trigger }
+      } else if (typeof definition.trigger === "object") {
+        const trigger = definition.trigger as Record<string, unknown>
+        triggerInfo = {
+          project: trigger.project as string | undefined,
+          include: trigger.include,
+          strategy: trigger.strategy as "depend" | "mirror" | undefined,
+        }
+      }
+    }
+
     graph.set(name, {
       name,
       definition,
       extends: definition.extends ?? [],
       isTemplate: name.startsWith("."),
       isRemote: jobOpts?.remote ?? false,
+      trigger: triggerInfo,
     })
   }
 
