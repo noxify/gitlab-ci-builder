@@ -171,7 +171,7 @@ function postProcessReferences(yamlString: string): string {
     const line = lines[i]
 
     // Case 1: Check if this line contains a multiline !reference tag in an array
-    if (line && line.trim() === "- !reference") {
+    if (line?.trim() === "- !reference") {
       // Next two lines should contain the array elements
       const nextLine1 = lines[i + 1]
       const nextLine2 = lines[i + 2]
