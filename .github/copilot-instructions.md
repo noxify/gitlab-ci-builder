@@ -30,8 +30,7 @@
   1. Types first
   2. React/Next.js/Expo (if applicable)
   3. Third-party modules
-  4. @vorsteh-queue packages
-  5. Relative imports (~/,../, ./)
+  4. Relative imports (~/,../, ./)
 
 ## Code Generation Guidelines
 

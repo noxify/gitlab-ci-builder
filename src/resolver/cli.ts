@@ -313,7 +313,7 @@ async function resolveInclude(
  * // Returns: { stages: ['build', 'test'], jobs: { 'build-job': {...} } }
  * ```
  */
-function convertYamlToConfig(
+export function convertYamlToConfig(
   yamlContent: string,
   options?: { resolveReferences?: boolean },
 ): ConfigBuilder {
