@@ -85,7 +85,7 @@
     "@types/js-yaml": "4.0.9",
     "@types/node": "24.10.4",
     "@vitest/coverage-v8": "4.0.16",
-    "dedent": "^1.7.1",
+    "dedent": "1.7.1",
     "eslint": "9.39.2",
     "eslint-config-turbo": "2.7.2",
     "eslint-plugin-import": "2.32.0",

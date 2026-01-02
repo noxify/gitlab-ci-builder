@@ -61,7 +61,7 @@ importers:
         specifier: 4.0.16
         version: 4.0.16(vitest@4.0.16(@types/node@24.10.4)(msw@2.12.7(@types/node@24.10.4)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.1))
       dedent:
-        specifier: ^1.7.1
+        specifier: 1.7.1
         version: 1.7.1
       eslint:
         specifier: 9.39.2
