@@ -131,7 +131,7 @@ export const ArtifactsSchema = z
       .object({
         accessibility: z.string().optional(),
         annotations: z
-          .string()
+          .union([z.string(), z.array(z.string())])
           .meta({
             description:
               "@see https://docs.gitlab.com/ci/yaml/artifacts_reports/#artifactsreportsannotations",

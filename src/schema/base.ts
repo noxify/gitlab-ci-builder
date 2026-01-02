@@ -177,7 +177,7 @@ export type Image = z.infer<typeof ImageSchema>
 /**
  * Services definition with extended options
  */
-export const ServiceSchema = z
+export const ServiceSchema: z.ZodType<string | ServiceObject | (string | ServiceObject)[]> = z
   .union([
     z.string(),
     z.object({
@@ -212,8 +212,31 @@ export const ServiceSchema = z
       }).optional(),
       variables: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
     }),
+    z.lazy(() => z.array(z.union([z.string(), ServiceObjectSchema]))),
   ])
   .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#services" })
+
+interface ServiceObject {
+  name: string
+  alias?: string
+  entrypoint?: string[]
+  command?: string[]
+  docker?: { platform?: string; user?: string }
+  kubernetes?: { user?: string | number }
+  pull_policy?: z.infer<typeof PullPolicySchema>
+  variables?: Record<string, string | number | boolean>
+}
+
+const ServiceObjectSchema = z.object({
+  name: z.string(),
+  alias: z.string().optional(),
+  entrypoint: z.array(z.string()).optional(),
+  command: z.array(z.string()).optional(),
+  docker: z.object({ platform: z.string().optional(), user: z.string().optional() }).optional(),
+  kubernetes: z.object({ user: z.union([z.string(), z.number()]).optional() }).optional(),
+  pull_policy: PullPolicySchema.optional(),
+  variables: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+})
 
 export const ServicesSchema = z.array(ServiceSchema)
 

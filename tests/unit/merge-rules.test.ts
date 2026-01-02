@@ -47,7 +47,11 @@ describe("Merge Rules", () => {
       expect(job?.services).toHaveLength(3)
       // redis should be overridden by child
       const redis = job?.services?.find((s) =>
-        typeof s === "string" ? s === "redis" : s.name === "redis",
+        typeof s === "string"
+          ? s === "redis"
+          : typeof s === "object" && !Array.isArray(s)
+            ? s.name === "redis"
+            : false,
       )
       expect(redis).toEqual({ name: "redis", alias: "redis-cache" })
     })
