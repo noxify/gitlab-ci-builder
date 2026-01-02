@@ -158,6 +158,104 @@ gitlab-ci-builder visualize pipeline.yml \
 - Resolving `remote:` includes to private URLs
 - Accessing GitLab CI/CD templates from private instances
 
+### Simulate Command
+
+Simulate GitLab CI pipeline execution to see which jobs would run based on variables and rules:
+
+```bash
+# Simulate a local pipeline
+gitlab-ci-builder simulate .gitlab-ci.yml
+
+# Simulate for a specific branch
+gitlab-ci-builder simulate .gitlab-ci.yml -b main
+
+# Simulate with custom variables
+gitlab-ci-builder simulate .gitlab-ci.yml -v CI_COMMIT_BRANCH=main -v DEPLOY_ENV=production
+
+# Simulate a merge request pipeline
+gitlab-ci-builder simulate .gitlab-ci.yml --mr -b feature-123
+
+# Output as JSON for further processing
+gitlab-ci-builder simulate .gitlab-ci.yml -f json > simulation.json
+
+# Show skipped jobs and verbose rule evaluation
+gitlab-ci-builder simulate .gitlab-ci.yml -b develop --show-skipped --verbose
+```
+
+**Options:**
+
+- `-v, --variable <key=value...>` - Set pipeline variables (can be used multiple times)
+- `-b, --branch <branch>` - Simulate for specific branch (sets `CI_COMMIT_BRANCH`)
+- `--tag <tag>` - Simulate for specific tag (sets `CI_COMMIT_TAG`)
+- `--mr` - Simulate merge request pipeline (sets `CI_MERGE_REQUEST_ID`)
+- `--mr-labels <labels...>` - Merge request labels (comma-separated)
+- `-f, --format <format>` - Output format: `summary`, `text`, `json`, `yaml`, `table` (default: `summary`)
+- `--show-skipped` - Show skipped jobs in output (default: `false`)
+- `--verbose` - Verbose output with detailed rule evaluation (default: `false`)
+- `-t, --token <token>` - Authentication token for private repositories (or use `GITLAB_TOKEN` env var)
+- `--host <host>` - GitLab host for project/template includes (default: `gitlab.com`, or use `GITLAB_HOST` env var)
+- `-h, --help` - Display help information
+
+**Examples:**
+
+```bash
+# Basic branch simulation
+gitlab-ci-builder simulate .gitlab-ci.yml -b main
+
+# Tag-based release pipeline
+gitlab-ci-builder simulate .gitlab-ci.yml --tag v1.0.0
+
+# MR pipeline with multiple variables
+gitlab-ci-builder simulate .gitlab-ci.yml --mr \
+  -v CI_COMMIT_BRANCH=feature-new-ui \
+  -v TARGET_BRANCH=main
+
+# Table format with skipped jobs
+gitlab-ci-builder simulate .gitlab-ci.yml -f table \
+  -b develop \
+  --show-skipped
+
+# Remote pipeline with authentication
+gitlab-ci-builder simulate https://gitlab.com/org/repo/-/raw/main/.gitlab-ci.yml \
+  -t glpat-xxxx \
+  -b main
+```
+
+**Output Formats:**
+
+- `summary` (default): Clean overview with job counts and stage breakdown
+- `text`: Detailed text format with full job information
+- `table`: ASCII table with job status and stage information
+- `json`: Machine-readable JSON for further processing
+- `yaml`: YAML format compatible with GitLab CI syntax
+
+**Example Output:**
+
+```bash
+$ gitlab-ci-builder simulate .gitlab-ci.yml -b main
+
+📊 Pipeline Simulation Result
+
+════════════════════════════════════════════════════════════
+Total Jobs:    5
+Will Run:      3
+  - Automatic: 2
+  - Manual:    1
+Will Skip:     2
+
+📋 Stages:
+────────────────────────────────────────────────────────────
+  build: 1 job(s)
+  test: 1 job(s)
+  deploy: 1 job(s)
+
+🔧 Jobs:
+────────────────────────────────────────────────────────────
+  ▶ build-app (build)
+  ▶ test-app (test)
+  ⚙ deploy-prod (deploy) - Manual
+```
+
 All visualization formats show:
 
 - Job inheritance chains (extends relationships)

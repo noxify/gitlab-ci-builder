@@ -216,7 +216,7 @@ export const ServiceSchema: z.ZodType<string | ServiceObject | (string | Service
   ])
   .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#services" })
 
-interface ServiceObject {
+export interface ServiceObject {
   name: string
   alias?: string
   entrypoint?: string[]
@@ -227,7 +227,7 @@ interface ServiceObject {
   variables?: Record<string, string | number | boolean>
 }
 
-const ServiceObjectSchema = z.object({
+export const ServiceObjectSchema = z.object({
   name: z.string(),
   alias: z.string().optional(),
   entrypoint: z.array(z.string()).optional(),

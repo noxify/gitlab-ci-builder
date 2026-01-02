@@ -26,6 +26,13 @@ export default defineConfig({
           exclude: ["**/.generated/**"],
         },
       },
+      {
+        test: {
+          name: "e2e",
+          include: ["tests/e2e/**/*.test.ts"],
+          testTimeout: 30000, // E2E tests may take longer
+        },
+      },
     ],
   },
 })
