@@ -61,7 +61,7 @@ export function formatScriptValue(value: unknown): ts.Expression {
  * Processes arrays of script commands, expanding multi-line strings into
  * individual commands when appropriate.
  *
- * @param items - Array of script items (strings or other values)
+ * @param items - Array of script items to flatten
  * @returns TypeScript ArrayLiteralExpression AST node
  *
  * @example
