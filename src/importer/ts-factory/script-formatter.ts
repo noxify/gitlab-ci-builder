@@ -4,11 +4,6 @@ import { createStringArray, createTemplateLiteral, valueToExpression } from "./a
 import { hasControlStructures, hasShellOperators } from "./utils"
 
 /**
- * Script properties that need special formatting
- */
-export const SCRIPT_PROPERTIES = ["script", "before_script", "after_script"] as const
-
-/**
  * Format a script value as AST expression.
  *
  * Detects shell patterns and formats accordingly:
