@@ -2,6 +2,7 @@
 import { Command } from "@commander-js/extra-typings"
 import { readPackage } from "read-pkg"
 
+import simulateCommand from "./commands/simulate"
 import visualizeCommand from "./commands/visualize"
 
 async function main() {
@@ -11,6 +12,7 @@ async function main() {
     .name("gitlab-ci-builder")
     .description("GitLab CI Pipeline Builder and Visualizer")
     .addCommand(visualizeCommand())
+    .addCommand(simulateCommand())
 
     .version(pkg.version)
 

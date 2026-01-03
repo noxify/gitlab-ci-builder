@@ -64,6 +64,7 @@ export class PipelineState {
       mergeExtends: true,
       mergeExisting: true,
       resolveTemplatesOnly: true,
+      mergeRemoteExtends: true,
       performanceMode: false,
       missingExtendsPolicy: "warn",
       ...globalOptions,

@@ -229,17 +229,37 @@ function mergeServices(
   if (!parent) return child
   if (!child) return parent
 
+  // Helper to get service name, handling nested arrays
+  const getServiceName = (service: (typeof parent)[number]): string => {
+    if (typeof service === "string") return service
+    if (Array.isArray(service)) {
+      // Nested array: extract first element
+      const first = service[0] as unknown
+      if (typeof first === "string") return first
+      if (typeof first === "object" && first && "name" in first) {
+        return String((first as { name: string }).name)
+      }
+      return "unknown"
+    }
+    // Handle objects without name property (from unvalidated remote jobs)
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (!service || typeof service !== "object" || !("name" in service)) {
+      return "unknown"
+    }
+    return service.name
+  }
+
   const serviceMap = new Map<string, (typeof parent)[number]>()
 
   // Add parent services
   for (const service of parent) {
-    const name = typeof service === "string" ? service : service.name
+    const name = getServiceName(service)
     serviceMap.set(name, service)
   }
 
   // Add/override with child services
   for (const service of child) {
-    const name = typeof service === "string" ? service : service.name
+    const name = getServiceName(service)
     serviceMap.set(name, service)
   }
 

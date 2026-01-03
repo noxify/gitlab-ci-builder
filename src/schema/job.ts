@@ -131,7 +131,7 @@ export const ArtifactsSchema = z
       .object({
         accessibility: z.string().optional(),
         annotations: z
-          .string()
+          .union([z.string(), z.array(z.string())])
           .meta({
             description:
               "@see https://docs.gitlab.com/ci/yaml/artifacts_reports/#artifactsreportsannotations",
@@ -347,12 +347,16 @@ export const BaseJobSchema = z.object({
             ref: z.string(),
             artifacts: z.boolean().optional(),
           }),
+          // Fallback for complex needs definitions we don't fully support yet
+          z.record(z.string(), z.unknown()),
         ]),
       ),
       z.object({
         pipeline: z.string(),
         optional: z.boolean().optional(),
       }),
+      // Fallback for any other needs format
+      z.record(z.string(), z.unknown()),
     ])
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#needs" })
     .optional(),

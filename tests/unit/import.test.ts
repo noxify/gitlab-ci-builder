@@ -309,10 +309,10 @@ describe("YAML Import", () => {
         deploy:
           script:
             - |
-              if [ "$MANUAL_PROD_DEPLOYMENT" = "true" ]; then
-                echo "🚨 MANUAL PRODUCTION DEPLOYMENT TRIGGERED 🚨"
+              if [ "$MANUAL_DEPLOYMENT" = "true" ]; then
+                echo "🚨 MANUAL DEPLOYMENT TRIGGERED 🚨"
               else
-                echo "📦 Automated production deployment via changeset release"
+                echo "📦 Automated deployment via release"
               fi
       `
 
@@ -748,5 +748,107 @@ describe("YAML Import", () => {
         "utf-8",
       )
     })
+  })
+})
+
+describe("Import - Nested Script Arrays", () => {
+  it("should flatten nested script arrays from !reference expansions", () => {
+    const yaml = dedent`
+      test-job:
+        script:
+          - echo "start"
+          - - echo "nested 1"
+            - echo "nested 2"
+          - echo "end"
+    `
+
+    const result = fromYaml(yaml)
+
+    // Should flatten nested array - check for all strings being present
+    expect(result).toContain('echo \\"start\\"')
+    expect(result).toContain('echo \\"nested 1\\"')
+    expect(result).toContain('echo \\"nested 2\\"')
+    expect(result).toContain('echo \\"end\\"')
+    // Should NOT contain nested array syntax
+    expect(result).not.toContain("[[")
+  })
+
+  it("should handle deeply nested script arrays", () => {
+    const yaml = dedent`
+      test-job:
+        script:
+          - echo "level 0"
+          - - echo "level 1a"
+            - - echo "level 2"
+              - echo "level 2b"
+            - echo "level 1b"
+          - echo "level 0 end"
+    `
+
+    const result = fromYaml(yaml)
+
+    // Should flatten all levels
+    expect(result).toContain('echo \\"level 0\\"')
+    expect(result).toContain('echo \\"level 1a\\"')
+    expect(result).toContain('echo \\"level 2\\"')
+    expect(result).toContain('echo \\"level 2b\\"')
+    expect(result).toContain('echo \\"level 1b\\"')
+    expect(result).toContain('echo \\"level 0 end\\"')
+    // Should NOT contain nested array syntax
+    expect(result).not.toContain("[[")
+  })
+
+  it("should flatten nested arrays in before_script", () => {
+    const yaml = dedent`
+      test-job:
+        before_script:
+          - echo "prep"
+          - - echo "nested prep 1"
+            - echo "nested prep 2"
+        script:
+          - echo "main"
+    `
+
+    const result = fromYaml(yaml)
+
+    expect(result).toContain('echo \\"prep\\"')
+    expect(result).toContain('echo \\"nested prep 1\\"')
+    expect(result).toContain('echo \\"nested prep 2\\"')
+    expect(result).toContain('echo \\"main\\"')
+  })
+
+  it("should flatten nested arrays in after_script", () => {
+    const yaml = dedent`
+      test-job:
+        script:
+          - echo "main"
+        after_script:
+          - echo "cleanup"
+          - - echo "nested cleanup 1"
+            - echo "nested cleanup 2"
+    `
+
+    const result = fromYaml(yaml)
+
+    expect(result).toContain('echo \\"main\\"')
+    expect(result).toContain('echo \\"cleanup\\"')
+    expect(result).toContain('echo \\"nested cleanup 1\\"')
+    expect(result).toContain('echo \\"nested cleanup 2\\"')
+  })
+
+  it("should handle empty nested arrays gracefully", () => {
+    const yaml = dedent`
+      test-job:
+        script:
+          - echo "start"
+          - []
+          - echo "end"
+    `
+
+    const result = fromYaml(yaml)
+
+    // Should skip empty nested array
+    expect(result).toContain('echo \\"start\\"')
+    expect(result).toContain('echo \\"end\\"')
   })
 })

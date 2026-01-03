@@ -1,12 +1,8 @@
 import ts from "typescript"
 
 import { valueToExpression } from "./ast-helpers"
-import { formatScriptProperty, SCRIPT_PROPERTIES } from "./script-formatter"
-
-/**
- * Properties that should remain as single values if array has only one element
- */
-const SINGLE_VALUE_PROPERTIES = ["extends", "image", "needs", "annotations", "dotenv"] as const
+import { formatScriptProperty } from "./script-formatter"
+import { SCRIPT_PROPERTIES, SINGLE_VALUE_PROPERTIES } from "./utils"
 
 /**
  * Check if a value is a plain object.

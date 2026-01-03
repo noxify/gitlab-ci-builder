@@ -23,7 +23,7 @@ const SCRIPT_PROPERTIES = ["script", "before_script", "after_script"] as const
 /**
  * Properties that accept string | string[] but single values are more common
  */
-const SINGLE_VALUE_PROPERTIES = ["extends", "annotations", "dotenv"] as const
+const SINGLE_VALUE_PROPERTIES = ["extends", "image", "needs", "annotations", "dotenv"] as const
 
 /**
  * Shell operator patterns that indicate script should stay as single string

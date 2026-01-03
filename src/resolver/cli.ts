@@ -54,6 +54,8 @@ export interface ResolverOptions {
   basePath?: string
   /** Resolve !reference tags in YAML (needed for visualization, default: false) */
   resolveReferences?: boolean
+  /** Show warnings for failed includes (default: false) */
+  verbose?: boolean
 }
 
 /**
@@ -99,11 +101,12 @@ interface ResolutionContext {
 export async function resolveIncludes(
   config: ConfigBuilder,
   options: ResolverOptions = {},
-): Promise<void> {
+): Promise<{ failedIncludes: string[] }> {
   const maxDepth = options.maxDepth ?? 10
   const visited = new Set<string>()
   const basePath = options.basePath ?? process.cwd()
   const context: ResolutionContext = { remoteItems: new Set() }
+  const failedIncludes: string[] = []
 
   async function resolveRecursive(currentConfig: ConfigBuilder, depth = 0): Promise<void> {
     if (depth >= maxDepth) {
@@ -117,12 +120,22 @@ export async function resolveIncludes(
     const includes = Array.isArray(plain.include) ? plain.include : [plain.include]
 
     for (const include of includes) {
-      const content = await resolveInclude(include, basePath, options, visited)
-      if (!content) continue
+      const result = await resolveInclude(include, basePath, options, visited)
+
+      // Track failed includes
+      const identifier = getIncludeIdentifier(include)
+      if (result === null && identifier && !visited.has(identifier)) {
+        if (!failedIncludes.includes(identifier)) {
+          failedIncludes.push(identifier)
+        }
+      }
+
+      if (!result) continue
 
       // Parse the included YAML
-      const includedConfig = convertYamlToConfig(content, {
+      const includedConfig = convertYamlToConfig(result, {
         resolveReferences: options.resolveReferences,
+        verbose: options.verbose,
       })
 
       // Recursively resolve nested includes first
@@ -137,6 +150,22 @@ export async function resolveIncludes(
 
   // Mark all collected remote items after resolution is complete
   markRemoteItems(config, context.remoteItems)
+
+  return { failedIncludes }
+}
+
+/**
+ * Get a unique identifier for an include entry
+ */
+function getIncludeIdentifier(include: IncludeEntry): string | null {
+  if ("local" in include && include.local) return include.local
+  if ("remote" in include && include.remote) return include.remote
+  if ("project" in include && include.project && "file" in include && include.file) {
+    const file = Array.isArray(include.file) ? include.file[0] : include.file
+    return `${include.project}/${file}`
+  }
+  if ("template" in include && include.template) return include.template
+  return null
 }
 
 /**
@@ -215,13 +244,21 @@ async function resolveInclude(
 
       const response = await fetch(include.remote, { headers })
       if (!response.ok) {
-        throw new Error(`Failed to fetch remote include: ${include.remote}`)
+        // Always warn about failed remote includes
+        // eslint-disable-next-line no-console
+        console.warn(
+          `⚠️  Could not fetch remote include: ${include.remote} (${response.status} ${response.statusText})`,
+        )
+        return null
       }
       return await response.text()
     } catch (error) {
-      throw new Error(
-        `Failed to fetch remote include: ${include.remote} - ${error instanceof Error ? error.message : String(error)}`,
+      // Always warn about failed remote includes
+      // eslint-disable-next-line no-console
+      console.warn(
+        `⚠️  Could not fetch remote include: ${include.remote} - ${error instanceof Error ? error.message : "Unknown error"}`,
       )
+      return null
     }
   }
 
@@ -313,9 +350,9 @@ async function resolveInclude(
  * // Returns: { stages: ['build', 'test'], jobs: { 'build-job': {...} } }
  * ```
  */
-function convertYamlToConfig(
+export function convertYamlToConfig(
   yamlContent: string,
-  options?: { resolveReferences?: boolean },
+  options?: { resolveReferences?: boolean; verbose?: boolean },
 ): ConfigBuilder {
   const parsed = parseYamlResolvable(yamlContent)
 
@@ -354,6 +391,7 @@ function convertYamlToConfig(
   }
 
   // Add jobs and templates (mark as remote for visualization)
+  // For remote includes, be lenient with validation - just store the raw definitions
   for (const [name, definition] of Object.entries(resolved)) {
     if (
       typeof definition === "object" &&
@@ -366,8 +404,11 @@ function convertYamlToConfig(
         } else {
           config.job(name, definition, { remote: true })
         }
-      } catch {
-        // Silently skip jobs with validation errors during include resolution
+      } catch (error) {
+        // Skip remote jobs with validation errors - they may have complex schemas
+        // The { remote: true } option already uses relaxed validation via safeParse
+        // eslint-disable-next-line no-console
+        console.warn(`⚠️  Skipped remote job '${name}':`, error)
       }
     }
   }
@@ -448,9 +489,14 @@ function mergeConfigs(
   }
 
   // Merge variables
+  // Remote variables should NOT override local variables
+  // Get current target variables first, then merge source variables underneath
   if (sourcePlain.variables) {
+    const targetPlain = target.getPlainObject({ skipValidation: true })
+    const currentVars = targetPlain.variables ?? {}
+    // Merge order: source variables as base, target variables override
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-    target.variables(sourcePlain.variables as any)
+    target.variables({ ...sourcePlain.variables, ...currentVars } as any)
   }
 
   // Merge workflow
@@ -464,14 +510,23 @@ function mergeConfigs(
   }
 
   // Merge jobs and templates from the jobs object
-  // Track remote items in context without marking during merge to allow proper resolution
+  // For remote jobs, use try-catch to be lenient with validation
   if (sourcePlain.jobs) {
     for (const [name, job] of Object.entries(sourcePlain.jobs)) {
       context.remoteItems.add(name)
-      if (name.startsWith(".")) {
-        target.template(name, job)
-      } else {
-        target.job(name, job)
+      try {
+        if (name.startsWith(".")) {
+          target.template(name, job, { remote: true })
+        } else {
+          target.job(name, job, { remote: true })
+        }
+      } catch (error) {
+        // Skip jobs with validation errors - they may have complex schemas
+        // we don't fully support yet (e.g., complex needs arrays)
+        // eslint-disable-next-line no-console
+        console.error(`❌ Skipping ${name}:`)
+        // eslint-disable-next-line no-console
+        console.error(error)
       }
     }
   }

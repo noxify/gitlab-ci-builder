@@ -95,7 +95,12 @@ function resolveReferencesInValue(
 ): unknown {
   // Handle arrays
   if (Array.isArray(value)) {
-    return value.map((item) => resolveReferencesInValue(item, parsed, visited))
+    return value.flatMap((item) => {
+      const resolved = resolveReferencesInValue(item, parsed, visited)
+      // Flatten arrays from !reference tags (GitLab behavior)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return Array.isArray(resolved) ? resolved : [resolved]
+    })
   }
 
   // Handle !reference tags

@@ -111,7 +111,7 @@ export interface Artifacts {
     /**
      * @see https://docs.gitlab.com/ci/yaml/artifacts_reports/#artifactsreportsannotations
      */
-    annotations?: string
+    annotations?: string | string[]
     /**
      * @see https://docs.gitlab.com/ci/pipelines/job_artifacts.html#artifactsreportsjunit
      */
@@ -386,6 +386,29 @@ export interface BaseJob {
           | ("always" | "never" | "if-not-present")[]
         variables?: Record<string, string | number | boolean>
       }
+    | (
+        | string
+        | {
+            name: string
+            alias?: string
+            entrypoint?: string[]
+            command?: string[]
+            docker?: {
+              platform?: string
+              user?: string
+            }
+            kubernetes?: {
+              user?: string | number
+            }
+            /**
+             * @see https://docs.gitlab.com/ci/yaml/#imagepull_policy
+             */
+            pull_policy?:
+              | ("always" | "never" | "if-not-present")
+              | ("always" | "never" | "if-not-present")[]
+            variables?: Record<string, string | number | boolean>
+          }
+      )[]
   )[]
   /**
    * @see https://docs.gitlab.com/ci/yaml/#tags
@@ -503,7 +526,7 @@ export interface BaseJob {
       /**
        * @see https://docs.gitlab.com/ci/yaml/artifacts_reports/#artifactsreportsannotations
        */
-      annotations?: string
+      annotations?: string | string[]
       /**
        * @see https://docs.gitlab.com/ci/pipelines/job_artifacts.html#artifactsreportsjunit
        */
@@ -1599,6 +1622,29 @@ export interface Defaults {
           | ("always" | "never" | "if-not-present")[]
         variables?: Record<string, string | number | boolean>
       }
+    | (
+        | string
+        | {
+            name: string
+            alias?: string
+            entrypoint?: string[]
+            command?: string[]
+            docker?: {
+              platform?: string
+              user?: string
+            }
+            kubernetes?: {
+              user?: string | number
+            }
+            /**
+             * @see https://docs.gitlab.com/ci/yaml/#imagepull_policy
+             */
+            pull_policy?:
+              | ("always" | "never" | "if-not-present")
+              | ("always" | "never" | "if-not-present")[]
+            variables?: Record<string, string | number | boolean>
+          }
+      )[]
   )[]
   /**
    * @see https://docs.gitlab.com/ci/yaml/#before_script
@@ -1656,7 +1702,7 @@ export interface Defaults {
       /**
        * @see https://docs.gitlab.com/ci/yaml/artifacts_reports/#artifactsreportsannotations
        */
-      annotations?: string
+      annotations?: string | string[]
       /**
        * @see https://docs.gitlab.com/ci/pipelines/job_artifacts.html#artifactsreportsjunit
        */
@@ -1974,6 +2020,29 @@ export type Service =
         | ("always" | "never" | "if-not-present")[]
       variables?: Record<string, string | number | boolean>
     }
+  | (
+      | string
+      | {
+          name: string
+          alias?: string
+          entrypoint?: string[]
+          command?: string[]
+          docker?: {
+            platform?: string
+            user?: string
+          }
+          kubernetes?: {
+            user?: string | number
+          }
+          /**
+           * @see https://docs.gitlab.com/ci/yaml/#imagepull_policy
+           */
+          pull_policy?:
+            | ("always" | "never" | "if-not-present")
+            | ("always" | "never" | "if-not-present")[]
+          variables?: Record<string, string | number | boolean>
+        }
+    )[]
 
 /**
  * @see https://docs.gitlab.com/ci/yaml/#tags

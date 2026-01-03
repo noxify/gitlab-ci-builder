@@ -4,11 +4,6 @@ import { createStringArray, createTemplateLiteral, valueToExpression } from "./a
 import { hasControlStructures, hasShellOperators } from "./utils"
 
 /**
- * Script properties that need special formatting
- */
-export const SCRIPT_PROPERTIES = ["script", "before_script", "after_script"] as const
-
-/**
  * Format a script value as AST expression.
  *
  * Detects shell patterns and formats accordingly:
@@ -61,7 +56,7 @@ export function formatScriptValue(value: unknown): ts.Expression {
  * Processes arrays of script commands, expanding multi-line strings into
  * individual commands when appropriate.
  *
- * @param items - Array of script items (strings or other values)
+ * @param items - Array of script items to flatten
  * @returns TypeScript ArrayLiteralExpression AST node
  *
  * @example

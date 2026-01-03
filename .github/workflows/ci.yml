@@ -80,6 +80,9 @@ jobs:
       - name: Integration Tests
         run: pnpm test:integration
 
+      - name: E2E Tests
+        run: pnpm test:e2e
+
   pkg-new-release:
     needs: [lint, format, typecheck]
     if: github.event_name == 'pull_request'

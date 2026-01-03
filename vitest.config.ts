@@ -1,4 +1,3 @@
-import { resolve } from "node:path"
 import { defineConfig } from "vitest/config"
 
 export default defineConfig({
@@ -24,6 +23,13 @@ export default defineConfig({
           name: "integration",
           include: ["tests/integration/**/*.test.ts"],
           exclude: ["**/.generated/**"],
+        },
+      },
+      {
+        test: {
+          name: "e2e",
+          include: ["tests/e2e/**/*.test.ts"],
+          testTimeout: 30000, // E2E tests may take longer
         },
       },
     ],

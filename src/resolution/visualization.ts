@@ -138,11 +138,18 @@ export async function visualizeYaml(
 
   // Resolve includes BEFORE adding jobs/templates
   if (parsed.include) {
-    await resolveIncludes(config, {
+    const { failedIncludes } = await resolveIncludes(config, {
       gitlabToken: options.gitlabToken,
       gitlabUrl: options.gitlabUrl,
       resolveReferences: true, // Enable !reference resolution for visualization
     })
+
+    if (failedIncludes.length > 0) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `⚠️  Warning: ${failedIncludes.length} include(s) could not be loaded. Visualization may be incomplete.`,
+      )
+    }
   }
 
   // Add variables if present
