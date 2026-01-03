@@ -1344,12 +1344,13 @@ describe("Graph Visualization", () => {
             - echo "testing"
       `
 
-      // Should not crash
-      await expect(
-        visualizeYaml(yaml, {
-          format: "ascii",
-        }),
-      ).rejects.toThrow()
+      // Should not crash - missing includes are now handled gracefully
+      const result = await visualizeYaml(yaml, {
+        format: "ascii",
+      })
+
+      // Should still render the local job even if remote include fails
+      expect(result.ascii).toContain("test")
     })
 
     it("should handle nested remote includes (remote file includes another remote file)", async () => {

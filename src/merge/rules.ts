@@ -241,6 +241,11 @@ function mergeServices(
       }
       return "unknown"
     }
+    // Handle objects without name property (from unvalidated remote jobs)
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (!service || typeof service !== "object" || !("name" in service)) {
+      return "unknown"
+    }
     return service.name
   }
 

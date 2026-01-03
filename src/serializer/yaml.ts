@@ -290,10 +290,55 @@ function addSectionSeparators(yamlString: string): string {
 }
 
 /**
- * Serialize a pipeline configuration to YAML string
+ * Serialize a pipeline configuration to a GitLab CI YAML string.
+ *
+ * This function converts a PipelineOutput object into a properly formatted
+ * GitLab CI YAML configuration string with:
+ * - Canonical key ordering (workflow, include, default, variables, stages, jobs)
+ * - Templates listed before regular jobs
+ * - Proper !reference tag formatting
+ * - Blank lines between sections for readability
+ * - Empty sections automatically omitted
  *
  * @param pipeline - The pipeline configuration to serialize
- * @returns YAML string representation
+ * @returns Formatted GitLab CI YAML string
+ *
+ * @example
+ * ```ts
+ * import { serializeToYaml } from '@noxify/gitlab-ci-builder'
+ *
+ * const pipeline = {
+ *   stages: ['build', 'test'],
+ *   variables: { NODE_ENV: 'production' },
+ *   jobs: {
+ *     '.base': { image: 'node:22' },
+ *     'build': {
+ *       extends: '.base',
+ *       stage: 'build',
+ *       script: ['npm run build']
+ *     }
+ *   }
+ * }
+ *
+ * const yaml = serializeToYaml(pipeline)
+ * console.log(yaml)
+ * // Output:
+ * // stages:
+ * //   - build
+ * //   - test
+ * //
+ * // variables:
+ * //   NODE_ENV: production
+ * //
+ * // .base:
+ * //   image: node:22
+ * //
+ * // build:
+ * //   extends: .base
+ * //   stage: build
+ * //   script:
+ * //     - npm run build
+ * ```
  */
 export function serializeToYaml(pipeline: PipelineOutput): string {
   // Process references before serialization

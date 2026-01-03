@@ -1,9 +1,14 @@
 import { readFile } from "fs/promises"
+import { dirname, resolve } from "node:path"
 import { Command } from "@commander-js/extra-typings"
 import { ClimtTable } from "climt"
+import { dump as yamlDump } from "js-yaml"
 
+import type { IncludeInput, Workflow } from "../../schema"
 import type { RuleContext, SimulationResult } from "../../simulation"
-import { convertYamlToConfig, resolveIncludes } from "../../resolver/cli"
+import { ConfigBuilder } from "../../builder/ConfigBuilder"
+import { parseYaml } from "../../importer/parser"
+import { resolveIncludes } from "../../resolver/cli"
 import { PipelineSimulator } from "../../simulation"
 
 export default function simulateCommand() {
@@ -53,6 +58,7 @@ Examples:
 
       try {
         let yamlContent: string
+        let basePath: string | undefined
 
         // Get token and host from CLI option or environment variable
         const token = options.token ?? process.env.GITLAB_TOKEN
@@ -72,9 +78,12 @@ Examples:
             throw new Error(`Failed to fetch ${input}: ${response.statusText}`)
           }
           yamlContent = await response.text()
+          // No basePath for remote URLs - cannot resolve file paths
         } else {
           // Local YAML file
           yamlContent = await readFile(input, "utf-8")
+          // Set basePath to the directory containing the config file
+          basePath = dirname(resolve(process.cwd(), input))
         }
 
         // Parse variables from CLI
@@ -91,14 +100,52 @@ Examples:
         // Add branch/tag to variables
         if (options.branch) {
           variables.CI_COMMIT_BRANCH = options.branch
+          // Also set CI_DEFAULT_BRANCH if not explicitly set
+          // GitLab sets this automatically - needed for rules like: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+          if (!variables.CI_DEFAULT_BRANCH) {
+            variables.CI_DEFAULT_BRANCH = options.branch
+          }
+
+          // Set additional branch-related variables that GitLab provides automatically
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+          if (!variables.CI_COMMIT_REF_NAME) {
+            variables.CI_COMMIT_REF_NAME = options.branch
+          }
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+          if (!variables.CI_COMMIT_REF_SLUG) {
+            variables.CI_COMMIT_REF_SLUG = options.branch.toLowerCase().replace(/[^a-z0-9-]/g, "-")
+          }
         }
         if (options.tag) {
           variables.CI_COMMIT_TAG = options.tag
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+          if (!variables.CI_COMMIT_REF_NAME) {
+            variables.CI_COMMIT_REF_NAME = options.tag
+          }
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+          if (!variables.CI_COMMIT_REF_SLUG) {
+            variables.CI_COMMIT_REF_SLUG = options.tag.toLowerCase().replace(/[^a-z0-9-]/g, "-")
+          }
         }
+
+        // Set CI_PIPELINE_SOURCE if not explicitly set (default to push for non-MR pipelines)
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+        if (!variables.CI_PIPELINE_SOURCE) {
+          variables.CI_PIPELINE_SOURCE = "push"
+        }
+
         if (options.mr) {
           variables.CI_MERGE_REQUEST_ID = "1"
           variables.CI_PIPELINE_SOURCE = "merge_request_event"
         }
+
+        // Set default commit message if not provided
+        // This is used in rules like: $CI_COMMIT_MESSAGE =~ /changeset-release/
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        variables.CI_COMMIT_MESSAGE ??= ""
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        variables.CI_COMMIT_TITLE ??= ""
 
         // Parse merge request labels
         const mrLabels = options.mrLabels
@@ -111,29 +158,113 @@ Examples:
           branch: options.branch,
           tag: options.tag,
           mergeRequestLabels: mrLabels,
+          basePath,
         }
 
-        // Load and resolve includes
-        const config = convertYamlToConfig(yamlContent, { resolveReferences: true })
-        await resolveIncludes(config, {
-          resolveReferences: true,
-          basePath: process.cwd(),
-          gitlabToken: token,
-          gitlabUrl,
-        })
+        // Parse YAML first (handles !reference tags)
+        const parsed = parseYaml(yamlContent)
+        const config = new ConfigBuilder()
+
+        // Add stages first
+        if (parsed.stages) {
+          config.stages(
+            ...(Array.isArray(parsed.stages)
+              ? (parsed.stages as string[])
+              : ([parsed.stages] as string[])),
+          )
+        }
+
+        // Add variables and workflow from local YAML
+        if (parsed.variables && typeof parsed.variables === "object") {
+          config.variables(parsed.variables as Record<string, string | number | boolean>)
+        }
+
+        if (parsed.workflow && typeof parsed.workflow === "object") {
+          try {
+            config.workflow(parsed.workflow as Workflow)
+          } catch {
+            // Ignore validation errors for simulation
+          }
+        }
+
+        // Add all local jobs and templates FIRST (before resolving includes)
+        // This way, local jobs with extends will properly inherit from remote includes
+        for (const [name, definition] of Object.entries(parsed)) {
+          if (
+            typeof definition === "object" &&
+            definition !== null &&
+            !["stages", "variables", "workflow", "include", "default", "spec"].includes(name)
+          ) {
+            try {
+              if (name.startsWith(".")) {
+                config.template(name, definition)
+              } else {
+                config.job(name, definition)
+              }
+            } catch (error) {
+              // Silently skip jobs with validation errors
+              if (options.verbose) {
+                // eslint-disable-next-line no-console
+                console.warn(
+                  `⚠️  Skipped job '${name}': ${error instanceof Error ? error.message : String(error)}`,
+                )
+              }
+            }
+          }
+        }
+
+        // Add includes reference (needed for resolveIncludes)
+        if (parsed.include) {
+          config.include(parsed.include as IncludeInput | IncludeInput[])
+        }
+
+        // Resolve includes AFTER adding local jobs
+        // Remote jobs will be merged with local ones using mergeExisting
+        let failedIncludes: string[] = []
+        if (parsed.include) {
+          const result = await resolveIncludes(config, {
+            resolveReferences: true,
+            basePath: process.cwd(),
+            gitlabToken: token,
+            gitlabUrl,
+            verbose: options.verbose,
+          })
+          failedIncludes = result.failedIncludes
+        }
 
         // Simulate pipeline
         const simulator = new PipelineSimulator()
         const result = simulator.simulate(config, context)
+
+        // Warn about failed includes
+        if (failedIncludes.length > 0) {
+          // eslint-disable-next-line no-console
+          console.error("\n⚠️  WARNING: Failed to load remote includes")
+          // eslint-disable-next-line no-console
+          console.error("═".repeat(60))
+          // eslint-disable-next-line no-console
+          console.error("The following includes could not be fetched:\n")
+          for (const inc of failedIncludes) {
+            // eslint-disable-next-line no-console
+            console.error(`  ❌ ${inc}`)
+          }
+          // eslint-disable-next-line no-console
+          console.error(
+            "\nJobs that depend on templates from these includes may not run correctly.",
+          )
+          // eslint-disable-next-line no-console
+          console.error(
+            "The simulation results may be incomplete. Consider downloading these files locally.\n",
+          )
+        }
 
         // Output results
         if (format === "json") {
           // eslint-disable-next-line no-console
           console.log(JSON.stringify(result, null, 2))
         } else if (format === "yaml") {
-          const yaml = await import("js-yaml")
           // eslint-disable-next-line no-console
-          console.log(yaml.dump(result))
+          console.log(yamlDump(result))
         } else if (format === "table") {
           printTableOutput(result, options)
         } else if (format === "summary") {

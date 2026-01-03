@@ -463,7 +463,30 @@ export class ConfigBuilder {
     }
 
     // Parse and normalize (extends is automatically normalized to array)
-    const normalized = JobDefinitionParseSchema.parse(definition)
+    // Use safeParse for ALL templates (not just remote) because:
+    // - Templates are often incomplete (partial definitions)
+    // - Templates may contain !reference tags that are resolved later
+    // - Templates are never executed directly, only extended by jobs
+    const parseResult = JobDefinitionParseSchema.safeParse(definition)
+
+    if (!parseResult.success) {
+      // Template has validation errors (likely unresolved !reference tags or incomplete definition)
+      // Store the raw definition without validation
+      let normalized = definition as JobDefinitionNormalized
+
+      // Manually normalize extends field if present
+      if (normalized.extends && typeof normalized.extends === "string") {
+        normalized = {
+          ...normalized,
+          extends: [normalized.extends],
+        }
+      }
+
+      this.state.setTemplate(templateName, normalized, templateOptions)
+      return this
+    }
+
+    const normalized = parseResult.data
 
     // Check if template exists
     const existing = this.state.getJob(templateName)
@@ -591,7 +614,29 @@ export class ConfigBuilder {
     }
 
     // Parse and normalize (extends is automatically normalized to array)
-    const normalized = JobDefinitionParseSchema.parse(definition)
+    // For remote jobs, use safeParse to be lenient with validation
+    let normalized: JobDefinitionNormalized
+    if (options.remote) {
+      const result = JobDefinitionParseSchema.safeParse(definition)
+      if (!result.success) {
+        // Silently use raw definition for remote jobs with validation errors
+        // This allows us to work with complex GitLab CI features we don't fully support yet
+        normalized = definition as JobDefinitionNormalized
+
+        // BUGFIX: Manually normalize extends field if validation failed
+        // If extends is a string, convert it to an array to prevent string iteration bugs
+        if (normalized.extends && typeof normalized.extends === "string") {
+          normalized = {
+            ...normalized,
+            extends: [normalized.extends],
+          }
+        }
+      } else {
+        normalized = result.data
+      }
+    } else {
+      normalized = JobDefinitionParseSchema.parse(definition)
+    }
 
     // Check if it should be treated as template
     if (name.startsWith(".") || options.hidden) {
@@ -606,7 +651,11 @@ export class ConfigBuilder {
 
     if (existing && mergeExisting !== false) {
       // Merge with existing
-      const merged = mergeJobDefinitions(existing, normalized)
+      // For remote jobs, reverse merge order: remote job is base, local job overrides
+      // For local jobs, normal order: existing is base, new definition overrides
+      const merged = options.remote
+        ? mergeJobDefinitions(normalized, existing)
+        : mergeJobDefinitions(existing, normalized)
       this.state.setJob(name, merged, options)
     } else {
       this.state.setJob(name, normalized, options)

@@ -7,37 +7,37 @@ describe("ConfigBuilder - template extends chain resolution", () => {
     const config = new ConfigBuilder()
 
     // Base template with cache and variables
-    config.template(".nodejs:cache", {
+    config.template(".node:cache", {
       cache: [
         {
-          key: "${NPM_CACHE_KEY}-${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}",
+          key: "${CACHE_KEY}-${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}",
           paths: ["${APP_DIR}/node_modules", "${APP_DIR}/.pnpm-store"],
           policy: "pull",
         },
       ],
       variables: {
         APP_DIR: ".",
-        NPM_CACHE_KEY: "default",
+        CACHE_KEY: "default",
       },
     })
 
     // Template with tags
-    config.template(".review_tags", {
-      tags: ["openshift", "test"],
+    config.template(".env_tags", {
+      tags: ["docker", "test"],
     })
 
-    // Template extending .nodejs:cache
-    config.template(".deploy_rds", {
-      extends: ".nodejs:cache",
+    // Template extending .node:cache
+    config.template(".deploy_job", {
+      extends: ".node:cache",
       image: "node:20",
       script: ["echo 'deploy'"],
     })
 
-    // Job extending both .deploy_rds and .review_tags
-    config.extends([".deploy_rds", ".review_tags"], "deploy_rds_review", {
-      stage: "review",
+    // Job extending both .deploy_job and .env_tags
+    config.extends([".deploy_job", ".env_tags"], "deploy_to_env", {
+      stage: "deploy",
       variables: {
-        AWS_ACCOUNT_ID: "$AWS_ACCOUNT_ID_TEST",
+        DEPLOYMENT_ID: "$ENV_DEPLOYMENT_ID",
       },
     })
 
@@ -47,35 +47,35 @@ describe("ConfigBuilder - template extends chain resolution", () => {
     expect(result.errors).toHaveLength(0)
     expect(result.warnings).toHaveLength(0)
 
-    const job = pipeline.jobs?.deploy_rds_review
+    const job = pipeline.jobs?.deploy_to_env
     expect(job).toBeDefined()
 
-    // Should have cache from .nodejs:cache (through .deploy_rds)
+    // Should have cache from .node:cache (through .deploy_job)
     expect(job?.cache).toBeDefined()
     expect(job?.cache).toEqual([
       {
-        key: "${NPM_CACHE_KEY}-${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}",
+        key: "${CACHE_KEY}-${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}",
         paths: ["${APP_DIR}/node_modules", "${APP_DIR}/.pnpm-store"],
         policy: "pull",
       },
     ])
 
-    // Should have base variables from .nodejs:cache AND job-specific variables
+    // Should have base variables from .node:cache AND job-specific variables
     expect(job?.variables).toEqual({
       APP_DIR: ".",
-      NPM_CACHE_KEY: "default",
-      AWS_ACCOUNT_ID: "$AWS_ACCOUNT_ID_TEST",
+      CACHE_KEY: "default",
+      DEPLOYMENT_ID: "$ENV_DEPLOYMENT_ID",
     })
 
-    // Should have tags from .review_tags
-    expect(job?.tags).toEqual(["openshift", "test"])
+    // Should have tags from .env_tags
+    expect(job?.tags).toEqual(["docker", "test"])
 
-    // Should have image and script from .deploy_rds
+    // Should have image and script from .deploy_job
     expect(job?.image).toBe("node:20")
     expect(job?.script).toEqual(["echo 'deploy'"])
 
     // Should have stage from job definition
-    expect(job?.stage).toBe("review")
+    expect(job?.stage).toBe("deploy")
 
     // Templates are resolved, extends removed
     expect(job?.extends).toBeUndefined()

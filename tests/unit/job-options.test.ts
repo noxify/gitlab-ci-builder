@@ -18,18 +18,20 @@ describe("Job Options", () => {
       })
     })
 
-    it("should ignore remote templates when merging", () => {
+    it("should merge remote templates (changed behavior for !reference support)", () => {
       const config = new ConfigBuilder()
       config.template(".remote", { script: ["remote template"] }, { remote: true })
       config.template(".base", { script: ["base"] })
       config.job("child", { extends: [".remote", ".base"], stage: "test" })
 
       const result = config.getPlainObject()
+      // Remote templates are now merged to support !reference tags
       expect(result.jobs?.child).toMatchObject({
-        script: ["base"],
+        script: ["remote template", "base"],
         stage: "test",
-        extends: ".remote",
       })
+      // extends should be resolved (no longer present)
+      expect(result.jobs?.child?.extends).toBeUndefined()
     })
   })
   describe("resolveTemplatesOnly option", () => {

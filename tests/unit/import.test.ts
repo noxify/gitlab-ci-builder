@@ -309,10 +309,10 @@ describe("YAML Import", () => {
         deploy:
           script:
             - |
-              if [ "$MANUAL_PROD_DEPLOYMENT" = "true" ]; then
-                echo "🚨 MANUAL PRODUCTION DEPLOYMENT TRIGGERED 🚨"
+              if [ "$MANUAL_DEPLOYMENT" = "true" ]; then
+                echo "🚨 MANUAL DEPLOYMENT TRIGGERED 🚨"
               else
-                echo "📦 Automated production deployment via changeset release"
+                echo "📦 Automated deployment via release"
               fi
       `
 

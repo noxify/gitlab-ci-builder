@@ -37,26 +37,93 @@ export class PipelineSimulator {
   }
 
   /**
-   * Simulate a pipeline execution
+   * Simulate a GitLab CI pipeline execution with rule evaluation.
+   *
+   * This method evaluates which jobs would run in a pipeline based on the provided
+   * context (branch, variables, merge request status). It resolves all job extends,
+   * merges configurations, and evaluates job rules to determine execution status.
+   *
+   * @param config - The ConfigBuilder instance containing the pipeline definition
+   * @param context - The execution context with variables, branch, tags, and MR info
+   * @param context.variables - Pipeline variables (CI_* and custom variables)
+   * @param context.branch - Branch name (sets CI_COMMIT_BRANCH)
+   * @param context.tag - Tag name (sets CI_COMMIT_TAG)
+   * @param context.mergeRequestId - MR ID (sets CI_MERGE_REQUEST_ID)
+   * @param context.mergeRequestLabels - MR labels array
+   * @returns Simulation result with job execution status, stages, and skipped jobs
+   *
+   * @example
+   * ```ts
+   * import { ConfigBuilder, PipelineSimulator } from '@noxify/gitlab-ci-builder'
+   *
+   * const config = new ConfigBuilder()
+   *   .stages('build', 'test', 'deploy')
+   *   .job('build', { stage: 'build', script: ['npm run build'] })
+   *   .job('deploy', {
+   *     stage: 'deploy',
+   *     script: ['deploy.sh'],
+   *     rules: [{ if: '$CI_COMMIT_BRANCH == "main"' }]
+   *   })
+   *
+   * const simulator = new PipelineSimulator()
+   * const result = simulator.simulate(config, {
+   *   variables: { CI_COMMIT_BRANCH: 'main' },
+   *   branch: 'main'
+   * })
+   *
+   * console.log(result.jobs) // Shows which jobs will run
+   * console.log(result.stages) // Stage execution summary
+   * ```
    */
   simulate(config: ConfigBuilder, context: RuleContext): SimulationResult {
     const plain = config.getPlainObject({ skipValidation: true })
     const allJobs = plain.jobs ?? {}
     const stages = plain.stages ?? ["test"]
 
-    // Separate jobs and templates (templates start with .)
+    // Merge global pipeline variables into context
+    const globalVariables: Record<string, string> = {}
+    if (plain.variables && typeof plain.variables === "object") {
+      for (const [key, val] of Object.entries(plain.variables)) {
+        if (val && typeof val === "object" && "value" in val) {
+          globalVariables[key] = String(val.value)
+        } else {
+          globalVariables[key] = String(val)
+        }
+      }
+    }
+
+    // Global variables are available to all jobs
+    // Context variables (CI_* vars from command line) override global variables
+    const mergedContext: RuleContext = {
+      ...context,
+      variables: {
+        ...globalVariables,
+        ...context.variables,
+      },
+    }
+
+    // getPlainObject() resolves templates (resolveTemplatesOnly: true by default)
+    // but keeps job-to-job extends. For simulation, we need fully resolved jobs.
+    // Normalize extends back to arrays and resolve again with resolveTemplatesOnly: false
     const jobs: Record<string, JobDefinitionNormalized> = {}
     const templates: Record<string, JobDefinitionNormalized> = {}
 
     for (const [name, def] of Object.entries(allJobs)) {
+      const normalized = { ...def } as JobDefinitionNormalized
+
+      // Normalize extends: string -> array for resolveExtends
+      if (normalized.extends && typeof normalized.extends === "string") {
+        normalized.extends = [normalized.extends]
+      }
+
       if (name.startsWith(".")) {
-        templates[name] = def as JobDefinitionNormalized
+        templates[name] = normalized
       } else {
-        jobs[name] = def as JobDefinitionNormalized
+        jobs[name] = normalized
       }
     }
 
-    // Resolve extends relationships to get complete job definitions
+    // Resolve job-to-job extends for complete job definitions
     const { resolved: resolvedJobs } = resolveExtends(
       jobs,
       templates,
@@ -64,7 +131,10 @@ export class PipelineSimulator {
       {
         mergeExtends: true,
         mergeExisting: true,
+        // IMPORTANT: resolve ALL extends, not just templates
         resolveTemplatesOnly: false,
+        // IMPORTANT: merge remote extends for complete simulation
+        mergeRemoteExtends: true,
         performanceMode: false,
         missingExtendsPolicy: "ignore",
       },
@@ -77,14 +147,49 @@ export class PipelineSimulator {
 
     // Helper to check if a job should be included in simulation
     const shouldIncludeJob = (job: JobDefinitionNormalized): boolean => {
-      // Include if job has script or run
+      // A job must have at least one of these to be executable:
+      // - script or run (actual commands to execute)
+      // - trigger (child pipeline or multi-project pipeline)
+      // - needs with pipeline keyword (parent-child pipeline trigger)
+      // - release (create a GitLab release)
+      // - pages (GitLab Pages deployment)
       if (job.script ?? job.run) return true
+      if (job.trigger) return true
+      if (job.release) return true
+      if (job.pages) return true
 
-      // Also include if job has variables but no script/run
-      // These are likely disabled jobs from remote includes that should appear as skipped
-      if (job.variables && Object.keys(job.variables).length > 0) return true
+      // Check if this is a child pipeline trigger via needs
+      if (job.needs && Array.isArray(job.needs)) {
+        const hasPipelineTrigger = job.needs.some((need) => {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+          if (typeof need === "object" && need !== null) {
+            return "pipeline" in need
+          }
+          return false
+        })
+        if (hasPipelineTrigger) return true
+      }
 
-      // Skip everything else (pure templates without any content)
+      // Special case: Jobs that have a stage defined (not using default 'test')
+      // are likely real jobs where the script comes from remote includes
+      // Include them if they have any content beyond just the stage
+      if (job.stage && job.stage !== "test") {
+        // If the job has variables, rules, or other config, it's likely a real job
+        // being configured locally with the actual implementation in a remote include
+        const hasConfig =
+          (job.variables && Object.keys(job.variables).length > 0) ??
+          (job.rules && job.rules.length > 0) ??
+          job.image ??
+          job.before_script ??
+          job.after_script ??
+          job.tags ??
+          job.only ??
+          job.except
+        if (hasConfig) return true
+      }
+
+      // Jobs with only variables/stage/tags/etc and no other content
+      // are pure template jobs that are meant to be extended
       return false
     }
 
@@ -96,7 +201,7 @@ export class PipelineSimulator {
         .filter(([_name, job]) => shouldIncludeJob(job as JobDefinitionNormalized))
 
       for (const [name, job] of stageJobs) {
-        const simulation = this.simulateJob(name, job as JobDefinitionNormalized, context)
+        const simulation = this.simulateJob(name, job as JobDefinitionNormalized, mergedContext)
         simulations.push(simulation)
       }
     }
@@ -108,7 +213,7 @@ export class PipelineSimulator {
       .filter(([_name, job]) => shouldIncludeJob(job as JobDefinitionNormalized))
 
     for (const [name, job] of jobsWithoutStage) {
-      const simulation = this.simulateJob(name, job as JobDefinitionNormalized, context)
+      const simulation = this.simulateJob(name, job as JobDefinitionNormalized, mergedContext)
       simulations.push(simulation)
     }
 

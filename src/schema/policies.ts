@@ -20,6 +20,9 @@ export const GlobalOptionsSchema = z.object({
   /** If true, only merge templates (names starting with .). Default: true */
   resolveTemplatesOnly: z.boolean().optional().default(true),
 
+  /** If true, merge remote extends (from remote includes). Default: true (resolve remote extends) */
+  mergeRemoteExtends: z.boolean().optional().default(true),
+
   /** If true, skip expensive validation checks (cycle detection, deep path scans). Default: false */
   performanceMode: z.boolean().optional().default(false),
 

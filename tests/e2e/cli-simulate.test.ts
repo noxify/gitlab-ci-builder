@@ -91,22 +91,14 @@ describe("CLI simulate command - E2E Tests", () => {
 
       const output = cleanOutput(await session.text())
 
-      expect(output).toMatchInlineSnapshot(`
-        "
-        Error: Error: ENOENT: no such file or directory, open 'nonexistent.yml'
-            at async open (node:internal/fs/promises:642:25)
-            at async readFile (node:internal/fs/promises:1279:14)
-            at async Command.<anonymous> (file:///Users/marcusreinhardt/Development/gitlab-ci-builder/dist/cli/index.mjs:42:25)
-            at async Command.parseAsync (/Users/marcusreinhardt/Development/gitlab-ci-builder/node_modules/.pnpm/commander@14.0.
-        2/node_modules/commander/lib/command.js:1122:5)
-            at async main (file:///Users/marcusreinhardt/Development/gitlab-ci-builder/dist/cli/index.mjs:246:2) {
-          errno: -2,
-          code: 'ENOENT',
-          syscall: 'open',
-          path: 'nonexistent.yml'
-        }
-        "
-      `)
+      // Check for error details without hardcoded paths
+      expect(output).toContain("Error")
+      expect(output).toContain("ENOENT")
+      expect(output).toContain("no such file or directory")
+      expect(output).toContain("nonexistent.yml")
+      expect(output).toContain("errno: -2")
+      expect(output).toContain("code: 'ENOENT'")
+      expect(output).toContain("syscall: 'open'")
     })
   })
 

@@ -89,13 +89,16 @@ describe("ConfigBuilder - Zod Validation", () => {
       ).not.toThrow()
     })
 
-    it("should reject invalid template", () => {
+    it("should accept templates with validation errors (lenient validation)", () => {
       const builder = new ConfigBuilder()
+      // Templates should accept invalid definitions because:
+      // - They may contain !reference tags resolved later
+      // - They are partial definitions extended by jobs
       expect(() =>
         builder.template("build", {
           script: 123 as never,
         }),
-      ).toThrow(ZodError)
+      ).not.toThrow()
     })
   })
 

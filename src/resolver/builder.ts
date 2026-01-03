@@ -97,6 +97,7 @@ export function resolveExtends(
     const jobOpts = context.jobOptions[name]
     const mergeExtends = jobOpts?.mergeExtends ?? globalOptions.mergeExtends
     const resolveTemplatesOnly = jobOpts?.resolveTemplatesOnly ?? globalOptions.resolveTemplatesOnly
+    const mergeRemoteExtends = globalOptions.mergeRemoteExtends
 
     // Start with empty definition
     let mergedDef: JobDefinitionNormalized = {}
@@ -123,8 +124,8 @@ export function resolveExtends(
           if (!keptExtends.includes(nestedExtend)) {
             keptExtends.push(nestedExtend)
           }
-        } else if (nestedNode.isRemote) {
-          // Remote extend, keep it
+        } else if (nestedNode.isRemote && !mergeRemoteExtends) {
+          // Remote extend when mergeRemoteExtends is false, keep it
           if (!keptExtends.includes(nestedExtend)) {
             keptExtends.push(nestedExtend)
           }
@@ -154,12 +155,11 @@ export function resolveExtends(
         }
 
         // Check if we should merge this extend
-        const shouldMerge = resolveTemplatesOnly ? targetName.startsWith(".") : true
+        let shouldMerge = resolveTemplatesOnly ? targetName.startsWith(".") : true
 
-        // Skip remote extends from merging
-        if (targetNode.isRemote) {
-          keptExtends.push(extendName)
-          continue
+        // Check if remote extends should be merged
+        if (targetNode.isRemote && !mergeRemoteExtends) {
+          shouldMerge = false
         }
 
         if (shouldMerge) {

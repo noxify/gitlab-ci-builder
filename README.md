@@ -196,19 +196,60 @@ gitlab-ci-builder simulate .gitlab-ci.yml -b develop --show-skipped --verbose
 - `--host <host>` - GitLab host for project/template includes (default: `gitlab.com`, or use `GITLAB_HOST` env var)
 - `-h, --help` - Display help information
 
+**Predefined Variables:**
+
+The simulator automatically sets GitLab CI predefined variables based on the provided options. These can be overridden using the `-v` flag:
+
+| Variable                  | Set by                    | Default Value                       | Description                   |
+| ------------------------- | ------------------------- | ----------------------------------- | ----------------------------- |
+| `CI_COMMIT_BRANCH`        | `-b, --branch`            | `undefined`                         | Branch name being built       |
+| `CI_COMMIT_REF_NAME`      | `-b, --branch` or `--tag` | `undefined`                         | Branch or tag name            |
+| `CI_COMMIT_REF_SLUG`      | `-b, --branch` or `--tag` | Slugified ref name                  | URL-safe version of ref name  |
+| `CI_COMMIT_TAG`           | `--tag`                   | `undefined`                         | Tag name if building a tag    |
+| `CI_MERGE_REQUEST_ID`     | `--mr`                    | `"1"`                               | Merge request ID              |
+| `CI_MERGE_REQUEST_IID`    | `--mr`                    | `"1"`                               | Project-level MR ID           |
+| `CI_MERGE_REQUEST_LABELS` | `--mr-labels`             | `""`                                | Comma-separated MR labels     |
+| `CI_PIPELINE_SOURCE`      | `--mr`                    | `"merge_request_event"` or `"push"` | What triggered the pipeline   |
+| `CI_DEFAULT_BRANCH`       | Always set                | `"main"`                            | Default branch of the project |
+
 **Examples:**
 
 ```bash
-# Basic branch simulation
-gitlab-ci-builder simulate .gitlab-ci.yml -b main
+# Branch simulation - sets CI_COMMIT_BRANCH, CI_COMMIT_REF_NAME, CI_COMMIT_REF_SLUG
+gitlab-ci-builder simulate .gitlab-ci.yml -b develop
 
-# Tag-based release pipeline
+# Override default branch
+gitlab-ci-builder simulate .gitlab-ci.yml -b main -v CI_DEFAULT_BRANCH=master
+
+# Tag simulation - sets CI_COMMIT_TAG, CI_COMMIT_REF_NAME, CI_COMMIT_REF_SLUG
 gitlab-ci-builder simulate .gitlab-ci.yml --tag v1.0.0
 
-# MR pipeline with multiple variables
-gitlab-ci-builder simulate .gitlab-ci.yml --mr \
-  -v CI_COMMIT_BRANCH=feature-new-ui \
-  -v TARGET_BRANCH=main
+# MR simulation - sets CI_MERGE_REQUEST_ID, CI_MERGE_REQUEST_IID, CI_PIPELINE_SOURCE
+gitlab-ci-builder simulate .gitlab-ci.yml --mr -b feature-branch
+
+# MR with labels - sets CI_MERGE_REQUEST_LABELS
+gitlab-ci-builder simulate .gitlab-ci.yml --mr --mr-labels "bug,critical"
+
+# Override predefined variables
+gitlab-ci-builder simulate .gitlab-ci.yml -b main \
+  -v CI_COMMIT_BRANCH=custom-branch \
+  -v CI_PIPELINE_SOURCE=web
+```
+
+**Note:** Variables set via `-v` always take precedence over automatically set values. This allows you to test edge cases or override defaults.
+
+**Additional Examples:**
+
+```bash
+# Custom variables alongside automatic ones
+gitlab-ci-builder simulate .gitlab-ci.yml -b main \
+  -v DEPLOY_ENV=staging \
+  -v AWS_REGION=eu-central-1
+
+# Test specific rule conditions
+gitlab-ci-builder simulate .gitlab-ci.yml \
+  -v CI_COMMIT_BRANCH=main \
+  -v CI_PIPELINE_SOURCE=schedule
 
 # Table format with skipped jobs
 gitlab-ci-builder simulate .gitlab-ci.yml -f table \
@@ -262,6 +303,56 @@ All visualization formats show:
 - Stage assignments
 - Remote job/template indicators (🌐)
 - Template markers ([T])
+
+### Error Handling & Remote Includes
+
+**Remote Include Failures:**
+
+When remote or project includes cannot be resolved, the behavior differs between `visualize` and `simulate`:
+
+- **`visualize` command**: Logs a warning to stderr and continues without the failed include
+
+  ```bash
+  ⚠️  Could not fetch remote include: https://example.com/missing.yml (404 Not Found)
+  ```
+
+  The visualization will show jobs from successfully resolved includes. Missing remote templates will appear as broken references.
+
+- **`simulate` command**: Logs a warning and continues simulation with available jobs
+
+  ```bash
+  ⚠️  Could not fetch remote include: https://example.com/templates/base.yml (Network error)
+  ```
+
+  Jobs extending missing remote templates may have incomplete configurations.
+
+- **`project:` includes**: Throw an error and halt execution if authentication fails or path is invalid
+  ```bash
+  Error: Failed to fetch project include: https://gitlab.com/org/project/-/raw/main/templates/ci.yml
+  ```
+
+**Authentication Tips:**
+
+- Use `GITLAB_TOKEN` environment variable to avoid exposing tokens in command history
+- For self-hosted GitLab, always set `--host` or `GITLAB_HOST`
+- Project includes require `PRIVATE-TOKEN` header (automatically set with `-t`)
+- Remote includes use `Authorization: Bearer` header
+
+**Example with error handling:**
+
+```bash
+# Set token via environment variable (recommended)
+export GITLAB_TOKEN=glpat-xxxxxxxxxxxx
+export GITLAB_HOST=gitlab.company.com
+
+# Visualize with potential remote include failures
+gitlab-ci-builder visualize pipeline.yml 2> errors.log
+
+# Check if any includes failed
+if grep -q "Could not fetch" errors.log; then
+  echo "⚠️  Some remote includes failed to load"
+fi
+```
 
 ## Import & Export
 
@@ -1032,6 +1123,173 @@ config.job(
 - **Conditional template resolution**: Set `resolveTemplatesOnly: true` to only merge templates (names starting with `.`), ignoring regular jobs during extends resolution.
 - **Remote jobs/templates**: Set `remote: true` on individual jobs or templates to exclude them from merging and output. This is only available at the job/template level. Use this for jobs/templates defined in external includes or that should not be processed locally.
   - **Shadow-overrides for remote jobs/templates**: If a job or template is marked as `remote: true`, it will be ignored during merging and output. However, you can locally define a job/template with the same name (without `remote: true`) to override or "shadow" the remote definition. This allows you to selectively replace or extend remote jobs/templates in your local pipeline configuration.
+
+## Common Pitfalls & Best Practices
+
+### Stage References
+
+Jobs must reference stages that exist in the pipeline. Undefined stages will cause validation errors:
+
+```ts
+// ❌ Bad: Job references non-existent stage
+const config = new ConfigBuilder()
+config.job("build", { stage: "build", script: ["npm run build"] })
+// Error: Stage "build" not defined
+
+// ✅ Good: Define stages first
+const config = new ConfigBuilder()
+  .stages("build", "test", "deploy")
+  .job("build", { stage: "build", script: ["npm run build"] })
+```
+
+### Template Naming
+
+Templates must start with a dot (`.`). Without it, they're treated as regular jobs:
+
+```ts
+// ❌ Bad: Template without leading dot
+config.job("base", { image: "node:22" }) // This is a regular job!
+
+// ✅ Good: Use template() or add dot manually
+config.template(".base", { image: "node:22" })
+// or
+config.job(".base", { image: "node:22" })
+```
+
+### Extends Resolution Order
+
+The builder resolves extends topologically. Circular dependencies are detected and will throw an error:
+
+```ts
+// ❌ Bad: Circular dependency
+config.template(".a", { extends: ".b" })
+config.template(".b", { extends: ".a" })
+// Error: Circular dependency detected: .a → .b → .a
+
+// ✅ Good: Linear inheritance chain
+config.template(".base", { image: "node:22" })
+config.template(".with-cache", { extends: ".base", cache: { paths: ["node_modules"] } })
+config.job("build", { extends: ".with-cache", script: ["npm run build"] })
+```
+
+### Variable Precedence
+
+Variables are merged with child values overriding parent values:
+
+```ts
+config.template(".base", {
+  variables: { NODE_ENV: "test", DEBUG: "false" },
+})
+
+config.job("build", {
+  extends: ".base",
+  variables: { NODE_ENV: "production" }, // Overrides NODE_ENV, keeps DEBUG
+})
+// Result: { NODE_ENV: "production", DEBUG: "false" }
+```
+
+### Script Array Concatenation
+
+Unlike most properties, scripts are concatenated (not replaced) during merge:
+
+```ts
+config.template(".base", {
+  script: ["npm ci"],
+})
+
+config.job("build", {
+  extends: ".base",
+  script: ["npm run build"],
+})
+// Result: script: ["npm ci", "npm run build"] ← Both scripts!
+```
+
+To replace instead of concatenate, use `mergeExisting: false`:
+
+```ts
+config.job(
+  "build",
+  {
+    extends: ".base",
+    script: ["npm run build"],
+  },
+  { mergeExisting: false },
+)
+// Result: script: ["npm run build"] ← Only new script
+```
+
+### YAML Anchors vs Extends
+
+When importing YAML with anchors, they're resolved and inlined. Use GitLab's `extends` for clearer TypeScript code:
+
+```yaml
+# ❌ Anchors are resolved during import
+.base: &base
+  image: node:22
+
+build:
+  <<: *base # Values get inlined
+  script: [build]
+```
+
+```yaml
+# ✅ Extends are preserved
+.base:
+  image: node:22
+
+build:
+  extends: .base # Reference preserved in TypeScript
+  script: [build]
+```
+
+### Remote Include Behavior
+
+Jobs/templates from remote includes can be marked as `remote: true` to exclude them from output:
+
+```ts
+// Mark remote template as remote (won't appear in output)
+config.template(".remote-base", { image: "alpine" }, { remote: true })
+
+// Local job can still extend it
+config.job("local-job", {
+  extends: ".remote-base",
+  script: ["echo 'hello'"],
+})
+// Output only includes "local-job" with merged properties
+```
+
+### Child Pipeline Paths
+
+Child pipeline `outputPath` must be relative to the parent pipeline location:
+
+```ts
+// ❌ Bad: Absolute path
+config.childPipeline("scan", (child) => { ... }, {
+  outputPath: "/absolute/path/scan.yml" // Won't work with GitLab
+})
+
+// ✅ Good: Relative path
+config.childPipeline("scan", (child) => { ... }, {
+  outputPath: "pipelines/scan.yml" // Relative to parent
+})
+```
+
+### Performance with Large Pipelines
+
+For pipelines with 100+ jobs, consider:
+
+- Use `performanceMode: true` in global options to skip expensive validation
+- Break into child pipelines for parallel execution
+- Use `resolveTemplatesOnly: true` to reduce merge operations
+- Avoid deep extends chains (>5 levels)
+
+```ts
+// For large pipelines
+const config = new ConfigBuilder()
+  .globalOptions({ performanceMode: true })
+  .stages("build", "test", "deploy")
+// ... add many jobs ...
+```
 
 ## API Reference
 

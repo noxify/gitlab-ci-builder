@@ -4,7 +4,7 @@ import { setupServer } from "msw/node"
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
 
 import type { RuleContext } from "../../../src/simulation"
-import { convertYamlToConfig, resolveIncludes } from "../../../src"
+import { ConfigBuilder, convertYamlToConfig, resolveIncludes } from "../../../src"
 import { PipelineSimulator } from "../../../src/simulation"
 
 const restHandlers = [
@@ -746,9 +746,9 @@ describe("Pipeline Simulation - Integration Tests", () => {
 
       const buildFeature = featureResult.jobs.find((j) => j.name === "build-with-inheritance")
       if (buildFeature) {
-        // build-with-inheritance has own script, so it should run even without rule match
-        // The extends only provides base configuration
-        expect(buildFeature.shouldRun).toBe(true)
+        // build-with-inheritance extends .level2-build which has rules: if branch == "main"
+        // On feature branch, rules don't match, so job should not run
+        expect(buildFeature.shouldRun).toBe(false)
       }
 
       const testFeature = featureResult.jobs.find((j) => j.name === "test-with-custom-rules")
@@ -930,6 +930,73 @@ describe("Pipeline Simulation - Integration Tests", () => {
       const otherResult = simulator.simulate(config, otherContext)
       const deployOther = otherResult.jobs.find((j) => j.name === "deploy")
       expect(deployOther?.shouldRun).toBe(false)
+    })
+
+    it("should evaluate exists rules with filesystem checks", () => {
+      const config = new ConfigBuilder()
+        .stages("build", "test")
+        .job("build-with-package", {
+          stage: "build",
+          script: "npm run build",
+          rules: [{ exists: ["package.json"] }],
+        })
+        .job("build-with-dockerfile", {
+          stage: "build",
+          script: "docker build .",
+          rules: [{ exists: ["Dockerfile"] }, { when: "never" }],
+        })
+        .job("test", {
+          stage: "test",
+          script: "npm test",
+        })
+
+      const simulator = new PipelineSimulator()
+
+      const context: RuleContext = {
+        variables: {},
+        basePath: process.cwd(), // Project root contains package.json but no Dockerfile
+      }
+
+      const result = simulator.simulate(config, context)
+
+      // build-with-package should run (package.json exists)
+      const buildPackage = result.jobs.find((j) => j.name === "build-with-package")
+      expect(buildPackage?.shouldRun).toBe(true)
+
+      // build-with-dockerfile should not run (Dockerfile doesn't exist, falls to when: never)
+      const buildDocker = result.jobs.find((j) => j.name === "build-with-dockerfile")
+      expect(buildDocker?.shouldRun).toBe(false)
+
+      // test should run (no rules)
+      const test = result.jobs.find((j) => j.name === "test")
+      expect(test?.shouldRun).toBe(true)
+    })
+
+    it("should interpolate variables in exists paths", () => {
+      const config = new ConfigBuilder()
+        .stages("build")
+        .variables({ PROJECT_DIR: "src", FILE_NAME: "index.ts" })
+        .job("build-app", {
+          stage: "build",
+          script: "build.sh",
+          rules: [{ exists: ["$PROJECT_DIR/$FILE_NAME"] }],
+        })
+
+      const simulator = new PipelineSimulator()
+
+      const context: RuleContext = {
+        variables: {
+          PROJECT_DIR: "src",
+          FILE_NAME: "index.ts",
+        },
+        basePath: process.cwd(),
+      }
+
+      const result = simulator.simulate(config, context)
+
+      // Should evaluate src/index.ts
+      const job = result.jobs[0]
+      expect(job?.shouldRun).toBe(true)
     })
   })
 })
