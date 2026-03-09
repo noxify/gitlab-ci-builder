@@ -1,5 +1,11 @@
 # @noxify/gitlab-ci-builder
 
+## 1.6.1
+
+### Patch Changes
+
+- 34e30ad: updated dependencies
+
 ## 1.6.0
 
 ### Minor Changes
