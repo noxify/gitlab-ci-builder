@@ -28,6 +28,17 @@
     "type": "git",
     "url": "git+https://github.com/noxiy/gitlab-ci-builder.git"
   },
+  "contributors": [
+    {
+      "name": "Marcus Reinhardt",
+      "url": "https://github.com/noxify"
+    }
+  ],
+  "author": {
+    "name": "Marcus Reinhardt",
+    "url": "https://github.com/noxify"
+  },
+  "sideEffects": false,
   "license": "MIT",
   "type": "module",
   "exports": {
