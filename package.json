@@ -26,8 +26,19 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://gitlab.com/noxiy/gitlab-ci-builder.git"
+    "url": "git+https://github.com/noxiy/gitlab-ci-builder.git"
   },
+  "contributors": [
+    {
+      "name": "Marcus Reinhardt",
+      "url": "https://github.com/noxify"
+    }
+  ],
+  "author": {
+    "name": "Marcus Reinhardt",
+    "url": "https://github.com/noxify"
+  },
+  "sideEffects": false,
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -69,45 +80,53 @@
   "dependencies": {
     "@commander-js/extra-typings": "^14.0.0",
     "climt": "^0.2.0",
-    "commander": "^14.0.2",
+    "commander": "^14.0.3",
     "deepmerge": "4.3.1",
     "js-yaml": "4.1.1",
-    "oo-ascii-tree": "^1.124.0",
-    "read-pkg": "^10.0.0",
+    "oo-ascii-tree": "^1.127.0",
+    "read-pkg": "^10.1.0",
     "tinyglobby": "0.2.15",
     "typescript": "5.9.3",
-    "zod": "4.3.4"
+    "zod": "4.3.6"
   },
   "devDependencies": {
-    "@changesets/cli": "2.29.8",
-    "@eslint/compat": "2.0.0",
-    "@eslint/js": "9.39.2",
-    "@ianvs/prettier-plugin-sort-imports": "4.7.0",
+    "@changesets/cli": "2.30.0",
+    "@eslint/compat": "2.0.3",
+    "@eslint/js": "9.39.4",
+    "@ianvs/prettier-plugin-sort-imports": "4.7.1",
     "@types/js-yaml": "4.0.9",
-    "@types/node": "24.10.4",
-    "@vitest/coverage-v8": "4.0.16",
-    "dedent": "1.7.1",
-    "eslint": "9.39.2",
-    "eslint-config-turbo": "2.7.2",
+    "@types/node": "24.12.0",
+    "@vitest/coverage-v8": "4.0.18",
+    "dedent": "1.7.2",
+    "eslint": "9.39.4",
+    "eslint-config-turbo": "2.8.14",
     "eslint-plugin-import": "2.32.0",
-    "eslint-plugin-package-json": "0.87.1",
+    "eslint-plugin-package-json": "0.89.4",
     "json-schema-to-typescript": "15.0.4",
-    "jsonc-eslint-parser": "2.4.2",
-    "memfs": "4.51.1",
-    "msw": "^2.12.7",
+    "jsonc-eslint-parser": "3.1.0",
+    "memfs": "4.56.11",
+    "msw": "^2.12.10",
     "node-pty": "1.1.0",
-    "prettier": "3.7.4",
-    "tsdown": "0.18.4",
+    "prettier": "3.8.1",
+    "tsdown": "0.21.1",
     "tsx": "4.21.0",
-    "tuistory": "0.0.6",
-    "typescript-eslint": "8.51.0",
-    "vitest": "4.0.16"
+    "tuistory": "0.0.16",
+    "typescript-eslint": "8.56.1",
+    "vitest": "4.0.18"
   },
-  "packageManager": "pnpm@10.27.0",
+  "packageManager": "pnpm@10.31.0",
   "engines": {
     "node": ">=22"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "pnpm": {
+    "overrides": {
+      "minimatch@<3.1.4": ">=3.1.4",
+      "lodash@>=4.0.0 <=4.17.22": ">=4.17.23",
+      "cross-spawn@<6.0.6": ">=6.0.6",
+      "rollup@>=4.0.0 <4.59.0": ">=4.59.0"
+    }
   }
 }
