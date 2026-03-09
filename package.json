@@ -26,7 +26,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://gitlab.com/noxiy/gitlab-ci-builder.git"
+    "url": "git+https://github.com/noxiy/gitlab-ci-builder.git"
   },
   "license": "MIT",
   "type": "module",
