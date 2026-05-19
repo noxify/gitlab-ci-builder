@@ -5,7 +5,12 @@ import { orInterpolation } from "./interpolation"
 /**
  * Variable value types supported by GitLab CI
  */
-export const VariableValueSchema = z.union([z.string(), z.number(), z.boolean(), z.undefined()])
+export const VariableValueSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.undefined(),
+])
 
 export type VariableValue = z.infer<typeof VariableValueSchema>
 
@@ -17,20 +22,27 @@ export const GlobalVariableSchema = z
   .union([
     VariableValueSchema,
     z.object({
-      value: z
-        .string()
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#variablesvalue" }),
+      value: z.string().meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#variablesvalue",
+      }),
       options: z
         .array(z.string())
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#variablesoptions" })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#variablesoptions",
+        })
         .optional(),
       description: z
         .string()
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#variablesdescription" })
+        .meta({
+          description:
+            "@see https://docs.gitlab.com/ci/yaml/#variablesdescription",
+        })
         .optional(),
       expand: z
         .boolean()
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#variablesexpand" })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#variablesexpand",
+        })
         .optional(),
     }),
   ])
@@ -49,7 +61,9 @@ export const JobVariableSchema = z
       value: z.string(),
       expand: z
         .boolean()
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#variablesexpand" })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#variablesexpand",
+        })
         .optional(),
     }),
   ])
@@ -97,7 +111,7 @@ export const ExtendsInputSchema = z.union([z.string(), z.array(z.string())])
  * Extends schema with normalization - always returns array
  */
 export const ExtendsSchema = ExtendsInputSchema.transform((value) =>
-  Array.isArray(value) ? value : [value],
+  Array.isArray(value) ? value : [value]
 )
 
 export type ExtendsInput = z.infer<typeof ExtendsInputSchema>
@@ -114,7 +128,9 @@ export type Stage = z.infer<typeof StageSchema>
  * Templates start with a dot
  */
 export const JobNameSchema = z.string().min(1)
-export const TemplateNameSchema = z.string().regex(/^\./, "Template name must start with a dot")
+export const TemplateNameSchema = z
+  .string()
+  .regex(/^\./u, "Template name must start with a dot")
 
 export type JobName = z.infer<typeof JobNameSchema>
 export type TemplateName = z.infer<typeof TemplateNameSchema>
@@ -136,7 +152,9 @@ export const PullPolicySchema = z
     z.enum(["always", "never", "if-not-present"]),
     z.array(z.enum(["always", "never", "if-not-present"])),
   ])
-  .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#imagepull_policy" })
+  .meta({
+    description: "@see https://docs.gitlab.com/ci/yaml/#imagepull_policy",
+  })
 
 export type PullPolicy = z.infer<typeof PullPolicySchema>
 
@@ -147,23 +165,31 @@ export const ImageSchema = z
   .union([
     z.string(),
     z.object({
-      name: z.string().meta({ description: "@see https://docs.gitlab.com/ci/yaml/#imagename" }),
+      name: z.string().meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#imagename",
+      }),
       entrypoint: z
         .array(z.string())
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#imageentrypoint" })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#imageentrypoint",
+        })
         .optional(),
       docker: z
         .object({
           platform: z.string().optional(),
           user: z.string().optional(),
         })
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#imagedocker" })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#imagedocker",
+        })
         .optional(),
       kubernetes: z
         .object({
           user: z.union([z.string(), z.number()]).optional(),
         })
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#imagekubernetes" })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#imagekubernetes",
+        })
         .optional(),
       pull_policy: PullPolicySchema.meta({
         description: "@see https://docs.gitlab.com/ci/yaml/#imagepull_policy",
@@ -177,45 +203,6 @@ export type Image = z.infer<typeof ImageSchema>
 /**
  * Services definition with extended options
  */
-export const ServiceSchema: z.ZodType<string | ServiceObject | (string | ServiceObject)[]> = z
-  .union([
-    z.string(),
-    z.object({
-      name: z.string().meta({ description: "@see https://docs.gitlab.com/ci/yaml/#servicesname" }),
-      alias: z
-        .string()
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#servicesalias" })
-        .optional(),
-      entrypoint: z
-        .array(z.string())
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#servicesentrypoint" })
-        .optional(),
-      command: z
-        .array(z.string())
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#servicescommand" })
-        .optional(),
-      docker: z
-        .object({
-          platform: z.string().optional(),
-          user: z.string().optional(),
-        })
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#servicesdocker" })
-        .optional(),
-      kubernetes: z
-        .object({
-          user: z.union([z.string(), z.number()]).optional(),
-        })
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#imagekubernetes" })
-        .optional(),
-      pull_policy: PullPolicySchema.meta({
-        description: "@see https://docs.gitlab.com/ci/yaml/#servicespull_policy",
-      }).optional(),
-      variables: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
-    }),
-    z.lazy(() => z.array(z.union([z.string(), ServiceObjectSchema]))),
-  ])
-  .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#services" })
-
 export interface ServiceObject {
   name: string
   alias?: string
@@ -232,11 +219,74 @@ export const ServiceObjectSchema = z.object({
   alias: z.string().optional(),
   entrypoint: z.array(z.string()).optional(),
   command: z.array(z.string()).optional(),
-  docker: z.object({ platform: z.string().optional(), user: z.string().optional() }).optional(),
-  kubernetes: z.object({ user: z.union([z.string(), z.number()]).optional() }).optional(),
+  docker: z
+    .object({ platform: z.string().optional(), user: z.string().optional() })
+    .optional(),
+  kubernetes: z
+    .object({ user: z.union([z.string(), z.number()]).optional() })
+    .optional(),
   pull_policy: PullPolicySchema.optional(),
-  variables: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+  variables: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+    .optional(),
 })
+
+export const ServiceSchema: z.ZodType<
+  string | ServiceObject | (string | ServiceObject)[]
+> = z
+  .union([
+    z.string(),
+    z.object({
+      name: z.string().meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#servicesname",
+      }),
+      alias: z
+        .string()
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#servicesalias",
+        })
+        .optional(),
+      entrypoint: z
+        .array(z.string())
+        .meta({
+          description:
+            "@see https://docs.gitlab.com/ci/yaml/#servicesentrypoint",
+        })
+        .optional(),
+      command: z
+        .array(z.string())
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#servicescommand",
+        })
+        .optional(),
+      docker: z
+        .object({
+          platform: z.string().optional(),
+          user: z.string().optional(),
+        })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#servicesdocker",
+        })
+        .optional(),
+      kubernetes: z
+        .object({
+          user: z.union([z.string(), z.number()]).optional(),
+        })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#imagekubernetes",
+        })
+        .optional(),
+      pull_policy: PullPolicySchema.meta({
+        description:
+          "@see https://docs.gitlab.com/ci/yaml/#servicespull_policy",
+      }).optional(),
+      variables: z
+        .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+        .optional(),
+    }),
+    z.lazy(() => z.array(z.union([z.string(), ServiceObjectSchema]))),
+  ])
+  .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#services" })
 
 export const ServicesSchema = z.array(ServiceSchema)
 

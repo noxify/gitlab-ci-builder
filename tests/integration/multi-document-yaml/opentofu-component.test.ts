@@ -1,12 +1,21 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+// oxlint-disable vitest/no-conditional-expect
+// oxlint-disable vitest/max-expects
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import { join } from "node:path"
-import { describe, expect, it } from "vitest"
+
+import { describe, expect, it, expectTypeOf } from "vitest"
 
 import type { ConfigBuilder } from "../../../src"
 import { toYaml } from "../../../src/export"
 import { fromYaml } from "../../../src/import"
 
-const TEST_DIR = __dirname
+const TEST_DIR = import.meta.dirname
 const TEST_FILES_DIR = join(TEST_DIR, "test_files")
 const GENERATED_DIR = join(TEST_DIR, ".generated")
 
@@ -43,17 +52,18 @@ describe("Integration: OpenTofu Component with spec.inputs", () => {
     writeFileSync(tsFilePath, tsCode, "utf-8")
 
     // Verify file was written
-    expect(existsSync(tsFilePath)).toBe(true)
+    expect(existsSync(tsFilePath)).toBeTruthy()
 
     // Step 2: Execute the generated TypeScript code
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const module = await import(tsFilePath)
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const config: ConfigBuilder = (module.default ?? module.config) as ConfigBuilder
+    const config: ConfigBuilder = (module.default ??
+      module.config) as ConfigBuilder
 
     // Verify we got a ConfigBuilder-like object
     expect(config).toBeDefined()
-    expect(typeof config.safeValidate).toBe("function")
+    expectTypeOf(config.safeValidate).toBeFunction()
 
     // Step 3: Build the pipeline to verify structure
     const result = config.safeValidate()
@@ -61,7 +71,7 @@ describe("Integration: OpenTofu Component with spec.inputs", () => {
     expect(pipeline).toBeTruthy()
 
     // With interpolation support, we should have no errors
-    expect(result.errors.length).toBe(0)
+    expect(result.errors).toHaveLength(0)
 
     // Verify spec is present in pipeline
     expect(pipeline.spec).toBeDefined()
@@ -97,11 +107,14 @@ describe("Integration: OpenTofu Component with spec.inputs", () => {
     expect(exportedYaml).toContain("inputs:")
 
     // Write exported YAML to .generated directory
-    const exportedYamlPath = join(GENERATED_DIR, "opentofu-component-exported.yml")
+    const exportedYamlPath = join(
+      GENERATED_DIR,
+      "opentofu-component-exported.yml"
+    )
     writeFileSync(exportedYamlPath, exportedYaml, "utf-8")
 
     // Verify exported file exists
-    expect(existsSync(exportedYamlPath)).toBe(true)
+    expect(existsSync(exportedYamlPath)).toBeTruthy()
 
     // Step 5: Verify round-trip consistency - re-import exported YAML
     const reimportedTsCode = fromYaml(exportedYaml)
@@ -112,7 +125,10 @@ describe("Integration: OpenTofu Component with spec.inputs", () => {
     expect(reimportedTsCode).toContain(".spec(")
 
     // Step 6: Re-execute reimported code to verify it works
-    const reimportedTsPath = join(GENERATED_DIR, "opentofu-component-reimported.ts")
+    const reimportedTsPath = join(
+      GENERATED_DIR,
+      "opentofu-component-reimported.ts"
+    )
     writeFileSync(reimportedTsPath, reimportedTsCode, "utf-8")
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -122,13 +138,17 @@ describe("Integration: OpenTofu Component with spec.inputs", () => {
       (reimportedModule.default ?? reimportedModule.config) as ConfigBuilder
 
     const reimportedResult = reimportedConfig.safeValidate()
-    const reimportedPipeline = reimportedConfig.getPlainObject({ skipValidation: true })
-    expect(reimportedResult.errors.length).toBe(0)
+    const reimportedPipeline = reimportedConfig.getPlainObject({
+      skipValidation: true,
+    })
+    expect(reimportedResult.errors).toHaveLength(0)
     expect(reimportedPipeline.spec).toBeDefined()
 
     // Verify input counts match
     const originalInputCount = Object.keys(inputs ?? {}).length
-    const reimportedInputCount = Object.keys(reimportedPipeline.spec?.inputs ?? {}).length
+    const reimportedInputCount = Object.keys(
+      reimportedPipeline.spec?.inputs ?? {}
+    ).length
     expect(reimportedInputCount).toBe(originalInputCount)
   })
 
@@ -181,11 +201,12 @@ test-job:
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const module = await import(tsFilePath)
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const config: ConfigBuilder = (module.default ?? module.config) as ConfigBuilder
+    const config: ConfigBuilder = (module.default ??
+      module.config) as ConfigBuilder
 
     const result = config.safeValidate()
     const pipeline = config.getPlainObject({ skipValidation: true })
-    expect(result.errors.length).toBe(0)
+    expect(result.errors).toHaveLength(0)
 
     // Verify spec inputs
     const inputs = pipeline.spec?.inputs
@@ -199,9 +220,9 @@ test-job:
     // Verify default values and types
     expect(inputs?.stage?.default).toBe("test")
     expect(inputs?.parallel_count?.default).toBe(5)
-    expect(inputs?.enabled?.default).toBe(true)
-    expect(Array.isArray(inputs?.tags_list?.default)).toBe(true)
-    expect(typeof inputs?.env_vars?.default).toBe("object")
+    expect(inputs?.enabled?.default).toBeTruthy()
+    expect(Array.isArray(inputs?.tags_list?.default)).toBeTruthy()
+    expectTypeOf(inputs?.env_vars?.default as object).toBeObject()
 
     // Export and verify round-trip
     const exportedYaml = toYaml(config)
@@ -255,11 +276,12 @@ deploy-job:
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const module = await import(tsFilePath)
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const config: ConfigBuilder = (module.default ?? module.config) as ConfigBuilder
+    const config: ConfigBuilder = (module.default ??
+      module.config) as ConfigBuilder
 
     const result = config.safeValidate()
     const pipeline = config.getPlainObject({ skipValidation: true })
-    expect(result.errors.length).toBe(0)
+    expect(result.errors).toHaveLength(0)
 
     // Verify spec with options
     const inputs = pipeline.spec?.inputs
@@ -315,11 +337,12 @@ spec:
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const module = await import(tsFilePath)
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const config: ConfigBuilder = (module.default ?? module.config) as ConfigBuilder
+    const config: ConfigBuilder = (module.default ??
+      module.config) as ConfigBuilder
 
     const result = config.safeValidate()
     const pipeline = config.getPlainObject({ skipValidation: true })
-    expect(result.errors.length).toBe(0)
+    expect(result.errors).toHaveLength(0)
 
     // Verify dynamic job name is preserved
     const jobName = "$[[ inputs.as ]]"
@@ -327,7 +350,7 @@ spec:
 
     // Verify resource_group with interpolation
     expect(pipeline.jobs?.[jobName]?.resource_group).toBe(
-      "$[[ inputs.resource_group_prefix ]]$[[ inputs.resource_group_name ]]",
+      "$[[ inputs.resource_group_prefix ]]$[[ inputs.resource_group_name ]]"
     )
 
     // Verify variables with interpolation

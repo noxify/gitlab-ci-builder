@@ -66,25 +66,29 @@ export class CodeGenerator {
    * ```
    */
   public generate(parsed: Record<string, unknown>): string {
-    const statements: ts.Statement[] = []
-
-    // Add import
-    statements.push(this.createImport())
+    const statements: ts.Statement[] = [this.createImport()]
 
     // Separate top-level config from jobs
     const { topLevel, jobs } = separateTopLevelAndJobs(parsed)
     const { templates, regularJobs } = categorizeJobs(jobs)
 
     // Create body statements
-    const bodyStatements = this.createBodyStatements(topLevel, templates, regularJobs)
+    const bodyStatements = CodeGenerator.createBodyStatements(
+      topLevel,
+      templates,
+      regularJobs
+    )
 
     if (this.options.asExtendedConfig) {
       // Create function: export default function (config: ConfigBuilder) { ... }
       const func = createFunctionDeclaration(
         "",
         [createParameter("config", "ConfigBuilder")],
-        [...bodyStatements, createReturnStatement(ts.factory.createIdentifier("config"))],
-        true,
+        [
+          ...bodyStatements,
+          createReturnStatement(ts.factory.createIdentifier("config")),
+        ],
+        true
       )
       statements.push(func)
     } else {
@@ -95,23 +99,25 @@ export class CodeGenerator {
           ts.factory.createNewExpression(
             ts.factory.createIdentifier("ConfigBuilder"),
             undefined,
-            [],
-          ),
-        ),
+            []
+          )
+        )
       )
 
       // Add body statements
       statements.push(...bodyStatements)
 
       // Add export: export default config
-      statements.push(createExportDefault(ts.factory.createIdentifier("config")))
+      statements.push(
+        createExportDefault(ts.factory.createIdentifier("config"))
+      )
     }
 
     // Create source file and print
     const sourceFile = ts.factory.createSourceFile(
       statements,
       ts.factory.createToken(ts.SyntaxKind.EndOfFileToken),
-      ts.NodeFlags.None,
+      ts.NodeFlags.None
     )
 
     const printer = ts.createPrinter({
@@ -126,15 +132,17 @@ export class CodeGenerator {
    * Create import statement
    */
   private createImport(): ts.ImportDeclaration {
-    return createImportDeclaration("@noxify/gitlab-ci-builder", this.options.asExtendedConfig, [
-      "ConfigBuilder",
-    ])
+    return createImportDeclaration(
+      "@noxify/gitlab-ci-builder",
+      this.options.asExtendedConfig,
+      ["ConfigBuilder"]
+    )
   }
 
   /**
    * Create body statements for config builder calls
    */
-  private createBodyStatements(
+  private static createBodyStatements(
     topLevel: {
       stages?: unknown
       workflow?: unknown
@@ -144,7 +152,7 @@ export class CodeGenerator {
       spec?: unknown
     },
     templates: [string, Record<string, unknown>][],
-    jobs: [string, Record<string, unknown>][],
+    jobs: [string, Record<string, unknown>][]
   ): ts.Statement[] {
     const statements: ts.Statement[] = []
 
@@ -155,9 +163,9 @@ export class CodeGenerator {
           createMethodCall(
             "config",
             "stages",
-            topLevel.stages.map((s) => valueToExpression(s)),
-          ),
-        ),
+            topLevel.stages.map((s) => valueToExpression(s))
+          )
+        )
       )
     }
 
@@ -167,8 +175,8 @@ export class CodeGenerator {
         ts.factory.createExpressionStatement(
           createMethodCall("config", "workflow", [
             objectToExpression(topLevel.workflow as Record<string, unknown>),
-          ]),
-        ),
+          ])
+        )
       )
     }
 
@@ -179,8 +187,8 @@ export class CodeGenerator {
           ts.factory.createExpressionStatement(
             createMethodCall("config", "include", [
               objectToExpression(inc as Record<string, unknown>),
-            ]),
-          ),
+            ])
+          )
         )
       }
     }
@@ -194,9 +202,12 @@ export class CodeGenerator {
       statements.push(
         ts.factory.createExpressionStatement(
           createMethodCall("config", "variables", [
-            objectToExpression(topLevel.variables as Record<string, unknown>, true),
-          ]),
-        ),
+            objectToExpression(
+              topLevel.variables as Record<string, unknown>,
+              true
+            ),
+          ])
+        )
       )
     }
 
@@ -206,8 +217,8 @@ export class CodeGenerator {
         ts.factory.createExpressionStatement(
           createMethodCall("config", "defaults", [
             objectToExpression(topLevel.default as Record<string, unknown>),
-          ]),
-        ),
+          ])
+        )
       )
     }
 
@@ -217,8 +228,8 @@ export class CodeGenerator {
         ts.factory.createExpressionStatement(
           createMethodCall("config", "spec", [
             objectToExpression(topLevel.spec as Record<string, unknown>),
-          ]),
-        ),
+          ])
+        )
       )
     }
 
@@ -229,8 +240,8 @@ export class CodeGenerator {
           createMethodCall("config", "template", [
             ts.factory.createStringLiteral(name),
             objectToExpression(definition),
-          ]),
-        ),
+          ])
+        )
       )
     }
 
@@ -241,8 +252,8 @@ export class CodeGenerator {
           createMethodCall("config", "job", [
             ts.factory.createStringLiteral(name),
             objectToExpression(definition),
-          ]),
-        ),
+          ])
+        )
       )
     }
 

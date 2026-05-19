@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -77,37 +78,37 @@ describe("ConfigBuilder - reserved job names", () => {
   it("should throw error when using 'default' as job name", () => {
     expect(() => {
       config.job("default", { script: ["echo test"] })
-    }).toThrow(/reserved keyword/)
+    }).toThrow(/reserved keyword/u)
   })
 
   it("should throw error when using 'include' as job name", () => {
     expect(() => {
       config.job("include", { script: ["echo test"] })
-    }).toThrow(/reserved keyword/)
+    }).toThrow(/reserved keyword/u)
   })
 
   it("should throw error when using 'stages' as job name", () => {
     expect(() => {
       config.job("stages", { script: ["echo test"] })
-    }).toThrow(/reserved keyword/)
+    }).toThrow(/reserved keyword/u)
   })
 
   it("should throw error when using 'variables' as job name", () => {
     expect(() => {
       config.job("variables", { script: ["echo test"] })
-    }).toThrow(/reserved keyword/)
+    }).toThrow(/reserved keyword/u)
   })
 
   it("should throw error when using 'workflow' as job name", () => {
     expect(() => {
       config.job("workflow", { script: ["echo test"] })
-    }).toThrow(/reserved keyword/)
+    }).toThrow(/reserved keyword/u)
   })
 
   it("should throw error when using 'spec' as job name", () => {
     expect(() => {
       config.job("spec", { script: ["echo test"] })
-    }).toThrow(/reserved keyword/)
+    }).toThrow(/reserved keyword/u)
   })
 
   it("should allow 'pages' as valid job name (GitLab Pages)", () => {

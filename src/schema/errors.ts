@@ -32,7 +32,8 @@ export function formatZodError(error: ZodError): ValidationError[] {
     code: ValidationErrorCode.SCHEMA_VALIDATION,
     message: err.message,
     path: err.path.filter(
-      (p): p is string | number => typeof p === "string" || typeof p === "number",
+      (p): p is string | number =>
+        typeof p === "string" || typeof p === "number"
     ),
     details: {
       zodCode: err.code,
@@ -49,7 +50,7 @@ export function createValidationError(
   code: ValidationErrorCode | string,
   message: string,
   path?: (string | number)[],
-  details?: Record<string, unknown>,
+  details?: Record<string, unknown>
 ): ValidationError {
   return { code, message, path, details }
 }
@@ -73,7 +74,7 @@ export interface ValidationResult<T> {
 export function createSuccessResult<T>(
   data: T,
   warnings: ValidationError[] = [],
-  skippedChecks: string[] = [],
+  skippedChecks: string[] = []
 ): ValidationResult<T> {
   return {
     success: true,
@@ -90,7 +91,7 @@ export function createSuccessResult<T>(
 export function createErrorResult<T>(
   errors: ValidationError[],
   warnings: ValidationError[] = [],
-  skippedChecks: string[] = [],
+  skippedChecks: string[] = []
 ): ValidationResult<T> {
   return {
     success: false,

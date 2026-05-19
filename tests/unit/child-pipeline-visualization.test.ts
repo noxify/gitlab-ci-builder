@@ -1,14 +1,15 @@
+// oxlint-disable vitest/max-expects
 import dedent from "dedent"
 import { vol } from "memfs"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
-import type { JobDefinitionNormalized } from "../../src/schema"
 import {
   buildExtendsGraph,
   extractChildPipelines,
   generateAsciiTree,
   generateMermaidDiagram,
 } from "../../src"
+import type { JobDefinitionNormalized } from "../../src/schema"
 
 describe("Child Pipeline Visualization", () => {
   const testDir = "/test"
@@ -22,8 +23,8 @@ describe("Child Pipeline Visualization", () => {
     vol.reset()
   })
 
-  describe("extractChildPipelines", () => {
-    it("should extract child pipeline from local include", () => {
+  describe(extractChildPipelines, () => {
+    it("should extract child pipeline from local include", async () => {
       const childYaml = dedent`
         stages:
           - test
@@ -52,17 +53,18 @@ describe("Child Pipeline Visualization", () => {
       }
 
       const graph = buildExtendsGraph(jobs, {})
-      const childPipelines = extractChildPipelines(graph, testDir)
+      const childPipelines = await extractChildPipelines(graph, testDir)
 
+      const [childPipeline] = childPipelines
       expect(childPipelines).toHaveLength(1)
-      expect(childPipelines[0]?.parentJob).toBe("trigger:child")
-      expect(childPipelines[0]?.source).toBe("child-pipeline.yml")
-      expect(childPipelines[0]?.graph.size).toBe(2)
-      expect(childPipelines[0]?.graph.has("test:unit")).toBe(true)
-      expect(childPipelines[0]?.graph.has("deploy:prod")).toBe(true)
+      expect(childPipeline?.parentJob).toBe("trigger:child")
+      expect(childPipeline?.source).toBe("child-pipeline.yml")
+      expect(childPipeline?.graph.size).toBe(2)
+      expect(childPipeline?.graph.has("test:unit")).toBeTruthy()
+      expect(childPipeline?.graph.has("deploy:prod")).toBeTruthy()
     })
 
-    it("should handle artifact includes gracefully", () => {
+    it("should handle artifact includes gracefully", async () => {
       const jobs: Record<string, JobDefinitionNormalized> = {
         "generate-config": {
           stage: "prepare",
@@ -80,7 +82,7 @@ describe("Child Pipeline Visualization", () => {
       }
 
       const graph = buildExtendsGraph(jobs, {})
-      const childPipelines = extractChildPipelines(graph, testDir)
+      const childPipelines = await extractChildPipelines(graph, testDir)
 
       expect(childPipelines).toHaveLength(1)
       expect(childPipelines[0]?.parentJob).toBe("trigger:child")
@@ -88,7 +90,7 @@ describe("Child Pipeline Visualization", () => {
       expect(childPipelines[0]?.graph.size).toBe(0)
     })
 
-    it("should not extract downstream pipelines (project trigger)", () => {
+    it("should not extract downstream pipelines (project trigger)", async () => {
       const jobs: Record<string, JobDefinitionNormalized> = {
         "trigger:downstream": {
           stage: "trigger",
@@ -100,12 +102,12 @@ describe("Child Pipeline Visualization", () => {
       }
 
       const graph = buildExtendsGraph(jobs, {})
-      const childPipelines = extractChildPipelines(graph, testDir)
+      const childPipelines = await extractChildPipelines(graph, testDir)
 
       expect(childPipelines).toHaveLength(0)
     })
 
-    it("should extract child pipeline with templates", () => {
+    it("should extract child pipeline with templates", async () => {
       const childYaml = dedent`
         .base:
           image: node:20
@@ -128,15 +130,15 @@ describe("Child Pipeline Visualization", () => {
       }
 
       const graph = buildExtendsGraph(jobs, {})
-      const childPipelines = extractChildPipelines(graph, testDir)
+      const childPipelines = await extractChildPipelines(graph, testDir)
 
       expect(childPipelines).toHaveLength(1)
       expect(childPipelines[0]?.graph.size).toBe(2)
-      expect(childPipelines[0]?.graph.has(".base")).toBe(true)
-      expect(childPipelines[0]?.graph.has("test")).toBe(true)
+      expect(childPipelines[0]?.graph.has(".base")).toBeTruthy()
+      expect(childPipelines[0]?.graph.has("test")).toBeTruthy()
 
       const testNode = childPipelines[0]?.graph.get("test")
-      expect(testNode?.extends).toEqual([".base"])
+      expect(testNode?.extends).toStrictEqual([".base"])
     })
   })
 
@@ -245,7 +247,7 @@ describe("Child Pipeline Visualization", () => {
       expect(mermaid).toContain(".base")
       expect(mermaid).toContain("test")
       // Should have extends arrow within child pipeline
-      expect(mermaid).toMatch(/-->/)
+      expect(mermaid).toMatch(/-->/u)
     })
   })
 
@@ -319,7 +321,11 @@ describe("Child Pipeline Visualization", () => {
       const ascii = generateAsciiTree({
         graph,
         resolvedConfig,
-        options: { showChildPipelines: true, showStages: true, basePath: testDir },
+        options: {
+          showChildPipelines: true,
+          showStages: true,
+          basePath: testDir,
+        },
       })
 
       expect(ascii).toContain("test:unit (test)")
@@ -376,7 +382,7 @@ describe("Child Pipeline Visualization", () => {
       expect(childPipelines).toHaveLength(0)
     })
 
-    it("should handle multiple child pipelines", () => {
+    it("should handle multiple child pipelines", async () => {
       const child1Yaml = "test1:\n  script: test1"
       const child2Yaml = "test2:\n  script: test2"
 
@@ -397,14 +403,14 @@ describe("Child Pipeline Visualization", () => {
       }
 
       const graph = buildExtendsGraph(jobs, {})
-      const childPipelines = extractChildPipelines(graph, testDir)
+      const childPipelines = await extractChildPipelines(graph, testDir)
 
       expect(childPipelines).toHaveLength(2)
       expect(childPipelines[0]?.parentJob).toBe("trigger:child1")
       expect(childPipelines[1]?.parentJob).toBe("trigger:child2")
     })
 
-    it("should handle empty child pipeline", () => {
+    it("should handle empty child pipeline", async () => {
       const childYaml = "# Empty pipeline\n"
 
       const childPath = `${testDir}/empty.yml`
@@ -419,7 +425,7 @@ describe("Child Pipeline Visualization", () => {
       }
 
       const graph = buildExtendsGraph(jobs, {})
-      const childPipelines = extractChildPipelines(graph, testDir)
+      const childPipelines = await extractChildPipelines(graph, testDir)
 
       expect(childPipelines).toHaveLength(1)
       expect(childPipelines[0]?.graph.size).toBe(0)

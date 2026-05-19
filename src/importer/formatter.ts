@@ -47,7 +47,7 @@ export function formatScriptValue(value: unknown): string {
   // Check for shell-specific patterns
   if (hasShellOperators(value) || hasControlStructures(value)) {
     // Keep as template literal to preserve exact formatting
-    const escaped = value.replace(/`/g, "\\`").replace(/\$\{/g, "\\${")
+    const escaped = value.replaceAll("`", "\\`").replaceAll("${", "\\${")
     return `\`${escaped}\``
   }
 
@@ -95,7 +95,7 @@ function formatArray(value: unknown[], options: FormatOptions): string {
       typeof v === "number" ||
       typeof v === "boolean" ||
       v === null ||
-      v === undefined,
+      v === undefined
   )
 
   if (allSimple) {
@@ -105,7 +105,7 @@ function formatArray(value: unknown[], options: FormatOptions): string {
   // Complex array - multi-line
   const items = value.map(
     (v) =>
-      `${indent}${formatValue(v, { indentLevel: options.indentLevel + 1, addExtraIndent: options.addExtraIndent })}`,
+      `${indent}${formatValue(v, { indentLevel: options.indentLevel + 1, addExtraIndent: options.addExtraIndent })}`
   )
   return `[\n${items.join(",\n")},\n${indent.slice(baseIndent.length + 2)}]`
 }
@@ -135,7 +135,11 @@ function flattenScriptArray(items: unknown[]): string[] {
   for (const item of items) {
     if (typeof item === "string") {
       const hasNewline = item.includes("\n")
-      if (hasNewline && !hasShellOperators(item) && !hasControlStructures(item)) {
+      if (
+        hasNewline &&
+        !hasShellOperators(item) &&
+        !hasControlStructures(item)
+      ) {
         const lines = item
           .split("\n")
           .map((l) => l.trim())
@@ -151,7 +155,7 @@ function flattenScriptArray(items: unknown[]): string[] {
     const formatted = formatScriptValue(item)
 
     // If formatted result is an array, expand it
-    if (/^\[(?:.|\n)*\]$/.test(formatted)) {
+    if (/^\[(?:.|\n)*\]$/u.test(formatted)) {
       try {
         const parsed = JSON.parse(formatted) as unknown
         if (Array.isArray(parsed)) {
@@ -189,7 +193,10 @@ function flattenScriptArray(items: unknown[]): string[] {
  * // Returns: multi-line formatted object with proper script handling
  * ```
  */
-function formatObject(value: Record<string, unknown>, options: FormatOptions): string {
+function formatObject(
+  value: Record<string, unknown>,
+  options: FormatOptions
+): string {
   const entries = Object.entries(value)
   if (entries.length === 0) {
     return "{}"
@@ -199,7 +206,9 @@ function formatObject(value: Record<string, unknown>, options: FormatOptions): s
   const indent = baseIndent + "  ".repeat(options.indentLevel)
 
   const props = entries.map(([key, val]) => {
-    const formattedKey = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key) ? key : JSON.stringify(key)
+    const formattedKey = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/u.test(key)
+      ? key
+      : JSON.stringify(key)
 
     // Script properties
     if (SCRIPT_PROPERTIES.includes(key as (typeof SCRIPT_PROPERTIES)[number])) {
@@ -212,7 +221,9 @@ function formatObject(value: Record<string, unknown>, options: FormatOptions): s
 
     // Single value properties (string | string[])
     if (
-      SINGLE_VALUE_PROPERTIES.includes(key as (typeof SINGLE_VALUE_PROPERTIES)[number]) &&
+      SINGLE_VALUE_PROPERTIES.includes(
+        key as (typeof SINGLE_VALUE_PROPERTIES)[number]
+      ) &&
       Array.isArray(val) &&
       val.length === 1
     ) {

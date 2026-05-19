@@ -1,3 +1,5 @@
+// oxlint-disable eslint/no-template-curly-in-string
+// oxlint-disable vitest/max-expects
 import dedent from "dedent"
 import { vol } from "memfs"
 import { describe, expect, it } from "vitest"
@@ -83,7 +85,7 @@ describe("Complex script handling", () => {
       expect(yaml).toContain("${CI_JOB_TOKEN}")
 
       // Should use pipe for multiline
-      expect(yaml).toMatch(/[|>]/)
+      expect(yaml).toMatch(/[|>]/u)
     })
 
     it("should handle round-trip conversion with complex scripts", () => {

@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/sr/bin/env node
 import { Command } from "@commander-js/extra-typings"
 import { readPackage } from "read-pkg"
 
@@ -19,8 +19,15 @@ async function main() {
   await program.parseAsync()
 }
 
-main().catch((error) => {
-  // eslint-disable-next-line no-console
-  console.error("Error:", error instanceof Error ? error.message : String(error))
-  process.exit(1)
-})
+;(async () => {
+  try {
+    await main()
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(
+      "Error:",
+      error instanceof Error ? error.message : String(error)
+    )
+    process.exit(1)
+  }
+})()

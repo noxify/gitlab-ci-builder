@@ -23,30 +23,36 @@ const SCRIPT_PROPERTIES = ["script", "before_script", "after_script"] as const
 /**
  * Properties that accept string | string[] but single values are more common
  */
-const SINGLE_VALUE_PROPERTIES = ["extends", "image", "needs", "annotations", "dotenv"] as const
+const SINGLE_VALUE_PROPERTIES = [
+  "extends",
+  "image",
+  "needs",
+  "annotations",
+  "dotenv",
+] as const
 
 /**
  * Shell operator patterns that indicate script should stay as single string
  */
 const SHELL_OPERATOR_PATTERNS = [
-  /\\\n/, // Line continuation
-  /<</, // Heredoc
-  /(?<!\|)\|(?!\|)/, // Pipe (but not ||)
-  />>?/, // Redirect output
-  /2>/, // Redirect stderr
-  /&>/, // Redirect both
-  /(?<!<)<(?!<)/, // Redirect input (but not <<)
+  /\\\n/u, // Line continuation
+  /<</u, // Heredoc
+  /(?<!\|)\|(?!\|)/u, // Pipe (but not ||)
+  />>?/u, // Redirect output
+  /2>/u, // Redirect stderr
+  /&>/u, // Redirect both
+  /(?<!<)<(?!<)/u, // Redirect input (but not <<)
 ]
 
 /**
  * Shell control structure patterns
  */
 const SHELL_CONTROL_STRUCTURES = [
-  /\bif\b.*\bthen\b/s, // if-then
-  /\bcase\b.*\besac\b/s, // case-esac
-  /\bfor\b.*\bdo\b/s, // for-do
-  /\bwhile\b.*\bdo\b/s, // while-do
-  /\buntil\b.*\bdo\b/s, // until-do
+  /\bif\b.*\bthen\b/su, // if-then
+  /\bcase\b.*\besac\b/su, // case-esac
+  /\bfor\b.*\bdo\b/su, // for-do
+  /\bwhile\b.*\bdo\b/su, // while-do
+  /\buntil\b.*\bdo\b/su, // until-do
 ]
 
 /**
@@ -64,7 +70,9 @@ const SHELL_CONTROL_STRUCTURES = [
  * isValidJobDefinition(['array']) // false
  * ```
  */
-export function isValidJobDefinition(value: unknown): value is Record<string, unknown> {
+export function isValidJobDefinition(
+  value: unknown
+): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
@@ -136,7 +144,11 @@ export function separateTopLevelAndJobs(parsed: Record<string, unknown>): {
   const jobs: Record<string, unknown> = {}
 
   for (const [key, value] of Object.entries(parsed)) {
-    if (KNOWN_TOP_LEVEL_KEYS.includes(key as (typeof KNOWN_TOP_LEVEL_KEYS)[number])) {
+    if (
+      KNOWN_TOP_LEVEL_KEYS.includes(
+        key as (typeof KNOWN_TOP_LEVEL_KEYS)[number]
+      )
+    ) {
       topLevel[key] = value
     } else {
       jobs[key] = value
@@ -175,7 +187,9 @@ export function categorizeJobs(jobs: Record<string, unknown>): {
   const regularJobs: [string, Record<string, unknown>][] = []
 
   for (const [key, value] of Object.entries(jobs)) {
-    if (!isValidJobDefinition(value)) continue
+    if (!isValidJobDefinition(value)) {
+      continue
+    }
 
     if (key.startsWith(".")) {
       templates.push([key, value])

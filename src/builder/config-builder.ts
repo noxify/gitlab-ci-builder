@@ -1,40 +1,39 @@
-import fs from "fs/promises"
-import path from "path"
+import fs from "node:fs/promises"
+import path from "node:path"
+
 import { globSync } from "tinyglobby"
 
-import type { PipelineOutput } from "../model"
-import type { ExtendsGraphNode, VisualizationOptions } from "../resolution"
-import type {
-  Defaults,
-  GlobalOptions,
-  IncludeInput,
-  JobDefinitionInput,
-  JobDefinitionNormalized,
-  JobDefinitionOutput,
-  JobOptions,
-  Spec,
-  ValidationError,
-  Variables,
-  Workflow,
-} from "../schema"
-import { mergeJobDefinitions } from "../merge"
-import { PipelineState } from "../model"
+import { mergeJobDefinitions } from "../merge/rules"
+import type { PipelineOutput } from "../model/pipeline"
+import { PipelineState } from "../model/pipeline"
+import type { ExtendsGraphNode } from "../resolution/graph"
+import { buildExtendsGraph } from "../resolution/graph"
+import type { VisualizationOptions } from "../resolution/visualization"
 import {
-  buildExtendsGraph,
   generateAsciiTree,
   generateMermaidDiagram,
   generateStageTable,
-} from "../resolution"
-import { resolveExtends } from "../resolver"
-import {
-  DefaultsSchema,
-  IncludeSchema,
-  JobDefinitionParseSchema,
-  SpecSchema,
-  WorkflowSchema,
-} from "../schema"
-import { serializeToYaml } from "../serializer"
-import { JobBuilder } from "./JobBuilder"
+} from "../resolution/visualization"
+import { resolveExtends } from "../resolver/builder"
+import type { Variables } from "../schema/base"
+import type { Defaults } from "../schema/defaults"
+import { DefaultsSchema } from "../schema/defaults"
+import type { ValidationError } from "../schema/errors"
+import { IncludeSchema } from "../schema/include"
+import type { IncludeInput } from "../schema/include"
+import { JobDefinitionParseSchema } from "../schema/job"
+import type {
+  JobDefinitionInput,
+  JobDefinitionNormalized,
+  JobDefinitionOutput,
+} from "../schema/job"
+import type { GlobalOptions, JobOptions } from "../schema/policies"
+import type { Spec } from "../schema/spec"
+import { SpecSchema } from "../schema/spec"
+import { WorkflowSchema } from "../schema/workflow"
+import type { Workflow } from "../schema/workflow"
+import { serializeToYaml } from "../serializer/yaml"
+import { JobBuilder } from "./job-builder"
 
 /**
  * Reserved top-level keywords that cannot be used as job names
@@ -59,13 +58,15 @@ export type MacroArgs = unknown
  */
 export type MacroFunction<TArgs extends MacroArgs = MacroArgs> = (
   config: ConfigBuilder,
-  args: TArgs,
+  args: TArgs
 ) => void
 
 /**
  * Async config extension function (for dynamic includes)
  */
-export type ExtendConfigFunction = (config: ConfigBuilder) => ConfigBuilder | Promise<ConfigBuilder>
+export type ExtendConfigFunction = (
+  config: ConfigBuilder
+) => ConfigBuilder | Promise<ConfigBuilder>
 
 /**
  * Patcher function (for last-minute adjustments)
@@ -272,7 +273,7 @@ export class ConfigBuilder {
    *
    * @see https://docs.gitlab.com/ee/ci/yaml/#variables
    */
-  public variable(key: string, value: string | number | boolean | undefined) {
+  public variable(key: string, value?: string | number | boolean | undefined) {
     this.state.setVariable(key, value)
     return this
   }
@@ -326,7 +327,10 @@ export class ConfigBuilder {
    * const global = config.getVariable('test', 'GLOBAL_VAR') // Returns 'global'
    * ```
    */
-  public getVariable(job: string, key: string): string | number | boolean | undefined {
+  public getVariable(
+    job: string,
+    key: string
+  ): string | number | boolean | undefined {
     return this.state.getVariable(job, key)
   }
 
@@ -452,7 +456,11 @@ export class ConfigBuilder {
    * Templates default to `mergeExtends: false` to preserve extends references
    * in the template definition, allowing proper resolution when jobs extend from it.
    */
-  public template(name: string, definition: JobDefinitionInput, options: JobOptions = {}) {
+  public template(
+    name: string,
+    definition: JobDefinitionInput,
+    options: JobOptions = {}
+  ) {
     // Ensure name starts with dot
     const templateName = name.startsWith(".") ? name : `.${name}`
 
@@ -490,7 +498,8 @@ export class ConfigBuilder {
 
     // Check if template exists
     const existing = this.state.getJob(templateName)
-    const mergeExisting = options.mergeExisting ?? this.state.globalOptions.mergeExisting
+    const mergeExisting =
+      options.mergeExisting ?? this.state.globalOptions.mergeExisting
 
     if (existing && mergeExisting !== false) {
       // Merge with existing
@@ -605,11 +614,15 @@ export class ConfigBuilder {
    *
    * @see https://docs.gitlab.com/ee/ci/yaml/#job-keywords
    */
-  public job(name: string, definition: JobDefinitionInput, options: JobOptions = {}) {
+  public job(
+    name: string,
+    definition: JobDefinitionInput,
+    options: JobOptions = {}
+  ) {
     // Validate job name is not a reserved keyword
     if (RESERVED_JOB_NAMES.has(name)) {
       throw new Error(
-        `Job name "${name}" is a reserved keyword and cannot be used as a job name. Reserved keywords: ${[...RESERVED_JOB_NAMES].join(", ")}`,
+        `Job name "${name}" is a reserved keyword and cannot be used as a job name. Reserved keywords: ${[...RESERVED_JOB_NAMES].join(", ")}`
       )
     }
 
@@ -618,7 +631,9 @@ export class ConfigBuilder {
     let normalized: JobDefinitionNormalized
     if (options.remote) {
       const result = JobDefinitionParseSchema.safeParse(definition)
-      if (!result.success) {
+      if (result.success) {
+        normalized = result.data
+      } else {
         // Silently use raw definition for remote jobs with validation errors
         // This allows us to work with complex GitLab CI features we don't fully support yet
         normalized = definition as JobDefinitionNormalized
@@ -631,8 +646,6 @@ export class ConfigBuilder {
             extends: [normalized.extends],
           }
         }
-      } else {
-        normalized = result.data
       }
     } else {
       normalized = JobDefinitionParseSchema.parse(definition)
@@ -647,7 +660,8 @@ export class ConfigBuilder {
 
     // Check if job exists
     const existing = this.state.getJob(name)
-    const mergeExisting = options.mergeExisting ?? this.state.globalOptions.mergeExisting
+    const mergeExisting =
+      options.mergeExisting ?? this.state.globalOptions.mergeExisting
 
     if (existing && mergeExisting !== false) {
       // Merge with existing
@@ -704,12 +718,12 @@ export class ConfigBuilder {
     fromName: string | string[],
     name: string,
     job?: JobDefinitionInput,
-    options: JobOptions = {},
+    options: JobOptions = {}
   ) {
     const extendsArray = Array.isArray(fromName) ? fromName : [fromName]
 
     const definition: JobDefinitionInput = {
-      ...(job ?? {}),
+      ...job,
       extends: extendsArray,
     }
 
@@ -749,9 +763,15 @@ export class ConfigBuilder {
    *   .from('deploy', { environment: 'staging', url: 'https://staging.example.com' })
    * ```
    */
-  public macro<TArgs extends MacroArgs>(key: string, callback: MacroFunction<TArgs>) {
+  public macro<TArgs extends MacroArgs>(
+    key: string,
+    // oxlint-disable-next-line promise/prefer-await-to-callbacks
+    callback: MacroFunction<TArgs>
+  ) {
     if (this.macrosRegistry.has(key)) {
-      throw new Error(`Macro ${key} already defined! You are not allowed to overwrite it.`)
+      throw new Error(
+        `Macro ${key} already defined! You are not allowed to overwrite it.`
+      )
     }
 
     this.macrosRegistry.set(key, callback as MacroFunction)
@@ -785,7 +805,7 @@ export class ConfigBuilder {
 
     if (!macro) {
       throw new Error(
-        `Macro ${key} not found, please register it with Config#macro! Consider also, that you need to register the macro before you execute from it.`,
+        `Macro ${key} not found, please register it with Config#macro! Consider also, that you need to register the macro before you execute from it.`
       )
     }
 
@@ -840,6 +860,7 @@ export class ConfigBuilder {
    *   })
    * ```
    */
+  // oxlint-disable-next-line promise/prefer-await-to-callbacks
   public patch(callback: PatcherFunction) {
     this.patchersRegistry.push(callback)
     return this
@@ -895,17 +916,22 @@ export class ConfigBuilder {
 
       for (const file of files) {
         const exported = (await import(file)) as
-          | { default?: ExtendConfigFunction; extendConfig?: ExtendConfigFunction }
+          | {
+              default?: ExtendConfigFunction
+              extendConfig?: ExtendConfigFunction
+            }
           | undefined
 
         // Prefer default export, fallback to named extendConfig
         const extendFn = exported?.default ?? exported?.extendConfig
 
         if (!extendFn) {
-          throw new Error(`Please export a default function or a named "extendConfig" function!`)
+          throw new Error(
+            `Please export a default function or a named "extendConfig" function!`
+          )
         }
 
-        if (!(extendFn instanceof Function)) {
+        if (!(typeof extendFn === "function")) {
           throw new Error(`The exported function is not a function!`)
         }
 
@@ -967,14 +993,16 @@ export class ConfigBuilder {
         pipeline_variables?: boolean
       }
       jobOptions?: Partial<JobDefinitionNormalized>
-    },
+    }
   ): this {
     // Create child config builder
+    // oxlint-disable-next-line promise/prefer-await-to-callbacks
     const childConfig = callback(new ConfigBuilder(this.state.globalOptions))
 
     // Generate output path if not provided
     const outputPath =
-      options?.outputPath ?? `ci/${jobName.replace(/[^a-zA-Z0-9-]/g, "-")}-pipeline.yml`
+      options?.outputPath ??
+      `ci/${jobName.replaceAll(/[^a-zA-Z0-9-]/gu, "-")}-pipeline.yml`
 
     // Store child pipeline config
     this.state.addChildPipeline(jobName, {
@@ -1015,20 +1043,19 @@ export class ConfigBuilder {
       this.state.jobs as Record<string, JobDefinitionNormalized>,
       this.state.templates as Record<string, JobDefinitionNormalized>,
       this.state.jobOptionsMap,
-      this.state.globalOptions,
+      this.state.globalOptions
     )
 
     // Normalize extends in resolved jobs (convert single-element arrays to strings)
     const normalizedJobs: Record<string, JobDefinitionOutput> = {}
     for (const [name, job] of Object.entries(resolution.resolved)) {
-      if (job.extends && Array.isArray(job.extends) && job.extends.length === 1) {
-        normalizedJobs[name] = {
-          ...job,
-          extends: job.extends[0],
-        } as JobDefinitionOutput
-      } else {
-        normalizedJobs[name] = job
-      }
+      normalizedJobs[name] =
+        job.extends && Array.isArray(job.extends) && job.extends.length === 1
+          ? ({
+              ...job,
+              extends: job.extends[0],
+            } as JobDefinitionOutput)
+          : job
     }
 
     // Build final output
@@ -1143,7 +1170,9 @@ export class ConfigBuilder {
    * const pipeline = config.getPlainObject({ skipValidation: true })
    * ```
    */
-  public getPlainObject(options?: { skipValidation?: boolean }): PipelineOutput {
+  public getPlainObject(options?: {
+    skipValidation?: boolean
+  }): PipelineOutput {
     if (options?.skipValidation !== true) {
       this.validate()
     }
@@ -1225,7 +1254,7 @@ export class ConfigBuilder {
     options?: {
       parentFilename?: string
       skipValidation?: boolean
-    },
+    }
   ): Promise<{
     parent: string
     children: string[]
@@ -1247,7 +1276,9 @@ export class ConfigBuilder {
     for (const childConfig of this.state.childPipelines.values()) {
       const childPath = path.join(outputDir, childConfig.outputPath)
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      const childYaml = childConfig.builder.toYaml({ skipValidation: options?.skipValidation })
+      const childYaml = childConfig.builder.toYaml({
+        skipValidation: options?.skipValidation,
+      })
 
       await fs.mkdir(path.dirname(childPath), { recursive: true })
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
@@ -1279,10 +1310,12 @@ export class ConfigBuilder {
    */
   public async writeYamlFile(
     filePath: string,
-    options?: { encoding?: BufferEncoding },
+    options?: { encoding?: BufferEncoding }
   ): Promise<void> {
     const content = this.toYaml()
-    await fs.writeFile(filePath, content, { encoding: options?.encoding ?? "utf8" })
+    await fs.writeFile(filePath, content, {
+      encoding: options?.encoding ?? "utf-8",
+    })
   }
 
   /**
@@ -1306,9 +1339,9 @@ export class ConfigBuilder {
    * ```
    */
   public getExtendsGraph(): Map<string, ExtendsGraphNode> {
-    const jobs = this.state.jobs
-    const templates = this.state.templates
-    const jobOptionsMap = this.state.jobOptionsMap
+    const { jobs } = this.state
+    const { templates } = this.state
+    const { jobOptionsMap } = this.state
 
     return buildExtendsGraph(jobs, templates, jobOptionsMap)
   }

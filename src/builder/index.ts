@@ -1,2 +1,2 @@
-export * from "./ConfigBuilder"
-export * from "./JobBuilder"
+export * from "./config-builder"
+export * from "./job-builder"

@@ -1,8 +1,9 @@
+// oxlint-disable vitest/max-expects
 import { describe, expect, test } from "vitest"
 
-import type { RuleContext } from "../../src/simulation"
 import { convertYamlToConfig } from "../../src"
-import { PipelineSimulator } from "../../src/simulation"
+import { PipelineSimulator } from "../../src/simulation/pipeline-simulator"
+import type { RuleContext } from "../../src/simulation/rule-evaluator"
 
 describe("Reference Resolver - Edge Cases", () => {
   describe("Invalid reference paths", () => {

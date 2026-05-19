@@ -7,7 +7,7 @@
 - **Minimal and focused**: Every line of code should serve a clear purpose
 - **Performance-conscious**: Consider efficiency and avoid unnecessary complexity
 
-## TypeScript & ESLint Rules
+## TypeScript & Oxlint Rules
 
 - **No console.log**: Use proper logging or remove debug statements
 - **Consistent type imports**: Use `import type` for type-only imports
@@ -16,11 +16,15 @@
 - **No non-null assertions**: Use proper type guards instead of `!`
 - **Prefer top-level type imports**: Keep type imports at the top
 - **Array type syntax**: Use `readonly T[]` instead of `ReadonlyArray<T>`
-- **Prefer nullish coalescing**: Use `??` instead of `||` for safer null/undefined checks
+- **Prefer nullish coalescing**: Use `??` instead of `||` for safer null/ndefined checks
 - **Prefer optional chaining**: Use `?.` for more concise and readable property access
 - **No import extensions**: Never use `.js`, `.ts` extensions in imports
 - **No useless path segments**: Avoid `/index` in import paths when possible
 - **Prefer directory imports**: Use `../src` instead of `../src/index` for cleaner imports
+- **Cyclomatic complexity limit**: Keep function complexity under 20
+- **Unicode regex flags**: Use the `u` flag in regex patterns for proper Unicode support
+- **No postfix increment**: Use `+= 1` instead of `++` operator
+- **Module-level functions**: Define reusable helper functions at module level, not in closures
 
 ## Prettier Configuration
 
@@ -37,7 +41,7 @@
 - Remove all `console.log` statements from generated code
 - Use proper TypeScript types instead of `any` when possible
 - **Use type-fest when available** - Prefer battle-tested utility types from type-fest over custom implementations
-- Add ESLint disable comments only when absolutely necessary
+- Add oxlint disable comments only when absolutely necessary (use `// oxlint-disable rule-name` format)
 - Follow the import order specified in prettier config
 - Use consistent naming conventions (camelCase for variables, PascalCase for types)
 - **Generic type parameters**: Prefix generic type parameters with `T` for clarity (e.g., `GenericType<TPayload>`, `Handler<TResult, TError>`)

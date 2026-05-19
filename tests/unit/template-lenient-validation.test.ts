@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { describe, expect, it } from "vitest"
 
 import { convertYamlToConfig } from "../../src/resolver/cli"
@@ -122,7 +123,7 @@ deploy:
     expect(plain.jobs?.deploy).toBeDefined()
     expect(plain.jobs?.deploy?.image).toBe("node:20")
     expect(plain.jobs?.deploy?.variables?.NODE_ENV).toBe("production")
-    expect(plain.jobs?.deploy?.tags).toEqual(["kubernetes"])
-    expect(plain.jobs?.deploy?.script).toEqual(["echo 'deploying'"])
+    expect(plain.jobs?.deploy?.tags).toStrictEqual(["kubernetes"])
+    expect(plain.jobs?.deploy?.script).toStrictEqual(["echo 'deploying'"])
   })
 })

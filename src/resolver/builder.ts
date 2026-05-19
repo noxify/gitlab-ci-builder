@@ -1,12 +1,16 @@
+import { mergeJobDefinitions } from "../merge"
+import {
+  buildExtendsGraph,
+  topologicalSort,
+  validateExtendsGraph,
+} from "../resolution/graph"
+import type { ExtendsGraphNode } from "../resolution/graph"
+import type { ValidationError } from "../schema/errors"
 import type {
-  GlobalOptions,
   JobDefinitionNormalized,
   JobDefinitionOutput,
-  JobOptions,
-  ValidationError,
-} from "../schema"
-import { mergeJobDefinitions } from "../merge"
-import { buildExtendsGraph, topologicalSort, validateExtendsGraph } from "../resolution/graph"
+} from "../schema/job"
+import type { GlobalOptions, JobOptions } from "../schema/policies"
 
 /**
  * Resolution context for tracking metadata during extends resolution
@@ -48,7 +52,7 @@ export function resolveExtends(
   jobs: Record<string, JobDefinitionNormalized>,
   templates: Record<string, JobDefinitionNormalized>,
   jobOptionsMap: Record<string, JobOptions>,
-  globalOptions: GlobalOptions,
+  globalOptions: GlobalOptions
 ): {
   resolved: Record<string, JobDefinitionOutput>
   errors: ValidationError[]
@@ -90,138 +94,194 @@ export function resolveExtends(
   const fullyResolved = new Map<string, JobDefinitionNormalized>()
 
   for (const name of sortedNames) {
-    const node = graph.get(name)
-    if (!node) continue
-
-    // Check if this job should have extends resolved
-    const jobOpts = context.jobOptions[name]
-    const mergeExtends = jobOpts?.mergeExtends ?? globalOptions.mergeExtends
-    const resolveTemplatesOnly = jobOpts?.resolveTemplatesOnly ?? globalOptions.resolveTemplatesOnly
-    const mergeRemoteExtends = globalOptions.mergeRemoteExtends
-
-    // Start with empty definition
-    let mergedDef: JobDefinitionNormalized = {}
-
-    // Collect all extends that should be kept (not merged)
-    const keptExtends: string[] = []
-
-    // Recursively collect non-template extends from merged templates
-    const collectNonTemplateExtends = (extendName: string, visited = new Set<string>()): void => {
-      if (visited.has(extendName)) return
-      visited.add(extendName)
-
-      const targetName = graph.has(extendName) ? extendName : `.${extendName}`
-      const targetNode = graph.get(targetName)
-
-      if (!targetNode?.extends) return
-
-      for (const nestedExtend of targetNode.extends) {
-        const nestedTargetName = graph.has(nestedExtend) ? nestedExtend : `.${nestedExtend}`
-        const nestedNode = graph.get(nestedTargetName)
-
-        if (!nestedNode) {
-          // Unknown extend, keep it
-          if (!keptExtends.includes(nestedExtend)) {
-            keptExtends.push(nestedExtend)
-          }
-        } else if (nestedNode.isRemote && !mergeRemoteExtends) {
-          // Remote extend when mergeRemoteExtends is false, keep it
-          if (!keptExtends.includes(nestedExtend)) {
-            keptExtends.push(nestedExtend)
-          }
-        } else if (!nestedTargetName.startsWith(".")) {
-          // Normal job (not template), keep it
-          if (!keptExtends.includes(nestedExtend)) {
-            keptExtends.push(nestedExtend)
-          }
-        } else {
-          // It's a template, recurse into it
-          collectNonTemplateExtends(nestedExtend, visited)
-        }
-      }
-    }
-
-    // Merge extends chain (ALWAYS resolve for merging, regardless of mergeExtends)
-    if (node.extends.length > 0) {
-      for (const extendName of node.extends) {
-        // Try with and without dot prefix
-        const targetName = graph.has(extendName) ? extendName : `.${extendName}`
-        const targetNode = graph.get(targetName)
-
-        if (!targetNode) {
-          // Unknown target, keep in extends
-          keptExtends.push(extendName)
-          continue
-        }
-
-        // Check if we should merge this extend
-        let shouldMerge = resolveTemplatesOnly ? targetName.startsWith(".") : true
-
-        // Check if remote extends should be merged
-        if (targetNode.isRemote && !mergeRemoteExtends) {
-          shouldMerge = false
-        }
-
-        if (shouldMerge) {
-          // Use fully resolved definition (without extends field) for merging
-          const targetDef = fullyResolved.get(targetName)
-          if (targetDef) {
-            mergedDef = mergeJobDefinitions(mergedDef, targetDef)
-          } else {
-            mergedDef = mergeJobDefinitions(mergedDef, targetNode.definition)
-          }
-
-          // If resolveTemplatesOnly and this is a template, collect non-template extends from it
-          if (resolveTemplatesOnly && targetName.startsWith(".")) {
-            collectNonTemplateExtends(extendName)
-          }
-        } else {
-          // Don't merge, but keep in extends (normal job when resolveTemplatesOnly: true)
-          keptExtends.push(extendName)
-        }
-      }
-    }
-
-    // Merge with the job's own definition (highest priority)
-    const finalDef = mergeJobDefinitions(mergedDef, node.definition)
-
-    // Store fully resolved version (for use by jobs that extend from this)
-    fullyResolved.set(name, finalDef)
-
-    // Determine what to output based on mergeExtends
-    if (mergeExtends === false) {
-      // Keep extends as-is in output
-      resolved.set(name, node.definition)
-      continue
-    }
-
-    // Add kept extends to final definition (or remove extends entirely if none kept)
-    let outputDef: JobDefinitionOutput
-    if (keptExtends.length > 0) {
-      if (keptExtends.length === 1) {
-        outputDef = { ...finalDef, extends: keptExtends[0] }
-      } else {
-        outputDef = { ...finalDef, extends: keptExtends }
-      }
-    } else {
-      // Remove extends field entirely if nothing to keep
-      const { extends: _extends, ...rest } = finalDef
-      outputDef = rest as JobDefinitionOutput
-    }
-
-    resolved.set(name, outputDef)
-  }
-
-  // Convert Map back to Record
-  const resolvedRecord: Record<string, JobDefinitionOutput> = {}
-  for (const [name, def] of resolved.entries()) {
-    resolvedRecord[name] = def
+    resolveNodeExtends(name, graph, context, fullyResolved, resolved)
   }
 
   return {
-    resolved: resolvedRecord,
+    resolved: mapToRecord(resolved),
     errors: context.errors,
     warnings: context.warnings,
     skippedChecks: context.skippedChecks,
   }
+}
+
+function resolveNodeExtends(
+  name: string,
+  graph: Map<string, ExtendsGraphNode>,
+  context: ResolutionContext,
+  fullyResolved: Map<string, JobDefinitionNormalized>,
+  resolved: Map<string, JobDefinitionOutput>
+): void {
+  const node = graph.get(name)
+  if (!node) {
+    return
+  }
+
+  const options = getEffectiveOptions(name, context)
+  const mergeResult = mergeExtendsChain(
+    node,
+    graph,
+    fullyResolved,
+    options.resolveTemplatesOnly,
+    options.mergeRemoteExtends
+  )
+
+  const finalDef = mergeJobDefinitions(mergeResult.mergedDef, node.definition)
+  fullyResolved.set(name, finalDef)
+
+  if (!options.mergeExtends) {
+    resolved.set(name, node.definition)
+    return
+  }
+
+  resolved.set(name, buildOutputDefinition(finalDef, mergeResult.keptExtends))
+}
+
+function getEffectiveOptions(
+  name: string,
+  context: ResolutionContext
+): {
+  mergeExtends: boolean
+  resolveTemplatesOnly: boolean
+  mergeRemoteExtends: boolean
+} {
+  const jobOpts = context.jobOptions[name]
+
+  return {
+    mergeExtends: jobOpts?.mergeExtends ?? context.globalOptions.mergeExtends,
+    resolveTemplatesOnly:
+      jobOpts?.resolveTemplatesOnly ??
+      context.globalOptions.resolveTemplatesOnly,
+    mergeRemoteExtends: context.globalOptions.mergeRemoteExtends,
+  }
+}
+
+function mergeExtendsChain(
+  node: ExtendsGraphNode,
+  graph: Map<string, ExtendsGraphNode>,
+  fullyResolved: Map<string, JobDefinitionNormalized>,
+  resolveTemplatesOnly: boolean,
+  mergeRemoteExtends: boolean
+): {
+  mergedDef: JobDefinitionNormalized
+  keptExtends: string[]
+} {
+  let mergedDef: JobDefinitionNormalized = {}
+  const keptExtends: string[] = []
+
+  for (const extendName of node.extends) {
+    const target = getTarget(graph, extendName)
+    if (!target) {
+      pushUnique(keptExtends, extendName)
+      continue
+    }
+
+    const shouldMerge =
+      (!resolveTemplatesOnly || target.name.startsWith(".")) &&
+      (!target.node.isRemote || mergeRemoteExtends)
+
+    if (!shouldMerge) {
+      pushUnique(keptExtends, extendName)
+      continue
+    }
+
+    const targetDef = fullyResolved.get(target.name) ?? target.node.definition
+    mergedDef = mergeJobDefinitions(mergedDef, targetDef)
+
+    if (resolveTemplatesOnly && target.name.startsWith(".")) {
+      collectNonTemplateExtends(
+        graph,
+        extendName,
+        keptExtends,
+        mergeRemoteExtends
+      )
+    }
+  }
+
+  return { mergedDef, keptExtends }
+}
+
+function collectNonTemplateExtends(
+  graph: Map<string, ExtendsGraphNode>,
+  extendName: string,
+  keptExtends: string[],
+  mergeRemoteExtends: boolean,
+  visited = new Set<string>()
+): void {
+  if (visited.has(extendName)) {
+    return
+  }
+  visited.add(extendName)
+
+  const target = getTarget(graph, extendName)
+  if (!target?.node.extends) {
+    return
+  }
+
+  for (const nestedExtend of target.node.extends) {
+    const nestedTarget = getTarget(graph, nestedExtend)
+
+    if (
+      !nestedTarget ||
+      (nestedTarget.node.isRemote && !mergeRemoteExtends) ||
+      !nestedTarget.name.startsWith(".")
+    ) {
+      pushUnique(keptExtends, nestedExtend)
+      continue
+    }
+
+    collectNonTemplateExtends(
+      graph,
+      nestedExtend,
+      keptExtends,
+      mergeRemoteExtends,
+      visited
+    )
+  }
+}
+
+function getTarget(
+  graph: Map<string, ExtendsGraphNode>,
+  extendName: string
+): { name: string; node: ExtendsGraphNode } | null {
+  const targetName = graph.has(extendName) ? extendName : `.${extendName}`
+  const targetNode = graph.get(targetName)
+
+  if (!targetNode) {
+    return null
+  }
+
+  return { name: targetName, node: targetNode }
+}
+
+function buildOutputDefinition(
+  finalDef: JobDefinitionNormalized,
+  keptExtends: readonly string[]
+): JobDefinitionOutput {
+  if (keptExtends.length === 0) {
+    const { extends: _extends, ...rest } = finalDef
+    return rest as JobDefinitionOutput
+  }
+
+  if (keptExtends.length === 1) {
+    return { ...finalDef, extends: keptExtends[0] }
+  }
+
+  return { ...finalDef, extends: [...keptExtends] }
+}
+
+function pushUnique(target: string[], value: string): void {
+  if (!target.includes(value)) {
+    target.push(value)
+  }
+}
+
+function mapToRecord(
+  resolved: Map<string, JobDefinitionOutput>
+): Record<string, JobDefinitionOutput> {
+  const resolvedRecord: Record<string, JobDefinitionOutput> = {}
+  for (const [name, def] of resolved.entries()) {
+    resolvedRecord[name] = def
+  }
+  return resolvedRecord
 }

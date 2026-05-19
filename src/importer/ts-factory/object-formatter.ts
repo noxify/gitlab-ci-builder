@@ -54,7 +54,9 @@ function valueWithContext(key: string, value: unknown): ts.Expression {
 
   // Single value properties: unwrap single-element arrays
   if (
-    SINGLE_VALUE_PROPERTIES.includes(key as (typeof SINGLE_VALUE_PROPERTIES)[number]) &&
+    SINGLE_VALUE_PROPERTIES.includes(
+      key as (typeof SINGLE_VALUE_PROPERTIES)[number]
+    ) &&
     Array.isArray(value) &&
     value.length === 1
   ) {
@@ -93,12 +95,12 @@ function valueWithContext(key: string, value: unknown): ts.Expression {
  */
 export function objectToExpression(
   obj: Record<string, unknown>,
-  forceQuotedKeys = false,
+  forceQuotedKeys = false
 ): ts.ObjectLiteralExpression {
   const properties = Object.entries(obj).map(([key, value]) => {
     // Force quoted keys for variables or if key is not a valid identifier
     const propertyName =
-      forceQuotedKeys || !/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key)
+      forceQuotedKeys || !/^[a-zA-Z_$][a-zA-Z0-9_$]*$/u.test(key)
         ? ts.factory.createStringLiteral(key)
         : ts.factory.createIdentifier(key)
 
@@ -107,5 +109,8 @@ export function objectToExpression(
     return ts.factory.createPropertyAssignment(propertyName, propertyValue)
   })
 
-  return ts.factory.createObjectLiteralExpression(properties, properties.length > 1)
+  return ts.factory.createObjectLiteralExpression(
+    properties,
+    properties.length > 1
+  )
 }

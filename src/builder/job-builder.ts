@@ -1,14 +1,7 @@
-import type {
-  Artifacts,
-  Cache,
-  Image,
-  JobDefinitionInput,
-  JobOptions,
-  Script,
-  Services,
-  Variables,
-} from "../schema"
-import type { ConfigBuilder } from "./ConfigBuilder"
+import type { Image, Script, Services, Variables } from "../schema/base"
+import type { Artifacts, Cache, JobDefinitionInput } from "../schema/job"
+import type { JobOptions } from "../schema/policies"
+import type { ConfigBuilder } from "./config-builder"
 
 /**
  * Fluent builder for job definitions
@@ -26,7 +19,7 @@ export class JobBuilder {
     config: ConfigBuilder,
     isTemplate = false,
     initialDefinition?: JobDefinitionInput,
-    initialOptions?: JobOptions,
+    initialOptions?: JobOptions
   ) {
     this.jobName = name
     this.config = config
@@ -732,7 +725,11 @@ export class JobBuilder {
   private save(): void {
     // Use type assertion to access internal methods
     const configInternal = this.config as unknown as {
-      template: (name: string, def: JobDefinitionInput, opts: JobOptions) => void
+      template: (
+        name: string,
+        def: JobDefinitionInput,
+        opts: JobOptions
+      ) => void
       job: (name: string, def: JobDefinitionInput, opts: JobOptions) => void
     }
 

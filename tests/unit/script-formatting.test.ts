@@ -1,3 +1,5 @@
+// oxlint-disable eslint/no-template-curly-in-string
+// oxlint-disable vitest/max-expects
 import dedent from "dedent"
 import { describe, expect, it } from "vitest"
 
@@ -24,7 +26,9 @@ describe("Script formatting", () => {
             echo "step3"
     `
     const result = fromYaml(yaml)
-    expect(result).toContain('script: ["echo \\"step1\\"", "echo \\"step2\\"", "echo \\"step3\\""]')
+    expect(result).toContain(
+      'script: ["echo \\"step1\\"", "echo \\"step2\\"", "echo \\"step3\\""]'
+    )
     expect(result).not.toContain("script: [[")
   })
 
@@ -122,7 +126,7 @@ test:
     const result = fromYaml(yaml)
     expect(result).toContain("before_script:")
     expect(result).toContain(
-      '"mkdir ~/.npm-global", "export PATH=$PATH:~/.npm-global/bin", "npm i -g pnpm@10.22.0"',
+      '"mkdir ~/.npm-global", "export PATH=$PATH:~/.npm-global/bin", "npm i -g pnpm@10.22.0"'
     )
   })
 
@@ -151,7 +155,7 @@ test:
     const result = fromYaml(yaml)
     // || and && are logical operators, not pipes - should be split into array
     expect(result).toContain(
-      '["command1 || echo \\"fallback\\"", "command2 && echo \\"success\\""]',
+      '["command1 || echo \\"fallback\\"", "command2 && echo \\"success\\""]'
     )
   })
 

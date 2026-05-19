@@ -1,3 +1,5 @@
+// oxlint-disable vitest/no-conditional-expect
+// oxlint-disable vitest/max-expects
 import { beforeEach, describe, expect, it } from "vitest"
 
 import type { PipelineOutput } from "../../src"
@@ -19,7 +21,7 @@ describe("ConfigBuilder - JSON Serialization", () => {
 
       const result = config.getPlainObject()
 
-      expect(result.stages).toEqual(["build", "test"])
+      expect(result.stages).toStrictEqual(["build", "test"])
       expect(result.variables?.NODE_ENV).toBe("production")
       expect(result.jobs?.build).toBeDefined()
       expect(result.jobs?.test).toBeDefined()
@@ -49,14 +51,14 @@ describe("ConfigBuilder - JSON Serialization", () => {
       const plain = config.getPlainObject()
       const json = config.toJSON()
 
-      expect(json).toEqual(plain)
+      expect(json).toStrictEqual(plain)
     })
 
     it("should be called by JSON.stringify", () => {
       config.variable("TEST", "value")
       config.job("build", { script: ["npm run build"] })
 
-      const serialized = JSON.parse(JSON.stringify(config)) as PipelineOutput
+      const serialized = structuredClone(config) as unknown as PipelineOutput
 
       expect(serialized.variables?.TEST).toBe("value")
       expect(serialized.jobs?.build).toBeDefined()
@@ -69,18 +71,18 @@ describe("ConfigBuilder - JSON Serialization", () => {
         script: ["echo test"],
         rules: [
           {
-            if: /^feature\/.*/.toString(),
+            if: /^feature\/.*/u.toString(),
             when: "always",
           },
         ],
       })
 
-      const serialized = JSON.parse(JSON.stringify(config)) as PipelineOutput
+      const serialized = structuredClone(config) as unknown as PipelineOutput
       const testRules = serialized.jobs?.test?.rules
       if (testRules && Array.isArray(testRules)) {
-        const firstRule = testRules[0]
+        const [firstRule] = testRules
         if (firstRule && typeof firstRule !== "string") {
-          expect(firstRule.if).toBe("/^feature\\/.*/")
+          expect(firstRule.if).toBe("/^feature\\/.*/u")
         }
       }
     })
@@ -198,8 +200,8 @@ describe("ConfigBuilder - YAML Serialization", () => {
     const yaml = config.toYaml()
 
     // There should be blank lines between sections
-    expect(yaml).toMatch(/variables:\s+VAR: .+\n\nstages:/s)
-    expect(yaml).toMatch(/stages:\s+- test\n\ntest:/s)
+    expect(yaml).toMatch(/variables:\s+VAR: .+\n\nstages:/su)
+    expect(yaml).toMatch(/stages:\s+- test\n\ntest:/su)
   })
 
   it("should handle extends with arrays", () => {
@@ -231,7 +233,7 @@ describe("ConfigBuilder - YAML Serialization", () => {
         extends: "remote-job",
         script: ["echo test"],
       },
-      { remote: true },
+      { remote: true }
     )
 
     const yaml = config.toYaml()

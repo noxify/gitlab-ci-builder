@@ -55,12 +55,15 @@ export class RuleEvaluator {
         paths = rule.exists
       } else {
         // Object format with paths, project, ref
-        paths = rule.exists.paths
+        ;({ paths } = rule.exists)
       }
 
       // Check if at least one file exists
       const anyExists = paths.some((pattern) => {
-        const interpolatedPath = this.interpolateVariables(pattern, context.variables)
+        const interpolatedPath = RuleEvaluator.interpolateVariables(
+          pattern,
+          context.variables
+        )
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const absolutePath = resolve(context.basePath!, interpolatedPath)
         return existsSync(absolutePath)
@@ -117,132 +120,225 @@ export class RuleEvaluator {
   /**
    * Interpolate variables in a string (e.g., $VAR_NAME or ${VAR_NAME})
    */
-  private interpolateVariables(str: string, variables: Record<string, string>): string {
+  private static interpolateVariables(
+    str: string,
+    variables: Record<string, string>
+  ): string {
     // Replace ${VAR_NAME} and $VAR_NAME with actual values
-    return str.replace(/\$\{?(\w+)\}?/g, (_match, varName) => {
-      return variables[varName as string] ?? ""
-    })
+    return str.replaceAll(
+      /\$\{?(\w+)\}?/gu,
+      (_match, varName) => variables[varName as string] ?? ""
+    )
   }
 
   /**
    * Evaluate if condition string
    */
   private evaluateCondition(condition: string, context: RuleContext): boolean {
-    // Handle && operator (AND logic)
+    const logicalResult = this.evaluateLogicalCondition(condition, context)
+    if (logicalResult !== null) {
+      return logicalResult
+    }
+
+    const varToVarResult = RuleEvaluator.evaluateVariableToVariableCondition(
+      condition,
+      context
+    )
+    if (varToVarResult !== null) {
+      return varToVarResult
+    }
+
+    const varToValueResult = RuleEvaluator.evaluateVariableToValueCondition(
+      condition,
+      context
+    )
+    if (varToValueResult !== null) {
+      return varToValueResult
+    }
+
+    const regexResult = RuleEvaluator.evaluateRegexCondition(condition, context)
+    if (regexResult !== null) {
+      return regexResult
+    }
+
+    const variableExistsResult = RuleEvaluator.evaluateVariableExistsCondition(
+      condition,
+      context
+    )
+    if (variableExistsResult !== null) {
+      return variableExistsResult
+    }
+
+    const specialVarResult = RuleEvaluator.evaluateSpecialVariableCondition(
+      condition,
+      context
+    )
+    if (specialVarResult !== null) {
+      return specialVarResult
+    }
+
+    const pipelineSourceResult = RuleEvaluator.evaluatePipelineSourceCondition(
+      condition,
+      context
+    )
+    if (pipelineSourceResult !== null) {
+      return pipelineSourceResult
+    }
+
+    return false
+  }
+
+  private evaluateLogicalCondition(
+    condition: string,
+    context: RuleContext
+  ): boolean | null {
     if (condition.includes(" && ")) {
       const parts = condition.split(" && ")
       return parts.every((part) => this.evaluateCondition(part.trim(), context))
     }
 
-    // Handle || operator (OR logic)
     if (condition.includes(" || ")) {
       const parts = condition.split(" || ")
       return parts.some((part) => this.evaluateCondition(part.trim(), context))
     }
 
-    // $VAR_NAME == $OTHER_VAR (variable-to-variable comparison)
-    const varToVarMatchRegex = /\$(\w+)\s*==\s*\$(\w+)/
-    const varToVarMatch = varToVarMatchRegex.exec(condition)
+    return null
+  }
+
+  private static evaluateVariableToVariableCondition(
+    condition: string,
+    context: RuleContext
+  ): boolean | null {
+    const varToVarMatch = /\$(\w+)\s*==\s*\$(\w+)/u.exec(condition)
     if (varToVarMatch) {
-      const var1 = varToVarMatch[1]
-      const var2 = varToVarMatch[2]
-      if (!var1 || !var2) return false
+      const [, var1, var2] = varToVarMatch
+      if (!var1 || !var2) {
+        return false
+      }
       return context.variables[var1] === context.variables[var2]
     }
 
-    // $VAR_NAME != $OTHER_VAR (variable-to-variable not equal)
-    const varToVarNotMatchRegex = /\$(\w+)\s*!=\s*\$(\w+)/
-    const varToVarNotMatch = varToVarNotMatchRegex.exec(condition)
-    if (varToVarNotMatch) {
-      const var1 = varToVarNotMatch[1]
-      const var2 = varToVarNotMatch[2]
-      if (!var1 || !var2) return false
-      return context.variables[var1] !== context.variables[var2]
+    const varToVarNotMatch = /\$(\w+)\s*!=\s*\$(\w+)/u.exec(condition)
+    if (!varToVarNotMatch) {
+      return null
     }
 
-    // $VAR_NAME == "value"
-    const exactMatchRegex = /\$(\w+)\s*==\s*["'](.+?)["']/
-    const exactMatch = exactMatchRegex.exec(condition)
+    const [, var1, var2] = varToVarNotMatch
+    if (!var1 || !var2) {
+      return false
+    }
+    return context.variables[var1] !== context.variables[var2]
+  }
+
+  private static evaluateVariableToValueCondition(
+    condition: string,
+    context: RuleContext
+  ): boolean | null {
+    const exactMatch = /\$(\w+)\s*==\s*["'](.+?)["']/u.exec(condition)
     if (exactMatch) {
-      const varName = exactMatch[1]
-      const value = exactMatch[2]
-      if (!varName || !value) return false
+      const [, varName, value] = exactMatch
+      if (!varName || !value) {
+        return false
+      }
       return context.variables[varName] === value
     }
 
-    // $VAR_NAME != "value"
-    const notMatchRegex = /\$(\w+)\s*!=\s*["'](.+?)["']/
-    const notMatch = notMatchRegex.exec(condition)
-    if (notMatch) {
-      const varName = notMatch[1]
-      const value = notMatch[2]
-      if (!varName || !value) return false
-      return context.variables[varName] !== value
+    const notMatch = /\$(\w+)\s*!=\s*["'](.+?)["']/u.exec(condition)
+    if (!notMatch) {
+      return null
     }
 
-    // $VAR_NAME =~ /pattern/i (regex match, case insensitive)
-    const regexMatchRegex = /\$(\w+)\s*=~\s*\/(.+?)\/([i]?)/
-    const regexMatch = regexMatchRegex.exec(condition)
+    const [, varName, value] = notMatch
+    if (!varName || !value) {
+      return false
+    }
+    return context.variables[varName] !== value
+  }
+
+  private static evaluateRegexCondition(
+    condition: string,
+    context: RuleContext
+  ): boolean | null {
+    const regexMatch = /\$(\w+)\s*=~\s*\/(.+?)\/([i]?)/u.exec(condition)
     if (regexMatch) {
-      const varName = regexMatch[1]
-      const pattern = regexMatch[2]
-      const flags = regexMatch[3]
-      if (!varName || !pattern) return false
+      const [, varName, pattern, flags] = regexMatch
+      if (!varName || !pattern) {
+        return false
+      }
       const value = context.variables[varName] ?? ""
       const regex = new RegExp(pattern, flags)
       return regex.test(value)
     }
 
-    // $VAR_NAME !~ /pattern/i (regex not match)
-    const regexNotMatchRegex = /\$(\w+)\s*!~\s*\/(.+?)\/([i]?)/
-    const regexNotMatch = regexNotMatchRegex.exec(condition)
-    if (regexNotMatch) {
-      const varName = regexNotMatch[1]
-      const pattern = regexNotMatch[2]
-      const flags = regexNotMatch[3]
-      if (!varName || !pattern) return false
-      const value = context.variables[varName] ?? ""
-      const regex = new RegExp(pattern, flags)
-      return !regex.test(value)
+    const regexNotMatch = /\$(\w+)\s*!~\s*\/(.+?)\/([i]?)/u.exec(condition)
+    if (!regexNotMatch) {
+      return null
     }
 
-    // $VAR_NAME (variable exists and is truthy)
-    const varExistsRegex = /^\$(\w+)$/
-    const varExists = varExistsRegex.exec(condition)
-    if (varExists) {
-      const varName = varExists[1]
-      if (!varName) return false
-      const value = context.variables[varName]
-      return value !== undefined && value !== "" && value !== "false" && value !== "0"
+    const [, varName, pattern, flags] = regexNotMatch
+    if (!varName || !pattern) {
+      return false
+    }
+    const value = context.variables[varName] ?? ""
+    const regex = new RegExp(pattern, flags)
+    return !regex.test(value)
+  }
+
+  private static evaluateVariableExistsCondition(
+    condition: string,
+    context: RuleContext
+  ): boolean | null {
+    const varExists = /^\$(\w+)$/u.exec(condition)
+    if (!varExists) {
+      return null
     }
 
-    // $CI_COMMIT_BRANCH (special variables)
-    if (condition === "$CI_COMMIT_BRANCH" && context.branch) {
-      return true
+    const [, varName] = varExists
+    if (!varName) {
+      return false
     }
 
-    if (condition === "$CI_COMMIT_TAG" && context.tag) {
-      return true
+    const value = context.variables[varName]
+    return (
+      value !== undefined && value !== "" && value !== "false" && value !== "0"
+    )
+  }
+
+  private static evaluateSpecialVariableCondition(
+    condition: string,
+    context: RuleContext
+  ): boolean | null {
+    if (condition === "$CI_COMMIT_BRANCH") {
+      return !!context.branch
     }
 
-    // $CI_MERGE_REQUEST_ID (merge request check)
+    if (condition === "$CI_COMMIT_TAG") {
+      return !!context.tag
+    }
+
     if (condition === "$CI_MERGE_REQUEST_ID") {
       return !!context.mergeRequestLabels
     }
 
-    // $CI_PIPELINE_SOURCE == "merge_request_event"
-    const pipelineSourceRegex = /\$CI_PIPELINE_SOURCE\s*==\s*["'](.+?)["']/
-    const pipelineSource = pipelineSourceRegex.exec(condition)
-    if (pipelineSource) {
-      const [, source] = pipelineSource
-      if (source === "merge_request_event") {
-        return !!context.mergeRequestLabels
-      }
-      // For other sources, assume they don't match in simulation
-      return false
+    return null
+  }
+
+  private static evaluatePipelineSourceCondition(
+    condition: string,
+    context: RuleContext
+  ): boolean | null {
+    const pipelineSource = /\$CI_PIPELINE_SOURCE\s*==\s*["'](.+?)["']/u.exec(
+      condition
+    )
+    if (!pipelineSource) {
+      return null
     }
 
-    // Default: assume condition doesn't match
+    const [, source] = pipelineSource
+    if (source === "merge_request_event") {
+      return !!context.mergeRequestLabels
+    }
+
     return false
   }
 
@@ -251,7 +347,7 @@ export class RuleEvaluator {
    */
   evaluateRules(
     rules: Rule[] | undefined,
-    context: RuleContext,
+    context: RuleContext
   ): { shouldRun: boolean; when: string } {
     if (!rules || rules.length === 0) {
       return { shouldRun: true, when: "on_success" }

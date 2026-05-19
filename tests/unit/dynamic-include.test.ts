@@ -1,12 +1,28 @@
+// oxlint-disable vitest/max-expects
 import { globSync } from "tinyglobby"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ConfigBuilder } from "../../src"
 
-// Mock tinyglobby
-vi.mock("tinyglobby", () => ({
-  globSync: vi.fn(),
+type GlobSyncFn = (
+  pattern: string,
+  options?: Record<string, unknown>
+) => string[]
+
+const mocks = vi.hoisted(() => ({
+  globSync: vi.fn<GlobSyncFn>(),
 }))
+
+const mockModuleImport = (path: string): Promise<unknown> => import(path)
+
+vi.mock(import("tinyglobby"), async (importOriginal) => {
+  const actual = await importOriginal()
+
+  return {
+    ...actual,
+    globSync: mocks.globSync as unknown as typeof actual.globSync,
+  }
+})
 
 describe("ConfigBuilder - include", () => {
   let config: ConfigBuilder
@@ -20,14 +36,16 @@ describe("ConfigBuilder - include", () => {
     vi.mocked(globSync).mockReturnValue(["/fake/file.ts"])
 
     // Mock the import to return an object without default or extendConfig
-    vi.doMock("/fake/file.ts", () => ({
+    vi.doMock(mockModuleImport("/fake/file.ts"), () => ({
       default: undefined,
       extendConfig: undefined,
       someOtherExport: "value",
     }))
 
-    await expect(config.dynamicInclude(process.cwd(), ["*.ts"])).rejects.toThrow(
-      /Please export a default function or a named "extendConfig" function!/,
+    await expect(
+      config.dynamicInclude(process.cwd(), ["*.ts"])
+    ).rejects.toThrow(
+      /Please export a default function or a named "extendConfig" function!/u
     )
 
     vi.doUnmock("/fake/file.ts")
@@ -37,33 +55,35 @@ describe("ConfigBuilder - include", () => {
     vi.mocked(globSync).mockReturnValue(["/fake/file.ts"])
 
     // Mock dynamic import with extendConfig as non-function
-    vi.doMock("/fake/file.ts", () => ({
+    vi.doMock(mockModuleImport("/fake/file.ts"), () => ({
       default: undefined,
       extendConfig: "not-a-function",
     }))
 
-    await expect(config.dynamicInclude(process.cwd(), ["*.ts"])).rejects.toThrow(
-      "The exported function is not a function!",
-    )
+    await expect(
+      config.dynamicInclude(process.cwd(), ["*.ts"])
+    ).rejects.toThrow(/The exported function is not a function!/u)
 
     vi.doUnmock("/fake/file.ts")
   })
 
   it("should call extendConfig for each matched file", async () => {
-    const mockExtendConfig = vi.fn((cfg: ConfigBuilder) => {
-      cfg.job("included-job", { script: ["echo included"] })
-      return cfg
-    })
+    const mockExtendConfig = vi.fn<(cfg: ConfigBuilder) => ConfigBuilder>(
+      (cfg: ConfigBuilder) => {
+        cfg.job("included-job", { script: ["echo included"] })
+        return cfg
+      }
+    )
 
     vi.mocked(globSync).mockReturnValue(["/fake/file1.ts", "/fake/file2.ts"])
 
     // Mock dynamic imports
-    vi.doMock("/fake/file1.ts", () => ({
+    vi.doMock(mockModuleImport("/fake/file1.ts"), () => ({
       default: undefined,
       extendConfig: mockExtendConfig,
     }))
 
-    vi.doMock("/fake/file2.ts", () => ({
+    vi.doMock(mockModuleImport("/fake/file2.ts"), () => ({
       default: undefined,
       extendConfig: mockExtendConfig,
     }))
@@ -100,23 +120,26 @@ describe("ConfigBuilder - include", () => {
   })
 
   it("should work with multiple globs", async () => {
-    const mockExtendConfig = vi.fn()
+    const mockExtendConfig = vi.fn<() => void>()
 
     vi.mocked(globSync)
       .mockReturnValueOnce(["/fake/config1.ts"])
       .mockReturnValueOnce(["/fake/config2.ts"])
 
-    vi.doMock("/fake/config1.ts", () => ({
+    vi.doMock(mockModuleImport("/fake/config1.ts"), () => ({
       default: undefined,
       extendConfig: mockExtendConfig,
     }))
 
-    vi.doMock("/fake/config2.ts", () => ({
+    vi.doMock(mockModuleImport("/fake/config2.ts"), () => ({
       default: undefined,
       extendConfig: mockExtendConfig,
     }))
 
-    await config.dynamicInclude(process.cwd(), ["configs/*.ts", "pipelines/*.ts"])
+    await config.dynamicInclude(process.cwd(), [
+      "configs/*.ts",
+      "pipelines/*.ts",
+    ])
 
     expect(globSync).toHaveBeenCalledTimes(2)
     expect(mockExtendConfig).toHaveBeenCalledTimes(2)
@@ -126,39 +149,40 @@ describe("ConfigBuilder - include", () => {
   })
 
   it("should support default export", async () => {
-    const mockExtendConfig = vi.fn((cfg: ConfigBuilder) => {
-      cfg.job("default-job", { script: ["echo default"] })
-      return cfg
-    })
+    const mockExtendConfig = vi.fn<(cfg: ConfigBuilder) => ConfigBuilder>(
+      (cfg: ConfigBuilder) => {
+        cfg.job("default-job", { script: ["echo default"] })
+        return cfg
+      }
+    )
 
     vi.mocked(globSync).mockReturnValue(["/fake/default.ts"])
 
-    vi.doMock("/fake/default.ts", () => ({
+    vi.doMock(mockModuleImport("/fake/default.ts"), () => ({
       default: mockExtendConfig,
     }))
 
     await config.dynamicInclude(process.cwd(), ["*.ts"])
 
-    expect(mockExtendConfig).toHaveBeenCalledTimes(1)
-    expect(mockExtendConfig).toHaveBeenCalledWith(config)
+    expect(mockExtendConfig).toHaveBeenCalledExactlyOnceWith(config)
 
     vi.doUnmock("/fake/default.ts")
   })
 
   it("should prefer default export over named extendConfig", async () => {
-    const mockDefault = vi.fn()
-    const mockNamed = vi.fn()
+    const mockDefault = vi.fn<() => void>()
+    const mockNamed = vi.fn<() => void>()
 
     vi.mocked(globSync).mockReturnValue(["/fake/both.ts"])
 
-    vi.doMock("/fake/both.ts", () => ({
+    vi.doMock(mockModuleImport("/fake/both.ts"), () => ({
       default: mockDefault,
       extendConfig: mockNamed,
     }))
 
     await config.dynamicInclude(process.cwd(), ["*.ts"])
 
-    expect(mockDefault).toHaveBeenCalledTimes(1)
+    expect(mockDefault).toHaveBeenCalledOnce()
     expect(mockNamed).not.toHaveBeenCalled()
 
     vi.doUnmock("/fake/both.ts")

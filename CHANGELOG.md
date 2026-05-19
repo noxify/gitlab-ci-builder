@@ -70,7 +70,7 @@
     {
       strategy: "depend",
       outputPath: "ci/deploy-pipeline.yml",
-    },
+    }
   )
 
   await config.writeYamlFiles(".")
@@ -679,7 +679,13 @@
 
   ```typescript
   // Before (incorrect)
-  script: ['if [ "$VAR" = "true" ]; then', 'echo "yes"', "else", 'echo "no"', "fi"]
+  script: [
+    'if [ "$VAR" = "true" ]; then',
+    'echo "yes"',
+    "else",
+    'echo "no"',
+    "fi",
+  ]
   ```
 
   Now they are preserved as cohesive blocks:

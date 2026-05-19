@@ -1,7 +1,7 @@
-import fs from "fs/promises"
+import fs from "node:fs/promises"
 
-import type { CodeGeneratorOptions } from "./ts-factory/generator"
 import { parseYaml } from "./parser"
+import type { CodeGeneratorOptions } from "./ts-factory/generator"
 import { CodeGenerator } from "./ts-factory/generator"
 
 /**
@@ -105,7 +105,7 @@ export function fromYaml(yamlContent: string, options?: ImportOptions): string {
 export async function importYamlFile(
   yamlPath: string,
   outputPath?: string,
-  options?: ImportOptions,
+  options?: ImportOptions
 ): Promise<string> {
   const content = await fs.readFile(yamlPath, "utf-8")
   const tsCode = fromYaml(content, options)

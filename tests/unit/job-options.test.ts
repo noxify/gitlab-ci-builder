@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -20,7 +21,11 @@ describe("Job Options", () => {
 
     it("should merge remote templates (changed behavior for !reference support)", () => {
       const config = new ConfigBuilder()
-      config.template(".remote", { script: ["remote template"] }, { remote: true })
+      config.template(
+        ".remote",
+        { script: ["remote template"] },
+        { remote: true }
+      )
       config.template(".base", { script: ["base"] })
       config.job("child", { extends: [".remote", ".base"], stage: "test" })
 
@@ -57,7 +62,7 @@ describe("Job Options", () => {
       config.job(
         "child",
         { extends: [".base", "basejob"], stage: "test" },
-        { resolveTemplatesOnly: false },
+        { resolveTemplatesOnly: false }
       )
 
       const result = config.getPlainObject()
@@ -87,7 +92,11 @@ describe("Job Options", () => {
     it("should skip extends merging when mergeExtends is false", () => {
       const config = new ConfigBuilder()
       config.template(".base", { script: ["base command"] })
-      config.job("child", { extends: ".base", stage: "test" }, { mergeExtends: false })
+      config.job(
+        "child",
+        { extends: ".base", stage: "test" },
+        { mergeExtends: false }
+      )
 
       const result = config.getPlainObject()
       expect(result.jobs?.child).toMatchObject({
@@ -118,7 +127,11 @@ describe("Job Options", () => {
       config.globalOptions({ mergeExtends: false })
       config.template(".base", { script: ["base command"] })
       config.job("disabled", { extends: ".base", stage: "test" })
-      config.job("enabled", { extends: ".base", stage: "deploy" }, { mergeExtends: true })
+      config.job(
+        "enabled",
+        { extends: ".base", stage: "deploy" },
+        { mergeExtends: true }
+      )
 
       const result = config.getPlainObject()
 
@@ -218,7 +231,12 @@ describe("Job Options", () => {
     it("should work with extends method", () => {
       const config = new ConfigBuilder()
       config.template(".base", { script: ["base"] })
-      config.extends(".base", "hidden-child", { stage: "test" }, { hidden: true })
+      config.extends(
+        ".base",
+        "hidden-child",
+        { stage: "test" },
+        { hidden: true }
+      )
 
       const result = config.getPlainObject()
       expect(result.jobs?.[".hidden-child"]).toBeDefined()
@@ -233,7 +251,7 @@ describe("Job Options", () => {
       config.job(
         "test",
         { extends: ".base", stage: "test" },
-        { mergeExtends: false, hidden: false, mergeExisting: true },
+        { mergeExtends: false, hidden: false, mergeExisting: true }
       )
 
       const result = config.getPlainObject()
@@ -265,12 +283,12 @@ describe("Job Options", () => {
       expect(result.jobs?.job1?.extends).toBe(".base")
 
       // job2: local override mergeExtends=true
-      expect(result.jobs?.job2?.script).toEqual(["base"])
+      expect(result.jobs?.job2?.script).toStrictEqual(["base"])
       // Template extends are fully resolved
       expect(result.jobs?.job2?.extends).toBeUndefined()
 
       // job3: global mergeExisting=false, replaced
-      expect(result.jobs?.job3).toEqual({ script: ["override"] })
+      expect(result.jobs?.job3).toStrictEqual({ script: ["override"] })
 
       // job4: local override mergeExisting=true, merged
       expect(result.jobs?.job4).toMatchObject({

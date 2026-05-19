@@ -1,7 +1,7 @@
-import type { ConfigBuilder } from "../builder/ConfigBuilder"
-import type { JobDefinitionNormalized } from "../schema"
-import type { RuleContext } from "./rule-evaluator"
+import type { ConfigBuilder } from "../builder/config-builder"
 import { resolveExtends } from "../resolver/builder"
+import type { JobDefinitionNormalized } from "../schema/job"
+import type { RuleContext } from "./rule-evaluator"
 import { RuleEvaluator } from "./rule-evaluator"
 
 /**
@@ -84,11 +84,10 @@ export class PipelineSimulator {
     const globalVariables: Record<string, string> = {}
     if (plain.variables && typeof plain.variables === "object") {
       for (const [key, val] of Object.entries(plain.variables)) {
-        if (val && typeof val === "object" && "value" in val) {
-          globalVariables[key] = String(val.value)
-        } else {
-          globalVariables[key] = String(val)
-        }
+        globalVariables[key] =
+          val && typeof val === "object" && "value" in val
+            ? String(val.value)
+            : String(val)
       }
     }
 
@@ -109,7 +108,7 @@ export class PipelineSimulator {
     const templates: Record<string, JobDefinitionNormalized> = {}
 
     for (const [name, def] of Object.entries(allJobs)) {
-      const normalized = { ...def } as JobDefinitionNormalized
+      const normalized = def as JobDefinitionNormalized
 
       // Normalize extends: string -> array for resolveExtends
       if (normalized.extends && typeof normalized.extends === "string") {
@@ -137,83 +136,44 @@ export class PipelineSimulator {
         mergeRemoteExtends: true,
         performanceMode: false,
         missingExtendsPolicy: "ignore",
-      },
+      }
     )
 
     const simulations: JobSimulation[] = []
 
-    // Helper to check if a job is a template (starts with .)
-    const isTemplate = (name: string): boolean => name.startsWith(".")
-
-    // Helper to check if a job should be included in simulation
-    const shouldIncludeJob = (job: JobDefinitionNormalized): boolean => {
-      // A job must have at least one of these to be executable:
-      // - script or run (actual commands to execute)
-      // - trigger (child pipeline or multi-project pipeline)
-      // - needs with pipeline keyword (parent-child pipeline trigger)
-      // - release (create a GitLab release)
-      // - pages (GitLab Pages deployment)
-      if (job.script ?? job.run) return true
-      if (job.trigger) return true
-      if (job.release) return true
-      if (job.pages) return true
-
-      // Check if this is a child pipeline trigger via needs
-      if (job.needs && Array.isArray(job.needs)) {
-        const hasPipelineTrigger = job.needs.some((need) => {
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-          if (typeof need === "object" && need !== null) {
-            return "pipeline" in need
-          }
-          return false
-        })
-        if (hasPipelineTrigger) return true
-      }
-
-      // Special case: Jobs that have a stage defined (not using default 'test')
-      // are likely real jobs where the script comes from remote includes
-      // Include them if they have any content beyond just the stage
-      if (job.stage && job.stage !== "test") {
-        // If the job has variables, rules, or other config, it's likely a real job
-        // being configured locally with the actual implementation in a remote include
-        const hasConfig =
-          (job.variables && Object.keys(job.variables).length > 0) ??
-          (job.rules && job.rules.length > 0) ??
-          job.image ??
-          job.before_script ??
-          job.after_script ??
-          job.tags ??
-          job.only ??
-          job.except
-        if (hasConfig) return true
-      }
-
-      // Jobs with only variables/stage/tags/etc and no other content
-      // are pure template jobs that are meant to be extended
-      return false
-    }
-
     // Process jobs in stage order
     for (const stage of stages) {
       const stageJobs = Object.entries(resolvedJobs)
-        .filter(([name, _job]) => !isTemplate(name))
+        .filter(([name, _job]) => !PipelineSimulator.isTemplate(name))
         .filter(([_name, job]) => job.stage === stage)
-        .filter(([_name, job]) => shouldIncludeJob(job as JobDefinitionNormalized))
+        .filter(([_name, job]) =>
+          PipelineSimulator.shouldIncludeJob(job as JobDefinitionNormalized)
+        )
 
       for (const [name, job] of stageJobs) {
-        const simulation = this.simulateJob(name, job as JobDefinitionNormalized, mergedContext)
+        const simulation = this.simulateJob(
+          name,
+          job as JobDefinitionNormalized,
+          mergedContext
+        )
         simulations.push(simulation)
       }
     }
 
     // Add jobs without explicit stage
     const jobsWithoutStage = Object.entries(resolvedJobs)
-      .filter(([name, _job]) => !isTemplate(name))
+      .filter(([name, _job]) => !PipelineSimulator.isTemplate(name))
       .filter(([_name, job]) => !job.stage)
-      .filter(([_name, job]) => shouldIncludeJob(job as JobDefinitionNormalized))
+      .filter(([_name, job]) =>
+        PipelineSimulator.shouldIncludeJob(job as JobDefinitionNormalized)
+      )
 
     for (const [name, job] of jobsWithoutStage) {
-      const simulation = this.simulateJob(name, job as JobDefinitionNormalized, mergedContext)
+      const simulation = this.simulateJob(
+        name,
+        job as JobDefinitionNormalized,
+        mergedContext
+      )
       simulations.push(simulation)
     }
 
@@ -235,7 +195,7 @@ export class PipelineSimulator {
   private simulateJob(
     name: string,
     job: JobDefinitionNormalized,
-    context: RuleContext,
+    context: RuleContext
   ): JobSimulation {
     const stage = job.stage ?? "test"
 
@@ -257,11 +217,10 @@ export class PipelineSimulator {
     if (job.variables && typeof job.variables === "object") {
       for (const [key, val] of Object.entries(job.variables)) {
         // JobVariable can be string | number | boolean | { value: string, expand?: boolean }
-        if (val && typeof val === "object" && "value" in val) {
-          jobVariables[key] = String(val.value)
-        } else {
-          jobVariables[key] = String(val)
-        }
+        jobVariables[key] =
+          val && typeof val === "object" && "value" in val
+            ? String(val.value)
+            : String(val)
       }
     }
 
@@ -314,5 +273,59 @@ export class PipelineSimulator {
       shouldRun: true,
       when: "on_success",
     }
+  }
+
+  private static isTemplate(name: string): boolean {
+    return name.startsWith(".")
+  }
+
+  private static hasExecutableScript(job: JobDefinitionNormalized): boolean {
+    return !!(job.script ?? job.run)
+  }
+
+  private static hasPipelineTriggerInNeeds(
+    job: JobDefinitionNormalized
+  ): boolean {
+    if (!job.needs || !Array.isArray(job.needs)) {
+      return false
+    }
+    return job.needs.some(
+      (need) => typeof need === "object" && need !== null && "pipeline" in need
+    )
+  }
+
+  private static hasConfigForNonDefaultStage(
+    job: JobDefinitionNormalized
+  ): boolean {
+    if (!job.stage || job.stage === "test") {
+      return false
+    }
+    return !!(
+      (job.variables && Object.keys(job.variables).length > 0) ||
+      (job.rules && job.rules.length > 0) ||
+      job.image ||
+      job.before_script ||
+      job.after_script ||
+      job.tags ||
+      job.only ||
+      job.except
+    )
+  }
+
+  private static shouldIncludeJob(job: JobDefinitionNormalized): boolean {
+    // A job must have at least one of these to be executable:
+    // - script or run (actual commands to execute)
+    // - trigger (child pipeline or multi-project pipeline)
+    // - needs with pipeline keyword (parent-child pipeline trigger)
+    // - release (create a GitLab release)
+    // - pages (GitLab Pages deployment)
+    return (
+      this.hasExecutableScript(job) ||
+      !!job.trigger ||
+      !!job.release ||
+      !!job.pages ||
+      this.hasPipelineTriggerInNeeds(job) ||
+      this.hasConfigForNonDefaultStage(job)
+    )
   }
 }

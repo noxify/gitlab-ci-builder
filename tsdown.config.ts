@@ -2,8 +2,10 @@ import { defineConfig } from "tsdown"
 
 export default defineConfig({
   entry: ["src/index.ts", "src/cli/index.ts"],
-  minify: false,
+  minify: true,
   dts: true,
-  external: ["typescript"],
+  deps: {
+    neverBundle: ["typescript"],
+  },
   format: ["esm"],
 })

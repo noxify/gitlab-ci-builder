@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -20,16 +21,18 @@ describe("ConfigBuilder - extends", () => {
     })
 
     const result = config.getPlainObject()
-    if (!result.jobs) throw new Error("Expected jobs to be present")
-    const jobs = result.jobs
+    if (!result.jobs) {
+      throw new Error("Expected jobs to be present")
+    }
+    const { jobs } = result
 
     expect(jobs.build).toBeDefined()
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const buildJob = jobs.build!
     // After resolution, extends is removed and properties are merged
     expect(buildJob.image).toBe("node:22")
-    expect(buildJob.before_script).toEqual(["npm install"])
-    expect(buildJob.script).toEqual(["npm run build"])
+    expect(buildJob.before_script).toStrictEqual(["npm install"])
+    expect(buildJob.script).toStrictEqual(["npm run build"])
   })
 
   it("should handle extends with single-element array", () => {
@@ -50,11 +53,11 @@ describe("ConfigBuilder - extends", () => {
 
     expect(testJob).toBeDefined()
     // Properties from .base-cache should be merged
-    expect(testJob?.cache).toEqual({
+    expect(testJob?.cache).toStrictEqual({
       key: "my-cache",
       paths: ["node_modules/"],
     })
-    expect(testJob?.script).toEqual(["npm test"])
+    expect(testJob?.script).toStrictEqual(["npm test"])
     // Template extends are resolved and removed from output
     expect(testJob?.extends).toBeUndefined()
   })
@@ -80,7 +83,7 @@ describe("ConfigBuilder - extends", () => {
     expect(testJob).toBeDefined()
     // With mergeExtends: false, extends is kept and normalized to string
     expect(testJob?.extends).toBe(".base-cache")
-    expect(testJob?.script).toEqual(["npm test"])
+    expect(testJob?.script).toStrictEqual(["npm test"])
   })
 
   it("should extend from multiple jobs", () => {
@@ -97,16 +100,18 @@ describe("ConfigBuilder - extends", () => {
     })
 
     const result = config.getPlainObject()
-    if (!result.jobs) throw new Error("Expected jobs to be present")
-    const jobs = result.jobs
+    if (!result.jobs) {
+      throw new Error("Expected jobs to be present")
+    }
+    const { jobs } = result
 
     expect(jobs.build).toBeDefined()
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const buildJob = jobs.build!
     // Properties from both templates should be merged
     expect(buildJob.image).toBe("node:22")
-    expect(buildJob.tags).toEqual(["docker"])
-    expect(buildJob.script).toEqual(["npm run build"])
+    expect(buildJob.tags).toStrictEqual(["docker"])
+    expect(buildJob.script).toStrictEqual(["npm run build"])
   })
 
   it("should create hidden job when hidden parameter is true", () => {
@@ -114,8 +119,10 @@ describe("ConfigBuilder - extends", () => {
     config.extends(".base", "base-job", { stage: "test" }, { hidden: true })
 
     const result = config.getPlainObject()
-    if (!result.jobs) throw new Error("Expected jobs to be present")
-    const jobs = result.jobs
+    if (!result.jobs) {
+      throw new Error("Expected jobs to be present")
+    }
+    const { jobs } = result
 
     expect(jobs[".base-job"]).toBeDefined()
     expect(jobs["base-job"]).toBeUndefined()
@@ -132,8 +139,10 @@ describe("ConfigBuilder - extends", () => {
     })
 
     const result = config.getPlainObject()
-    if (!result.jobs) throw new Error("Expected jobs to be present")
-    const jobs = result.jobs
+    if (!result.jobs) {
+      throw new Error("Expected jobs to be present")
+    }
+    const { jobs } = result
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const testJob = jobs.test!
@@ -141,7 +150,7 @@ describe("ConfigBuilder - extends", () => {
     // Properties should be merged from template and job definition
     expect(testJob.image).toBe("node:22")
     expect(testJob.stage).toBe("test")
-    expect(testJob.script).toEqual(["npm test"])
+    expect(testJob.script).toStrictEqual(["npm test"])
   })
 
   it("should resolve extends in getPlainObject", () => {
@@ -156,16 +165,18 @@ describe("ConfigBuilder - extends", () => {
     })
 
     const result = config.getPlainObject()
-    if (!result.jobs) throw new Error("Expected jobs to be present")
-    const jobs = result.jobs
+    if (!result.jobs) {
+      throw new Error("Expected jobs to be present")
+    }
+    const { jobs } = result
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const buildJob = jobs.build!
 
     // After resolution, the job should have inherited properties
     expect(buildJob.image).toBe("node:22")
-    expect(buildJob.tags).toEqual(["docker"])
+    expect(buildJob.tags).toStrictEqual(["docker"])
     expect(buildJob.stage).toBe("build")
-    expect(buildJob.script).toEqual(["npm run build"])
+    expect(buildJob.script).toStrictEqual(["npm run build"])
   })
 
   it("should handle chain of extends", () => {
@@ -180,7 +191,7 @@ describe("ConfigBuilder - extends", () => {
       {
         before_script: ["npm install"],
       },
-      { mergeExtends: true },
+      { mergeExtends: true }
     )
 
     config.extends(".with-deps", "build", {
@@ -188,15 +199,17 @@ describe("ConfigBuilder - extends", () => {
     })
 
     const result = config.getPlainObject()
-    if (!result.jobs) throw new Error("Expected jobs to be present")
-    const jobs = result.jobs
+    if (!result.jobs) {
+      throw new Error("Expected jobs to be present")
+    }
+    const { jobs } = result
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const buildJob = jobs.build!
 
     // Should inherit from both .base and .with-deps
     expect(buildJob.image).toBe("node:22")
-    expect(buildJob.before_script).toEqual(["npm install"])
-    expect(buildJob.script).toEqual(["npm run build"])
+    expect(buildJob.before_script).toStrictEqual(["npm install"])
+    expect(buildJob.script).toStrictEqual(["npm run build"])
   })
 
   it("should allow extending with undefined job definition", () => {
@@ -207,13 +220,15 @@ describe("ConfigBuilder - extends", () => {
     config.extends(".template", "simple")
 
     const result = config.getPlainObject()
-    if (!result.jobs) throw new Error("Expected jobs to be present")
-    const jobs = result.jobs
+    if (!result.jobs) {
+      throw new Error("Expected jobs to be present")
+    }
+    const { jobs } = result
 
     expect(jobs.simple).toBeDefined()
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const simpleJob = jobs.simple!
     // Should inherit script from template
-    expect(simpleJob.script).toEqual(["echo template"])
+    expect(simpleJob.script).toStrictEqual(["echo template"])
   })
 })

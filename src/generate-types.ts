@@ -3,10 +3,11 @@ import { exec } from "node:child_process"
 import { writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { promisify } from "node:util"
-import type { ZodType } from "zod"
-import type { JSONSchema } from "zod/v4/core"
+
 import { compile } from "json-schema-to-typescript"
+import type { ZodType } from "zod"
 import { toJSONSchema } from "zod"
+import type { JSONSchema } from "zod/v4/core"
 
 import {
   GlobalVariableSchema,
@@ -18,7 +19,12 @@ import {
 } from "../src/schema/base"
 import { DefaultsSchema } from "../src/schema/defaults"
 import { IncludeInputSchema } from "../src/schema/include"
-import { ArtifactsSchema, BaseJobSchema, CacheSchema, RuleSchema } from "../src/schema/job"
+import {
+  ArtifactsSchema,
+  BaseJobSchema,
+  CacheSchema,
+  RuleSchema,
+} from "../src/schema/job"
 import { SpecSchema } from "../src/schema/spec"
 import { WorkflowRuleSchema, WorkflowSchema } from "../src/schema/workflow"
 
@@ -71,8 +77,8 @@ async function generateTypes(): Promise<void> {
 
       // Post-process: Only replace empty object types
       // Let ESLint fix the index signatures automatically
-      tsType = tsType.replace(/\| \{\}/g, "| Record<string, unknown>")
-      tsType = tsType.replace(/\{\}\[\]/g, "Record<string, unknown>[]")
+      tsType = tsType.replaceAll("| {}", "| Record<string, unknown>")
+      tsType = tsType.replaceAll("{}[]", "Record<string, unknown>[]")
 
       generatedTypes.push(tsType)
     } catch (error) {
@@ -90,14 +96,18 @@ async function generateTypes(): Promise<void> {
   try {
     await execAsync(`pnpm eslint --fix ${outputPath}`)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
+  } catch {
     // ESLint might exit with code 1 if there are unfixable errors, but that's okay
     // The file will still be formatted and most issues will be fixed
   }
 }
 
-generateTypes().catch((error: unknown) => {
-  // eslint-disable-next-line no-console
-  console.error("❌ Failed to generate types:", error)
-  process.exit(1)
-})
+;(async () => {
+  try {
+    await generateTypes()
+  } catch (error: unknown) {
+    // eslint-disable-next-line no-console
+    console.error("❌ Failed to generate types:", error)
+    process.exit(1)
+  }
+})()

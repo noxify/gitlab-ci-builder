@@ -5,15 +5,17 @@ import { z } from "zod"
  * @see https://docs.gitlab.com/ci/yaml/inputs.html#use-inputs-in-the-same-file
  */
 const GITLAB_INTERPOLATION_PATTERNS = [
-  /^\$\[\[.*?\]\]$/, // $[[ ... ]] interpolation (inputs, CI variables, etc.)
-  /^\$\{\{.*?\}\}$/, // ${{ ... }} interpolation
+  /^\$\[\[.*?\]\]$/u, // $[[ ... ]] interpolation (inputs, CI variables, etc.)
+  /^\$\{\{.*?\}\}$/u, // ${{ ... }} interpolation
 ]
 
 /**
  * Check if a value is a GitLab CI interpolation string
  */
-export function isGitLabInterpolation(value: unknown): boolean {
-  if (typeof value !== "string") return false
+export function isGitLabInterpolation(value?: unknown): boolean {
+  if (typeof value !== "string") {
+    return false
+  }
   return GITLAB_INTERPOLATION_PATTERNS.some((pattern) => pattern.test(value))
 }
 
@@ -30,9 +32,13 @@ export function isGitLabInterpolation(value: unknown): boolean {
  * // Accepts: 'test', 'deploy', $[[ inputs.stage ]]
  * ```
  */
-export function allowInterpolation(value: unknown, _ctx: z.RefinementCtx): void {
+export function allowInterpolation(
+  value: unknown,
+  _ctx: z.RefinementCtx
+): void {
   // If it's a GitLab interpolation, consider it valid
   if (isGitLabInterpolation(value)) {
+    // oxlint-disable-next-line no-useless-return
     return
   }
 
@@ -52,9 +58,12 @@ export function allowInterpolation(value: unknown, _ctx: z.RefinementCtx): void 
  * // Accepts: 5, $[[ inputs.parallel_count ]]
  * ```
  */
-export function orInterpolation<T extends z.ZodTypeAny>(schema: T): z.ZodUnion<[T, z.ZodString]> {
+export function orInterpolation<T extends z.ZodTypeAny>(
+  schema: T
+): z.ZodUnion<[T, z.ZodString]> {
   const interpolationSchema = z.string().refine(isGitLabInterpolation, {
-    message: "String must be a valid GitLab CI interpolation pattern like $[[ inputs.xxx ]]",
+    message:
+      "String must be a valid GitLab CI interpolation pattern like $[[ inputs.xxx ]]",
   })
 
   return z.union([schema, interpolationSchema])

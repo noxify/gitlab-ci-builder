@@ -1,9 +1,10 @@
+// oxlint-disable vitest/max-expects
 import { vol } from "memfs"
 import { beforeEach, describe, expect, test } from "vitest"
 
-import type { RuleContext } from "../../src/simulation"
 import { ConfigBuilder } from "../../src"
-import { PipelineSimulator } from "../../src/simulation"
+import { PipelineSimulator } from "../../src/simulation/pipeline-simulator"
+import type { RuleContext } from "../../src/simulation/rule-evaluator"
 
 describe("Pipeline Simulator - Edge Cases", () => {
   beforeEach(() => {
@@ -26,17 +27,19 @@ describe("Pipeline Simulator - Edge Cases", () => {
 
       expect(result.totalJobs).toBe(1)
       expect(result.jobs[0]?.name).toBe("trigger-child")
-      expect(result.jobs[0]?.shouldRun).toBe(false) // No rules means default behavior
+      expect(result.jobs[0]?.shouldRun).toBeFalsy() // No rules means default behavior
     })
 
     test("should include jobs with release", () => {
-      const config = new ConfigBuilder().stages("release").job("create-release", {
-        stage: "release",
-        release: {
-          tag_name: "v1.0.0",
-          description: "Release notes",
-        },
-      })
+      const config = new ConfigBuilder()
+        .stages("release")
+        .job("create-release", {
+          stage: "release",
+          release: {
+            tag_name: "v1.0.0",
+            description: "Release notes",
+          },
+        })
 
       const simulator = new PipelineSimulator()
       const context: RuleContext = { variables: {} }
@@ -124,7 +127,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       const result = simulator.simulate(config, context)
 
       expect(result.totalJobs).toBe(1)
-      expect(result.jobs[0]?.shouldRun).toBe(false) // Rules without script don't auto-run
+      expect(result.jobs[0]?.shouldRun).toBeFalsy() // Rules without script don't auto-run
     })
 
     test("should include jobs with image configuration", () => {
@@ -142,10 +145,12 @@ describe("Pipeline Simulator - Edge Cases", () => {
     })
 
     test("should include jobs with before_script", () => {
-      const config = new ConfigBuilder().stages("build").job("build-with-setup", {
-        stage: "build",
-        before_script: ["echo setup"],
-      })
+      const config = new ConfigBuilder()
+        .stages("build")
+        .job("build-with-setup", {
+          stage: "build",
+          before_script: ["echo setup"],
+        })
 
       const simulator = new PipelineSimulator()
       const context: RuleContext = { variables: {} }
@@ -155,10 +160,12 @@ describe("Pipeline Simulator - Edge Cases", () => {
     })
 
     test("should include jobs with after_script", () => {
-      const config = new ConfigBuilder().stages("deploy").job("test-with-cleanup", {
-        stage: "deploy", // Use non-default stage
-        after_script: ["echo cleanup"],
-      })
+      const config = new ConfigBuilder()
+        .stages("deploy")
+        .job("test-with-cleanup", {
+          stage: "deploy", // Use non-default stage
+          after_script: ["echo cleanup"],
+        })
 
       const simulator = new PipelineSimulator()
       const context: RuleContext = { variables: {} }
@@ -244,7 +251,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       const context: RuleContext = { variables: {} }
       const result = simulator.simulate(config, context)
 
-      expect(result.stages).toEqual(["build", "test"])
+      expect(result.stages).toStrictEqual(["build", "test"])
       expect(result.totalJobs).toBe(3)
     })
   })
@@ -267,7 +274,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       const result = simulator.simulate(config, context)
 
       // Job should run because JOB_VAR is set
-      expect(result.jobs[0]?.shouldRun).toBe(true)
+      expect(result.jobs[0]?.shouldRun).toBeTruthy()
     })
 
     test("should prioritize job variables over context variables", () => {
@@ -287,7 +294,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       const result = simulator.simulate(config, context)
 
       // Job should run because job variable overrides context
-      expect(result.jobs[0]?.shouldRun).toBe(true)
+      expect(result.jobs[0]?.shouldRun).toBeTruthy()
     })
   })
 
@@ -302,7 +309,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       expect(result.totalJobs).toBe(0)
       expect(result.jobsToRun).toBe(0)
       expect(result.jobsSkipped).toBe(0)
-      expect(result.jobs).toEqual([])
+      expect(result.jobs).toStrictEqual([])
     })
 
     test("should handle pipeline with only template jobs", () => {

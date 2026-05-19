@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -17,7 +18,7 @@ describe("ConfigBuilder - defaults", () => {
     const result = config.getPlainObject()
 
     expect(result.default?.image).toBe("node:22")
-    expect(result.default?.tags).toEqual(["docker"])
+    expect(result.default?.tags).toStrictEqual(["docker"])
   })
 
   it("should merge defaults", () => {
@@ -26,7 +27,7 @@ describe("ConfigBuilder - defaults", () => {
     const result = config.getPlainObject()
 
     expect(result.default?.image).toBe("node:22")
-    expect(result.default?.tags).toEqual(["docker"])
+    expect(result.default?.tags).toStrictEqual(["docker"])
   })
 
   it("should return this for chaining", () => {

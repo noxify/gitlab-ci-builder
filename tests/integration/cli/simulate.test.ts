@@ -1,16 +1,22 @@
+// oxlint-disable vitest/no-conditional-expect
+// oxlint-disable vitest/max-expects
 import dedent from "dedent"
 import { http, HttpResponse } from "msw"
 import { setupServer } from "msw/node"
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
 
-import type { RuleContext } from "../../../src/simulation"
-import { ConfigBuilder, convertYamlToConfig, resolveIncludes } from "../../../src"
-import { PipelineSimulator } from "../../../src/simulation"
+import {
+  ConfigBuilder,
+  convertYamlToConfig,
+  resolveIncludes,
+} from "../../../src"
+import { PipelineSimulator } from "../../../src/simulation/pipeline-simulator"
+import type { RuleContext } from "../../../src/simulation/rule-evaluator"
 
 const restHandlers = [
   // Level 1: Main remote template with nested includes
-  http.get("https://example.com/ci/level1.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/level1.yml", () =>
+    HttpResponse.text(dedent`
       include:
         - remote: https://example.com/ci/level2.yml
 
@@ -19,11 +25,11 @@ const restHandlers = [
         variables:
           LEVEL: "1"
     `)
-  }),
+  ),
 
   // Level 2: Nested template with further includes
-  http.get("https://example.com/ci/level2.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/level2.yml", () =>
+    HttpResponse.text(dedent`
       include:
         - remote: https://example.com/ci/level3.yml
 
@@ -35,11 +41,11 @@ const restHandlers = [
         rules:
           - if: $CI_COMMIT_BRANCH == "main"
     `)
-  }),
+  ),
 
   // Level 3: Deep nested template
-  http.get("https://example.com/ci/level3.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/level3.yml", () =>
+    HttpResponse.text(dedent`
       include:
         - remote: https://example.com/ci/level4.yml
 
@@ -50,11 +56,11 @@ const restHandlers = [
         rules:
           - if: $CI_COMMIT_BRANCH =~ /^(main|develop)$/
     `)
-  }),
+  ),
 
   // Level 4: Deepest level
-  http.get("https://example.com/ci/level4.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/level4.yml", () =>
+    HttpResponse.text(dedent`
       .level4-deploy:
         stage: deploy
         script:
@@ -65,11 +71,11 @@ const restHandlers = [
         needs:
           - build-app
     `)
-  }),
+  ),
 
   // Additional shared templates
-  http.get("https://example.com/ci/docker.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/docker.yml", () =>
+    HttpResponse.text(dedent`
       .docker-base:
         image: docker:latest
         services:
@@ -79,10 +85,10 @@ const restHandlers = [
         before_script:
           - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     `)
-  }),
+  ),
 
-  http.get("https://example.com/ci/security.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/security.yml", () =>
+    HttpResponse.text(dedent`
       .security-scan:
         stage: security
         image: aquasec/trivy:latest
@@ -92,7 +98,7 @@ const restHandlers = [
           - if: $CI_MERGE_REQUEST_ID
           - if: $CI_COMMIT_BRANCH == "main"
     `)
-  }),
+  ),
 ]
 
 const server = setupServer(...restHandlers)
@@ -149,26 +155,26 @@ describe("Pipeline Simulation - Integration Tests", () => {
       expect(result.totalJobs).toBe(3)
       expect(result.jobsToRun).toBe(3)
       expect(result.jobsSkipped).toBe(0)
-      expect(result.stages).toEqual(["build", "test", "deploy"])
+      expect(result.stages).toStrictEqual(["build", "test", "deploy"])
 
       const buildJob = result.jobs.find((j) => j.name === "build-app")
       expect(buildJob).toBeDefined()
-      expect(buildJob?.shouldRun).toBe(true)
+      expect(buildJob?.shouldRun).toBeTruthy()
       expect(buildJob?.stage).toBe("build")
 
       const testJob = result.jobs.find((j) => j.name === "test-app")
       expect(testJob).toBeDefined()
-      expect(testJob?.shouldRun).toBe(true)
+      expect(testJob?.shouldRun).toBeTruthy()
       expect(testJob?.stage).toBe("test")
 
       const deployJob = result.jobs.find((j) => j.name === "deploy-app")
       expect(deployJob).toBeDefined()
-      expect(deployJob?.shouldRun).toBe(true)
+      expect(deployJob?.shouldRun).toBeTruthy()
       expect(deployJob?.stage).toBe("deploy")
 
       // Verify stage order
       const jobNames = result.jobs.map((j) => j.name)
-      expect(jobNames).toEqual(["build-app", "test-app", "deploy-app"])
+      expect(jobNames).toStrictEqual(["build-app", "test-app", "deploy-app"])
     })
 
     it("should simulate pipeline with parallel jobs in same stage", () => {
@@ -209,13 +215,13 @@ describe("Pipeline Simulation - Integration Tests", () => {
 
       expect(result.totalJobs).toBe(4)
       expect(result.jobsToRun).toBe(4)
-      expect(result.stages).toEqual(["test", "deploy"])
+      expect(result.stages).toStrictEqual(["test", "deploy"])
 
       const testJobs = result.jobs.filter((j) => j.stage === "test")
       expect(testJobs).toHaveLength(3)
-      testJobs.forEach((job) => {
-        expect(job.shouldRun).toBe(true)
-      })
+      for (const job of testJobs) {
+        expect(job.shouldRun).toBeTruthy()
+      }
     })
   })
 
@@ -285,19 +291,25 @@ describe("Pipeline Simulation - Integration Tests", () => {
       expect(mainResult.jobsToRun).toBe(3) // build-main, test, deploy-production
 
       const buildMain = mainResult.jobs.find((j) => j.name === "build-main")
-      expect(buildMain?.shouldRun).toBe(true)
+      expect(buildMain?.shouldRun).toBeTruthy()
 
-      const buildDevelop = mainResult.jobs.find((j) => j.name === "build-develop")
-      expect(buildDevelop?.shouldRun).toBe(false)
+      const buildDevelop = mainResult.jobs.find(
+        (j) => j.name === "build-develop"
+      )
+      expect(buildDevelop?.shouldRun).toBeFalsy()
 
       const test = mainResult.jobs.find((j) => j.name === "test")
-      expect(test?.shouldRun).toBe(true)
+      expect(test?.shouldRun).toBeTruthy()
 
-      const deployProd = mainResult.jobs.find((j) => j.name === "deploy-production")
-      expect(deployProd?.shouldRun).toBe(true)
+      const deployProd = mainResult.jobs.find(
+        (j) => j.name === "deploy-production"
+      )
+      expect(deployProd?.shouldRun).toBeTruthy()
 
-      const deployStaging = mainResult.jobs.find((j) => j.name === "deploy-staging")
-      expect(deployStaging?.shouldRun).toBe(false)
+      const deployStaging = mainResult.jobs.find(
+        (j) => j.name === "deploy-staging"
+      )
+      expect(deployStaging?.shouldRun).toBeFalsy()
 
       // Simulate on develop branch
       const developContext: RuleContext = {
@@ -311,11 +323,15 @@ describe("Pipeline Simulation - Integration Tests", () => {
 
       expect(developResult.jobsToRun).toBe(3) // build-develop, test, deploy-staging
 
-      const buildDevelopDev = developResult.jobs.find((j) => j.name === "build-develop")
-      expect(buildDevelopDev?.shouldRun).toBe(true)
+      const buildDevelopDev = developResult.jobs.find(
+        (j) => j.name === "build-develop"
+      )
+      expect(buildDevelopDev?.shouldRun).toBeTruthy()
 
-      const deployStagingDev = developResult.jobs.find((j) => j.name === "deploy-staging")
-      expect(deployStagingDev?.shouldRun).toBe(true)
+      const deployStagingDev = developResult.jobs.find(
+        (j) => j.name === "deploy-staging"
+      )
+      expect(deployStagingDev?.shouldRun).toBeTruthy()
     })
 
     it("should respect workflow rules for merge requests", () => {
@@ -413,8 +429,10 @@ describe("Pipeline Simulation - Integration Tests", () => {
       const featureResult = simulator.simulate(config, featureContext)
       expect(featureResult.jobsToRun).toBeGreaterThanOrEqual(1) // At least build-feature
 
-      const buildFeature = featureResult.jobs.find((j) => j.name === "build-feature")
-      expect(buildFeature?.shouldRun).toBe(true)
+      const buildFeature = featureResult.jobs.find(
+        (j) => j.name === "build-feature"
+      )
+      expect(buildFeature?.shouldRun).toBeTruthy()
 
       // Hotfix branch
       const hotfixContext: RuleContext = {
@@ -427,8 +445,10 @@ describe("Pipeline Simulation - Integration Tests", () => {
       const hotfixResult = simulator.simulate(config, hotfixContext)
       expect(hotfixResult.jobsToRun).toBeGreaterThanOrEqual(1) // At least build-hotfix or test-all
 
-      const buildHotfix = hotfixResult.jobs.find((j) => j.name === "build-hotfix")
-      expect(buildHotfix?.shouldRun).toBe(true)
+      const buildHotfix = hotfixResult.jobs.find(
+        (j) => j.name === "build-hotfix"
+      )
+      expect(buildHotfix?.shouldRun).toBeTruthy()
     })
 
     it("should handle manual jobs with rules", () => {
@@ -472,11 +492,11 @@ describe("Pipeline Simulation - Integration Tests", () => {
       const result = simulator.simulate(config, mainContext)
 
       const deployProd = result.jobs.find((j) => j.name === "deploy-production")
-      expect(deployProd?.shouldRun).toBe(true)
+      expect(deployProd?.shouldRun).toBeTruthy()
       expect(deployProd?.when).toBe("manual")
 
       const deployStaging = result.jobs.find((j) => j.name === "deploy-staging")
-      expect(deployStaging?.shouldRun).toBe(false)
+      expect(deployStaging?.shouldRun).toBeFalsy()
     })
   })
 
@@ -543,13 +563,13 @@ describe("Pipeline Simulation - Integration Tests", () => {
 
       const buildApp = mainResult.jobs.find((j) => j.name === "build-app")
       if (buildApp) {
-        expect(buildApp.shouldRun).toBe(true)
+        expect(buildApp.shouldRun).toBeTruthy()
         expect(buildApp.stage).toBe("build")
       }
 
       const testApp = mainResult.jobs.find((j) => j.name === "test-app")
       if (testApp) {
-        expect(testApp.shouldRun).toBe(true)
+        expect(testApp.shouldRun).toBeTruthy()
         expect(testApp.stage).toBe("test")
       }
 
@@ -566,11 +586,11 @@ describe("Pipeline Simulation - Integration Tests", () => {
       // On develop: build-app should be skipped (rule: main only), test-app should run (rule: main|develop)
       const buildAppDev = developResult.jobs.find((j) => j.name === "build-app")
       expect(buildAppDev).toBeDefined()
-      expect(buildAppDev?.shouldRun).toBe(false)
+      expect(buildAppDev?.shouldRun).toBeFalsy()
 
       const testAppDev = developResult.jobs.find((j) => j.name === "test-app")
       expect(testAppDev).toBeDefined()
-      expect(testAppDev?.shouldRun).toBe(true)
+      expect(testAppDev?.shouldRun).toBeTruthy()
     })
 
     it("should simulate complex pipeline with multiple remote includes and job dependencies", async () => {
@@ -635,13 +655,17 @@ describe("Pipeline Simulation - Integration Tests", () => {
 
       expect(mainResult.jobsToRun).toBeGreaterThan(0)
 
-      const buildDocker = mainResult.jobs.find((j) => j.name === "build-docker-image")
-      expect(buildDocker?.shouldRun).toBe(true)
+      const buildDocker = mainResult.jobs.find(
+        (j) => j.name === "build-docker-image"
+      )
+      expect(buildDocker?.shouldRun).toBeTruthy()
 
       // Security scan should run on main (rule: CI_MERGE_REQUEST_ID or main)
-      const securityScan = mainResult.jobs.find((j) => j.name === "security-scan")
+      const securityScan = mainResult.jobs.find(
+        (j) => j.name === "security-scan"
+      )
       if (securityScan) {
-        expect(securityScan.shouldRun).toBe(true)
+        expect(securityScan.shouldRun).toBeTruthy()
       }
 
       // Simulate with merge request
@@ -657,12 +681,16 @@ describe("Pipeline Simulation - Integration Tests", () => {
 
       const mrResult = simulator.simulate(config, mrContext)
 
-      const buildDockerMr = mrResult.jobs.find((j) => j.name === "build-docker-image")
-      expect(buildDockerMr?.shouldRun).toBe(true)
+      const buildDockerMr = mrResult.jobs.find(
+        (j) => j.name === "build-docker-image"
+      )
+      expect(buildDockerMr?.shouldRun).toBeTruthy()
 
-      const securityScanMr = mrResult.jobs.find((j) => j.name === "security-scan")
+      const securityScanMr = mrResult.jobs.find(
+        (j) => j.name === "security-scan"
+      )
       if (securityScanMr) {
-        expect(securityScanMr.shouldRun).toBe(true)
+        expect(securityScanMr.shouldRun).toBeTruthy()
       }
     })
 
@@ -719,19 +747,23 @@ describe("Pipeline Simulation - Integration Tests", () => {
 
       const mainResult = simulator.simulate(config, mainContext)
 
-      const build = mainResult.jobs.find((j) => j.name === "build-with-inheritance")
+      const build = mainResult.jobs.find(
+        (j) => j.name === "build-with-inheritance"
+      )
       if (build) {
-        expect(build.shouldRun).toBe(true)
+        expect(build.shouldRun).toBeTruthy()
       }
 
-      const test = mainResult.jobs.find((j) => j.name === "test-with-custom-rules")
+      const test = mainResult.jobs.find(
+        (j) => j.name === "test-with-custom-rules"
+      )
       if (test) {
-        expect(test.shouldRun).toBe(true)
+        expect(test.shouldRun).toBeTruthy()
       }
 
       const deploy = mainResult.jobs.find((j) => j.name === "deploy-with-needs")
       if (deploy) {
-        expect(deploy.shouldRun).toBe(true)
+        expect(deploy.shouldRun).toBeTruthy()
       }
 
       // Test on feature branch
@@ -744,21 +776,27 @@ describe("Pipeline Simulation - Integration Tests", () => {
 
       const featureResult = simulator.simulate(config, featureContext)
 
-      const buildFeature = featureResult.jobs.find((j) => j.name === "build-with-inheritance")
+      const buildFeature = featureResult.jobs.find(
+        (j) => j.name === "build-with-inheritance"
+      )
       if (buildFeature) {
         // build-with-inheritance extends .level2-build which has rules: if branch == "main"
         // On feature branch, rules don't match, so job should not run
-        expect(buildFeature.shouldRun).toBe(false)
+        expect(buildFeature.shouldRun).toBeFalsy()
       }
 
-      const testFeature = featureResult.jobs.find((j) => j.name === "test-with-custom-rules")
+      const testFeature = featureResult.jobs.find(
+        (j) => j.name === "test-with-custom-rules"
+      )
       if (testFeature) {
-        expect(testFeature.shouldRun).toBe(true) // Custom rule matches feature branches
+        expect(testFeature.shouldRun).toBeTruthy() // Custom rule matches feature branches
       }
 
-      const deployFeature = featureResult.jobs.find((j) => j.name === "deploy-with-needs")
+      const deployFeature = featureResult.jobs.find(
+        (j) => j.name === "deploy-with-needs"
+      )
       if (deployFeature) {
-        expect(deployFeature.shouldRun).toBe(false) // Level4 rule: only main or tag
+        expect(deployFeature.shouldRun).toBeFalsy() // Level4 rule: only main or tag
       }
     })
 
@@ -812,7 +850,7 @@ describe("Pipeline Simulation - Integration Tests", () => {
       expect(result.jobsToRun).toBeGreaterThan(0)
 
       const buildJob = result.jobs.find((j) => j.name === "build")
-      expect(buildJob?.shouldRun).toBe(true)
+      expect(buildJob?.shouldRun).toBeTruthy()
     })
   })
 
@@ -837,7 +875,7 @@ describe("Pipeline Simulation - Integration Tests", () => {
       })
 
       const buildJob = result.jobs.find((j) => j.name === "build")
-      expect(buildJob?.shouldRun).toBe(true) // Empty rules allows job to run by default
+      expect(buildJob?.shouldRun).toBeTruthy() // Empty rules allows job to run by default
     })
 
     it("should handle jobs with only rules: [when: never]", () => {
@@ -870,7 +908,7 @@ describe("Pipeline Simulation - Integration Tests", () => {
       expect(result.jobsToRun).toBe(1)
 
       const testJob = result.jobs.find((j) => j.name === "test-disabled")
-      expect(testJob?.shouldRun).toBe(false)
+      expect(testJob?.shouldRun).toBeFalsy()
     })
 
     it("should handle multiple rules with different outcomes", () => {
@@ -903,7 +941,7 @@ describe("Pipeline Simulation - Integration Tests", () => {
 
       const tagResult = simulator.simulate(config, tagContext)
       const deployTag = tagResult.jobs.find((j) => j.name === "deploy")
-      expect(deployTag?.shouldRun).toBe(true)
+      expect(deployTag?.shouldRun).toBeTruthy()
       expect(deployTag?.when).toBe("always")
 
       // On main - should be manual
@@ -916,7 +954,7 @@ describe("Pipeline Simulation - Integration Tests", () => {
 
       const mainResult = simulator.simulate(config, mainContext)
       const deployMain = mainResult.jobs.find((j) => j.name === "deploy")
-      expect(deployMain?.shouldRun).toBe(true)
+      expect(deployMain?.shouldRun).toBeTruthy()
       expect(deployMain?.when).toBe("manual")
 
       // Other branch - should not run
@@ -929,7 +967,7 @@ describe("Pipeline Simulation - Integration Tests", () => {
 
       const otherResult = simulator.simulate(config, otherContext)
       const deployOther = otherResult.jobs.find((j) => j.name === "deploy")
-      expect(deployOther?.shouldRun).toBe(false)
+      expect(deployOther?.shouldRun).toBeFalsy()
     })
 
     it("should evaluate exists rules with filesystem checks", () => {
@@ -960,16 +998,20 @@ describe("Pipeline Simulation - Integration Tests", () => {
       const result = simulator.simulate(config, context)
 
       // build-with-package should run (package.json exists)
-      const buildPackage = result.jobs.find((j) => j.name === "build-with-package")
-      expect(buildPackage?.shouldRun).toBe(true)
+      const buildPackage = result.jobs.find(
+        (j) => j.name === "build-with-package"
+      )
+      expect(buildPackage?.shouldRun).toBeTruthy()
 
       // build-with-dockerfile should not run (Dockerfile doesn't exist, falls to when: never)
-      const buildDocker = result.jobs.find((j) => j.name === "build-with-dockerfile")
-      expect(buildDocker?.shouldRun).toBe(false)
+      const buildDocker = result.jobs.find(
+        (j) => j.name === "build-with-dockerfile"
+      )
+      expect(buildDocker?.shouldRun).toBeFalsy()
 
       // test should run (no rules)
       const test = result.jobs.find((j) => j.name === "test")
-      expect(test?.shouldRun).toBe(true)
+      expect(test?.shouldRun).toBeTruthy()
     })
 
     it("should interpolate variables in exists paths", () => {
@@ -995,8 +1037,8 @@ describe("Pipeline Simulation - Integration Tests", () => {
       const result = simulator.simulate(config, context)
 
       // Should evaluate src/index.ts
-      const job = result.jobs[0]
-      expect(job?.shouldRun).toBe(true)
+      const [job] = result.jobs
+      expect(job?.shouldRun).toBeTruthy()
     })
   })
 })

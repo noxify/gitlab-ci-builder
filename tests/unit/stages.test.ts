@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -14,7 +15,7 @@ describe("ConfigBuilder - stages", () => {
       config.stages("build", "test", "deploy")
       const result = config.getPlainObject()
 
-      expect(result.stages).toEqual(["build", "test", "deploy"])
+      expect(result.stages).toStrictEqual(["build", "test", "deploy"])
     })
 
     it("should ensure unique stages", () => {
@@ -22,7 +23,7 @@ describe("ConfigBuilder - stages", () => {
       config.stages("test", "deploy")
       const result = config.getPlainObject()
 
-      expect(result.stages).toEqual(["build", "test", "deploy"])
+      expect(result.stages).toStrictEqual(["build", "test", "deploy"])
     })
 
     it("should return this for chaining", () => {
@@ -36,13 +37,13 @@ describe("ConfigBuilder - stages", () => {
       config.addStage("build")
       const result = config.getPlainObject()
 
-      expect(result.stages).toEqual(["build"])
+      expect(result.stages).toStrictEqual(["build"])
     })
 
     it("should be chainable", () => {
       const result = config.addStage("build").addStage("test")
       expect(result).toBe(config)
-      expect(config.getPlainObject().stages).toEqual(["build", "test"])
+      expect(config.getPlainObject().stages).toStrictEqual(["build", "test"])
     })
   })
 })

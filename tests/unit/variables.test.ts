@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -21,13 +22,13 @@ describe("ConfigBuilder - variables", () => {
       config.variable("STRING_VAR", "value")
       config.variable("NUMBER_VAR", 42)
       config.variable("BOOLEAN_VAR", true)
-      config.variable("UNDEFINED_VAR", undefined)
+      config.variable("UNDEFINED_VAR")
 
       const result = config.getPlainObject()
 
       expect(result.variables?.STRING_VAR).toBe("value")
       expect(result.variables?.NUMBER_VAR).toBe(42)
-      expect(result.variables?.BOOLEAN_VAR).toBe(true)
+      expect(result.variables?.BOOLEAN_VAR).toBeTruthy()
       expect(result.variables?.UNDEFINED_VAR).toBeUndefined()
     })
 

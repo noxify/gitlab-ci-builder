@@ -1,5 +1,7 @@
-import type { GlobalOptions, JobDefinitionNormalized, JobOptions, ValidationError } from "../schema"
-import { createValidationError, ValidationErrorCode } from "../schema"
+import { createValidationError, ValidationErrorCode } from "../schema/errors"
+import type { ValidationError } from "../schema/errors"
+import type { JobDefinitionNormalized } from "../schema/job"
+import type { GlobalOptions, JobOptions } from "../schema/policies"
 
 /**
  * Trigger configuration for child/downstream pipelines
@@ -67,7 +69,7 @@ export interface ExtendsResolutionResult {
 export function buildExtendsGraph(
   jobs: Record<string, JobDefinitionNormalized>,
   templates: Record<string, JobDefinitionNormalized>,
-  jobOptionsMap: Record<string, JobOptions> = {},
+  jobOptionsMap: Record<string, JobOptions> = {}
 ): Map<string, ExtendsGraphNode> {
   const graph = new Map<string, ExtendsGraphNode>()
 
@@ -196,7 +198,9 @@ export function detectCycles(graph: Map<string, ExtendsGraphNode>): string[][] {
  * // Returns: Map { 'build' => ['.missing-template'] }
  * ```
  */
-export function findMissingExtends(graph: Map<string, ExtendsGraphNode>): Map<string, string[]> {
+export function findMissingExtends(
+  graph: Map<string, ExtendsGraphNode>
+): Map<string, string[]> {
   const missing = new Map<string, string[]>()
 
   for (const [nodeName, node] of graph.entries()) {
@@ -235,7 +239,9 @@ export function findMissingExtends(graph: Map<string, ExtendsGraphNode>): Map<st
  * // Returns: ['C', 'B', 'A'] (dependencies first)
  * ```
  */
-export function topologicalSort(graph: Map<string, ExtendsGraphNode>): string[] {
+export function topologicalSort(
+  graph: Map<string, ExtendsGraphNode>
+): string[] {
   const sorted: string[] = []
   const visited = new Set<string>()
   const temp = new Set<string>()
@@ -304,7 +310,7 @@ export function topologicalSort(graph: Map<string, ExtendsGraphNode>): string[] 
  */
 export function validateExtendsGraph(
   graph: Map<string, ExtendsGraphNode>,
-  globalOptions: GlobalOptions,
+  globalOptions: GlobalOptions
 ): {
   errors: ValidationError[]
   warnings: ValidationError[]
@@ -324,7 +330,7 @@ export function validateExtendsGraph(
         ValidationErrorCode.MISSING_EXTENDS_TARGET,
         `Job "${jobName}" extends from missing target(s): ${targets.join(", ")}`,
         [jobName, "extends"],
-        { missingTargets: targets },
+        { missingTargets: targets }
       )
 
       if (policy === "error") {
@@ -350,8 +356,8 @@ export function validateExtendsGraph(
             undefined,
             {
               cycle,
-            },
-          ),
+            }
+          )
         )
       }
     }

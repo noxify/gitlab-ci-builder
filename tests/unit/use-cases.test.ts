@@ -1,3 +1,4 @@
+// oxlint-disable vitest/no-conditional-expect,vitest/max-expects
 import { describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -10,6 +11,7 @@ describe("Real-World Use Cases", () => {
 
       config
         .stages("build", "test", "release")
+        // oxlint-disable-next-line no-template-curly-in-string
         .variable("NPM_TOKEN", "${CI_JOB_TOKEN}")
         .job("build", {
           stage: "build",
@@ -40,7 +42,10 @@ describe("Real-World Use Cases", () => {
         .job("release", {
           stage: "release",
           image: "node:20-alpine",
-          script: ["npm ci --cache .npm --prefer-offline", "npx semantic-release"],
+          script: [
+            "npm ci --cache .npm --prefer-offline",
+            "npx semantic-release",
+          ],
           cache: {
             key: {
               files: ["package-lock.json"],
@@ -57,7 +62,7 @@ describe("Real-World Use Cases", () => {
 
       const result = config.getPlainObject()
 
-      expect(result.stages).toEqual(["build", "test", "release"])
+      expect(result.stages).toStrictEqual(["build", "test", "release"])
       expect(result.jobs?.build?.image).toBe("node:20-alpine")
       const testCache = result.jobs?.test?.cache
       if (testCache && !Array.isArray(testCache)) {
@@ -113,7 +118,7 @@ describe("Real-World Use Cases", () => {
 
       const result = config.getPlainObject()
 
-      expect(result.stages).toEqual(["build", "test", "deploy"])
+      expect(result.stages).toStrictEqual(["build", "test", "deploy"])
       expect(result.variables?.DOCKER_DRIVER).toBe("overlay2")
       expect(result.jobs?.["build-image"]?.services).toContain("docker:dind")
       const stagingEnv = result.jobs?.["deploy-staging"]?.environment
@@ -184,7 +189,7 @@ describe("Real-World Use Cases", () => {
       }
       const prodRules = result.jobs?.["deploy-production"]?.rules
       if (prodRules && Array.isArray(prodRules)) {
-        const firstRule = prodRules[0]
+        const [firstRule] = prodRules
         if (firstRule && typeof firstRule !== "string") {
           expect(firstRule.when).toBe("manual")
         }
@@ -243,10 +248,10 @@ describe("Real-World Use Cases", () => {
 
       const result = config.getPlainObject()
 
-      expect(result.stages).toEqual(["lint", "test", "build", "deploy"])
+      expect(result.stages).toStrictEqual(["lint", "test", "build", "deploy"])
       const frontendRules = result.jobs?.["lint-frontend"]?.rules
       if (frontendRules && Array.isArray(frontendRules)) {
-        const firstRule = frontendRules[0]
+        const [firstRule] = frontendRules
         if (firstRule && typeof firstRule !== "string") {
           expect(firstRule).toHaveProperty("changes")
         }
@@ -266,7 +271,11 @@ describe("Real-World Use Cases", () => {
           stage: "test",
           image: "node:$NODE_VERSION",
           parallel: {
-            matrix: [{ NODE_VERSION: "18" }, { NODE_VERSION: "20" }, { NODE_VERSION: "22" }],
+            matrix: [
+              { NODE_VERSION: "18" },
+              { NODE_VERSION: "20" },
+              { NODE_VERSION: "22" },
+            ],
           },
           script: ["node --version", "npm ci", "npm test"],
         })
@@ -333,7 +342,7 @@ describe("Real-World Use Cases", () => {
       const deployRules = result.jobs?.deploy?.rules
 
       if (deployRules && Array.isArray(deployRules)) {
-        const firstRule = deployRules[0]
+        const [firstRule] = deployRules
         if (firstRule && typeof firstRule !== "string") {
           expect(firstRule.variables?.ENVIRONMENT).toBe("production")
         }
@@ -351,7 +360,8 @@ describe("Real-World Use Cases", () => {
           { local: ".gitlab/ci/common.yml" },
           { template: "Security/SAST.gitlab-ci.yml" },
           {
-            remote: "https://gitlab.com/example/ci-templates/-/raw/main/template.yml",
+            remote:
+              "https://gitlab.com/example/ci-templates/-/raw/main/template.yml",
           },
         ])
         .stages("build", "test", "trigger")
@@ -421,7 +431,10 @@ describe("Real-World Use Cases", () => {
 
       const result = config.getPlainObject()
 
-      expect(result.jobs?.["test-integration"]?.needs).toEqual(["build-frontend", "build-backend"])
+      expect(result.jobs?.["test-integration"]?.needs).toStrictEqual([
+        "build-frontend",
+        "build-backend",
+      ])
       const deployNeeds = result.jobs?.deploy?.needs
       if (deployNeeds && Array.isArray(deployNeeds) && deployNeeds.length > 0) {
         expect(deployNeeds[0]).toMatchObject({
@@ -441,7 +454,10 @@ describe("Real-World Use Cases", () => {
         .defaults({
           image: "node:20-alpine",
           tags: ["docker", "linux"],
-          retry: { max: 2, when: ["runner_system_failure", "stuck_or_timeout_failure"] },
+          retry: {
+            max: 2,
+            when: ["runner_system_failure", "stuck_or_timeout_failure"],
+          },
           interruptible: true,
         })
         .stages("test", "build")
@@ -456,9 +472,9 @@ describe("Real-World Use Cases", () => {
       const result = config.getPlainObject()
 
       expect(result.default?.image).toBe("node:20-alpine")
-      expect(result.default?.tags).toEqual(["docker", "linux"])
+      expect(result.default?.tags).toStrictEqual(["docker", "linux"])
       expect(result.default?.retry).toMatchObject({ max: 2 })
-      expect(result.default?.interruptible).toBe(true)
+      expect(result.default?.interruptible).toBeTruthy()
       expect(result.jobs?.build?.image).toBe("node:22")
     })
   })

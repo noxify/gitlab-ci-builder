@@ -22,7 +22,10 @@ export const DefaultsSchema = z
     retry: z
       .union([
         z.number(),
-        z.object({ max: z.number(), when: z.union([z.string(), z.array(z.string())]).optional() }),
+        z.object({
+          max: z.number(),
+          when: z.union([z.string(), z.array(z.string())]).optional(),
+        }),
       ])
       .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#retry" })
       .optional(),
@@ -32,14 +35,16 @@ export const DefaultsSchema = z
       .optional(),
     interruptible: z
       .boolean()
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#interruptible" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#interruptible",
+      })
       .optional(),
     id_tokens: z
       .record(
         z.string(),
         z.object({
           aud: z.union([z.string(), z.array(z.string())]),
-        }),
+        })
       )
       .optional(),
     hooks: z
@@ -47,7 +52,8 @@ export const DefaultsSchema = z
         pre_get_sources_script: z
           .union([z.string(), z.array(z.string())])
           .meta({
-            description: "@see https://docs.gitlab.com/ci/yaml/#hookspre_get_sources_script",
+            description:
+              "@see https://docs.gitlab.com/ci/yaml/#hookspre_get_sources_script",
           })
           .optional(),
       })

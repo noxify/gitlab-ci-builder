@@ -3,30 +3,31 @@
   "version": "1.6.1",
   "description": "Build GitLab CI/CD pipelines programmatically with TypeScript. Fluent API for creating jobs, templates, and workflows. Import/export YAML, visualize with Mermaid diagrams, and resolve extends chains automatically.",
   "keywords": [
-    "gitlab",
-    "gitlab-ci",
-    "ci-cd",
-    "continuous-integration",
-    "continuous-deployment",
-    "pipeline",
-    "yaml",
-    "builder",
-    "typescript",
-    "devops",
     "automation",
-    "infrastructure-as-code",
-    "gitops",
+    "builder",
+    "ci-cd",
+    "code-generation",
     "configuration",
     "configuration-management",
-    "visualization",
-    "mermaid",
-    "code-generation",
+    "continuous-deployment",
+    "continuous-integration",
+    "devops",
+    "extends-resolution",
     "fluent-api",
-    "extends-resolution"
+    "gitlab",
+    "gitlab-ci",
+    "gitops",
+    "infrastructure-as-code",
+    "mermaid",
+    "pipeline",
+    "typescript",
+    "visualization",
+    "yaml"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/noxify/gitlab-ci-builder"
+  "license": "MIT",
+  "author": {
+    "name": "Marcus Reinhardt",
+    "url": "https://github.com/noxify"
   },
   "contributors": [
     {
@@ -34,13 +35,19 @@
       "url": "https://github.com/noxify"
     }
   ],
-  "author": {
-    "name": "Marcus Reinhardt",
-    "url": "https://github.com/noxify"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noxify/gitlab-ci-builder"
   },
-  "sideEffects": false,
-  "license": "MIT",
+  "bin": {
+    "gitlab-ci-builder": "./dist/cli/index.mjs"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
+  "sideEffects": false,
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
@@ -48,13 +55,9 @@
       "default": "./src/index.ts"
     }
   },
-  "types": "./dist/index.d.mts",
-  "bin": {
-    "gitlab-ci-builder": "./dist/cli/index.mjs"
+  "publishConfig": {
+    "access": "public"
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "build": "tsdown",
     "ci:publish": "pnpm build && pnpm publish -r --access public --publish-branch main && pnpm changeset tag",
@@ -62,11 +65,11 @@
     "cli:dev": "tsx src/cli/index.ts",
     "cs": "changeset",
     "dev": "tsdown --watch",
-    "format": "prettier --check . --ignore-path ./.gitignore --ignore-path ./.prettierignore",
-    "format:fix": "prettier --write . --ignore-path ./.gitignore --ignore-path ./.prettierignore",
+    "lint": "ultracite check",
+    "lint:fix": "ultracite fix && pnpm format:fix",
+    "format": "oxfmt --check",
+    "format:fix": "oxfmt .",
     "generate:types": "tsx src/generate-types.ts",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
     "test": "vitest --run",
     "test:coverage": "vitest --coverage",
     "test:e2e": "vitest --run --project e2e",
@@ -76,57 +79,39 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
-  "prettier": "./prettier.config.mjs",
   "dependencies": {
-    "@commander-js/extra-typings": "^14.0.0",
-    "climt": "^0.2.0",
-    "commander": "^14.0.3",
+    "@commander-js/extra-typings": "14.0.0",
+    "climt": "0.2.0",
+    "commander": "14.0.3",
     "deepmerge": "4.3.1",
     "js-yaml": "4.1.1",
-    "oo-ascii-tree": "^1.127.0",
-    "read-pkg": "^10.1.0",
-    "tinyglobby": "0.2.15",
-    "typescript": "5.9.3",
-    "zod": "4.3.6"
+    "oo-ascii-tree": "1.131.0",
+    "read-pkg": "10.1.0",
+    "tinyglobby": "0.2.16",
+    "typescript": "6.0.3",
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "@changesets/cli": "2.30.0",
-    "@eslint/compat": "2.0.3",
-    "@eslint/js": "9.39.4",
-    "@ianvs/prettier-plugin-sort-imports": "4.7.1",
+    "@changesets/cli": "2.31.0",
     "@types/js-yaml": "4.0.9",
-    "@types/node": "24.12.0",
-    "@vitest/coverage-v8": "4.0.18",
+    "@types/node": "24.12.4",
+    "@vitest/coverage-v8": "4.1.6",
     "dedent": "1.7.2",
-    "eslint": "9.39.4",
-    "eslint-config-turbo": "2.8.14",
-    "eslint-plugin-import": "2.32.0",
-    "eslint-plugin-package-json": "0.89.4",
     "json-schema-to-typescript": "15.0.4",
     "jsonc-eslint-parser": "3.1.0",
-    "memfs": "4.56.11",
-    "msw": "^2.12.10",
+    "memfs": "4.57.2",
+    "msw": "2.14.6",
     "node-pty": "1.1.0",
-    "prettier": "3.8.1",
-    "tsdown": "0.21.1",
-    "tsx": "4.21.0",
-    "tuistory": "0.0.16",
-    "typescript-eslint": "8.56.1",
-    "vitest": "4.0.18"
+    "oxfmt": "0.51.0",
+    "oxlint": "1.66.0",
+    "tsdown": "0.22.0",
+    "tsx": "4.22.3",
+    "tuistory": "0.7.0",
+    "ultracite": "7.7.0",
+    "vitest": "4.1.6"
   },
-  "packageManager": "pnpm@10.31.0",
   "engines": {
     "node": ">=22"
   },
-  "publishConfig": {
-    "access": "public"
-  },
-  "pnpm": {
-    "overrides": {
-      "minimatch@<3.1.4": ">=3.1.4",
-      "lodash@>=4.0.0 <=4.17.22": ">=4.17.23",
-      "cross-spawn@<6.0.6": ">=6.0.6",
-      "rollup@>=4.0.0 <4.59.0": ">=4.59.0"
-    }
-  }
+  "packageManager": "pnpm@11.1.3"
 }

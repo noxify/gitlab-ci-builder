@@ -1,5 +1,7 @@
+// oxlint-disable vitest/max-expects
 import { writeFileSync } from "node:fs"
 import { join } from "node:path"
+
 import dedent from "dedent"
 import { describe, expect, it } from "vitest"
 
@@ -8,7 +10,10 @@ import { toYaml } from "../../../src/export"
 import { fromYaml } from "../../../src/import"
 import { setupTemplateTest } from "./test-helper"
 
-const { generatedDir } = setupTemplateTest(import.meta.dirname, "browser-performance")
+const { generatedDir } = setupTemplateTest(
+  import.meta.dirname,
+  "browser-performance"
+)
 
 describe("Integration: GitLab Browser Performance Template", () => {
   it("should handle browser_performance artifact report", async () => {
@@ -52,22 +57,25 @@ describe("Integration: GitLab Browser Performance Template", () => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const module = await import(tsFilePath)
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const config: ConfigBuilder = (module.default ?? module.config) as ConfigBuilder
+    const config: ConfigBuilder = (module.default ??
+      module.config) as ConfigBuilder
 
     const result = config.safeValidate()
     const pipeline = config.getPlainObject({ skipValidation: true })
-    expect(result.errors.length).toBe(0)
+    expect(result.errors).toHaveLength(0)
 
     // Verify artifacts structure
     const job = pipeline.jobs?.browser_performance
     expect(job).toBeDefined()
-    expect(job?.artifacts?.paths).toEqual(["sitespeed-results/"])
-    expect(job?.artifacts?.reports?.browser_performance).toBe("browser-performance.json")
+    expect(job?.artifacts?.paths).toStrictEqual(["sitespeed-results/"])
+    expect(job?.artifacts?.reports?.browser_performance).toBe(
+      "browser-performance.json"
+    )
 
     // Verify other job properties
     expect(job?.stage).toBe("performance")
     expect(job?.image).toBe("docker:27.3")
-    expect(job?.allow_failure).toBe(true)
+    expect(job?.allow_failure).toBeTruthy()
     expect(job?.variables?.SITESPEED_IMAGE).toBe("sitespeedio/sitespeed.io")
 
     // Export and verify round-trip
@@ -77,24 +85,35 @@ describe("Integration: GitLab Browser Performance Template", () => {
     expect(exportedYaml).toContain("paths:")
     expect(exportedYaml).toContain("- sitespeed-results/")
     expect(exportedYaml).toContain("reports:")
-    expect(exportedYaml).toContain("browser_performance: browser-performance.json")
+    expect(exportedYaml).toContain(
+      "browser_performance: browser-performance.json"
+    )
 
     // Re-import to verify full round-trip
     const reimportedTsCode = fromYaml(exportedYaml)
-    writeFileSync(join(generatedDir, "browser-performance-reimport.ts"), reimportedTsCode, "utf-8")
+    writeFileSync(
+      join(generatedDir, "browser-performance-reimport.ts"),
+      reimportedTsCode,
+      "utf-8"
+    )
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const reimportedModule = await import(join(generatedDir, "browser-performance-reimport.ts"))
+    const reimportedModule = await import(
+      join(generatedDir, "browser-performance-reimport.ts")
+    )
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const reimportedConfig: ConfigBuilder = (reimportedModule.default ??
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       reimportedModule.config) as ConfigBuilder
 
     const reimportedResult = reimportedConfig.safeValidate()
-    const reimportedPipeline = reimportedConfig.getPlainObject({ skipValidation: true })
-    expect(reimportedResult.errors.length).toBe(0)
+    const reimportedPipeline = reimportedConfig.getPlainObject({
+      skipValidation: true,
+    })
+    expect(reimportedResult.errors).toHaveLength(0)
     expect(
-      reimportedPipeline.jobs?.browser_performance?.artifacts?.reports?.browser_performance,
+      reimportedPipeline.jobs?.browser_performance?.artifacts?.reports
+        ?.browser_performance
     ).toBe("browser-performance.json")
   })
 
@@ -136,11 +155,12 @@ describe("Integration: GitLab Browser Performance Template", () => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const module = await import(tsFilePath)
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const config: ConfigBuilder = (module.default ?? module.config) as ConfigBuilder
+    const config: ConfigBuilder = (module.default ??
+      module.config) as ConfigBuilder
 
     const result = config.safeValidate()
     const pipeline = config.getPlainObject({ skipValidation: true })
-    expect(result.errors.length).toBe(0)
+    expect(result.errors).toHaveLength(0)
 
     // Verify all report types
     const reports = pipeline.jobs?.test_job?.artifacts?.reports
@@ -153,8 +173,12 @@ describe("Integration: GitLab Browser Performance Template", () => {
     expect(reports?.browser_performance).toBe("performance.json")
     expect(reports?.load_performance).toBe("load-performance.json")
     expect(reports?.sast).toBe("gl-sast-report.json")
-    expect(reports?.dependency_scanning).toBe("gl-dependency-scanning-report.json")
-    expect(reports?.container_scanning).toBe("gl-container-scanning-report.json")
+    expect(reports?.dependency_scanning).toBe(
+      "gl-dependency-scanning-report.json"
+    )
+    expect(reports?.container_scanning).toBe(
+      "gl-container-scanning-report.json"
+    )
     expect(reports?.dast).toBe("gl-dast-report.json")
     expect(reports?.terraform).toBe("tfplan.json")
     expect(reports?.dotenv).toBe("build.env")

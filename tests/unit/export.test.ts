@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { vol } from "memfs"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
@@ -215,7 +216,10 @@ describe("YAML Export", () => {
         script: ["pnpm install"],
       })
       config.job("test", {
-        script: ["!reference [.pnpm_install_template, script]", "pnpm run test"],
+        script: [
+          "!reference [.pnpm_install_template, script]",
+          "pnpm run test",
+        ],
       })
 
       const yaml = toYaml(config.getPlainObject())
@@ -307,7 +311,7 @@ describe("YAML Export", () => {
 
       await writeYamlFile(testFilePath, config.getPlainObject())
 
-      const writtenContent = vol.readFileSync(testFilePath, "utf8") as string
+      const writtenContent = vol.readFileSync(testFilePath, "utf-8") as string
       expect(writtenContent).toContain("build:")
       expect(writtenContent).toContain("script:")
       expect(writtenContent).toContain("- npm run build")
@@ -319,7 +323,9 @@ describe("YAML Export", () => {
         script: ["echo test"],
       })
 
-      await writeYamlFile(testFilePath, config.getPlainObject(), { encoding: "utf-8" })
+      await writeYamlFile(testFilePath, config.getPlainObject(), {
+        encoding: "utf-8",
+      })
 
       const writtenContent = vol.readFileSync(testFilePath, "utf-8") as string
       expect(writtenContent).toContain("test:")
@@ -338,12 +344,12 @@ describe("YAML Export", () => {
 
       await writeYamlFile(testFilePath, config.getPlainObject())
 
-      const writtenContent = vol.readFileSync(testFilePath, "utf8") as string
+      const writtenContent = vol.readFileSync(testFilePath, "utf-8") as string
       expect(writtenContent).toContain("stages:")
       expect(writtenContent).toContain("- build")
       expect(writtenContent).toContain("- test")
       expect(writtenContent).toContain("- deploy")
-      expect(writtenContent).toMatch(/CI: ['"]?true['"]?/)
+      expect(writtenContent).toMatch(/CI: ['"]?true['"]?/u)
       expect(writtenContent).toContain("default:")
       expect(writtenContent).toContain("image: node:22")
       expect(writtenContent).toContain("build:")
@@ -357,7 +363,9 @@ describe("YAML Export", () => {
       const config = new ConfigBuilder()
       config.job("test", { script: ["echo test"] })
 
-      await expect(writeYamlFile(readonlyPath, config.getPlainObject())).rejects.toThrow()
+      await expect(
+        writeYamlFile(readonlyPath, config.getPlainObject())
+      ).rejects.toThrow(/EACCES|EPERM/iu)
     })
   })
 
@@ -382,7 +390,7 @@ describe("YAML Export", () => {
 
       await writeYamlFile(filePath, config)
 
-      const content = vol.readFileSync(filePath, "utf8") as string
+      const content = vol.readFileSync(filePath, "utf-8") as string
 
       expect(content).toContain("stages:")
       expect(content).toContain("- test")
@@ -405,7 +413,7 @@ describe("YAML Export", () => {
 
       await writeYamlFile(filePath, plainConfig)
 
-      const content = vol.readFileSync(filePath, "utf8") as string
+      const content = vol.readFileSync(filePath, "utf-8") as string
 
       expect(content).toContain("stages:")
       expect(content).toContain("- build")
@@ -448,7 +456,7 @@ describe("YAML Export", () => {
 
       await config.writeYamlFile(filePath)
 
-      const content = vol.readFileSync(filePath, "utf8") as string
+      const content = vol.readFileSync(filePath, "utf-8") as string
 
       expect(content).toContain("deploy:")
       expect(content).toContain("- echo deploy")

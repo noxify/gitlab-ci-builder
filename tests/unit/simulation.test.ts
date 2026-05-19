@@ -1,9 +1,10 @@
+// oxlint-disable vitest/max-expects
 import { vol } from "memfs"
 import { beforeEach, describe, expect, test } from "vitest"
 
-import type { RuleContext } from "../../src/simulation"
 import { ConfigBuilder } from "../../src"
-import { PipelineSimulator } from "../../src/simulation"
+import { PipelineSimulator } from "../../src/simulation/pipeline-simulator"
+import type { RuleContext } from "../../src/simulation/rule-evaluator"
 
 describe("Pipeline Simulation", () => {
   beforeEach(() => {
@@ -47,11 +48,11 @@ describe("Pipeline Simulation", () => {
     expect(mainResult.jobsSkipped).toBe(1)
 
     const buildJob = mainResult.jobs.find((j) => j.name === "build-job")
-    expect(buildJob?.shouldRun).toBe(true)
+    expect(buildJob?.shouldRun).toBeTruthy()
     expect(buildJob?.when).toBe("always")
 
     const testJob = mainResult.jobs.find((j) => j.name === "test-job")
-    expect(testJob?.shouldRun).toBe(false)
+    expect(testJob?.shouldRun).toBeFalsy()
     expect(testJob?.when).toBe("never")
 
     // Simulate on develop branch
@@ -65,11 +66,13 @@ describe("Pipeline Simulation", () => {
     const developResult = simulator.simulate(config, developContext)
 
     expect(developResult.jobsToRun).toBe(1)
-    const buildJobDevelop = developResult.jobs.find((j) => j.name === "build-job")
-    expect(buildJobDevelop?.shouldRun).toBe(false)
+    const buildJobDevelop = developResult.jobs.find(
+      (j) => j.name === "build-job"
+    )
+    expect(buildJobDevelop?.shouldRun).toBeFalsy()
 
     const testJobDevelop = developResult.jobs.find((j) => j.name === "test-job")
-    expect(testJobDevelop?.shouldRun).toBe(true)
+    expect(testJobDevelop?.shouldRun).toBeTruthy()
   })
 
   test("should simulate jobs with regex rules", () => {
@@ -89,8 +92,8 @@ describe("Pipeline Simulation", () => {
     }
 
     const featureResult = simulator.simulate(config, featureContext)
-    const featureJob = featureResult.jobs[0]
-    expect(featureJob?.shouldRun).toBe(true)
+    const [featureJob] = featureResult.jobs
+    expect(featureJob?.shouldRun).toBeTruthy()
     expect(featureJob?.when).toBe("manual")
 
     // Main branch - should not match
@@ -102,8 +105,8 @@ describe("Pipeline Simulation", () => {
     }
 
     const mainResult = simulator.simulate(config, mainContext)
-    const mainJob = mainResult.jobs[0]
-    expect(mainJob?.shouldRun).toBe(false)
+    const [mainJob] = mainResult.jobs
+    expect(mainJob?.shouldRun).toBeFalsy()
   })
 
   test("should simulate jobs without rules (default behavior)", () => {
@@ -119,8 +122,8 @@ describe("Pipeline Simulation", () => {
     expect(result.totalJobs).toBe(1)
     expect(result.jobsToRun).toBe(1)
 
-    const job = result.jobs[0]
-    expect(job?.shouldRun).toBe(true)
+    const [job] = result.jobs
+    expect(job?.shouldRun).toBeTruthy()
     expect(job?.when).toBe("on_success")
   })
 
@@ -140,8 +143,8 @@ describe("Pipeline Simulation", () => {
     }
 
     const disabledResult = simulator.simulate(config, disabledContext)
-    const disabledJob = disabledResult.jobs[0]
-    expect(disabledJob?.shouldRun).toBe(false)
+    const [disabledJob] = disabledResult.jobs
+    expect(disabledJob?.shouldRun).toBeFalsy()
     expect(disabledJob?.when).toBe("never")
 
     // Enabled
@@ -152,8 +155,8 @@ describe("Pipeline Simulation", () => {
     }
 
     const enabledResult = simulator.simulate(config, enabledContext)
-    const enabledJob = enabledResult.jobs[0]
-    expect(enabledJob?.shouldRun).toBe(true)
+    const [enabledJob] = enabledResult.jobs
+    expect(enabledJob?.shouldRun).toBeTruthy()
     expect(enabledJob?.when).toBe("always")
   })
 
@@ -178,8 +181,8 @@ describe("Pipeline Simulation", () => {
     const config = new ConfigBuilder().job("complex-job", {
       script: "complex.sh",
       rules: [
-        { if: "$JOB_DISABLED =~ /true/i", when: "never" },
-        { if: "$CI_MERGE_REQUEST_LABELS =~ /disable-job/i", when: "never" },
+        { if: "$JOB_DISABLED =~ /true/iu", when: "never" },
+        { if: "$CI_MERGE_REQUEST_LABELS =~ /disable-job/iu", when: "never" },
         { when: "always" },
       ],
     })
@@ -194,7 +197,7 @@ describe("Pipeline Simulation", () => {
     }
 
     const enabledResult = simulator.simulate(config, enabledContext)
-    expect(enabledResult.jobs[0]?.shouldRun).toBe(true)
+    expect(enabledResult.jobs[0]?.shouldRun).toBeTruthy()
 
     const disabledContext: RuleContext = {
       variables: {
@@ -203,7 +206,7 @@ describe("Pipeline Simulation", () => {
     }
 
     const disabledResult = simulator.simulate(config, disabledContext)
-    expect(disabledResult.jobs[0]?.shouldRun).toBe(false)
+    expect(disabledResult.jobs[0]?.shouldRun).toBeFalsy()
   })
 
   test("should merge job variables with context variables", () => {
@@ -213,7 +216,10 @@ describe("Pipeline Simulation", () => {
         JOB_DISABLED: "true",
         OTHER_VAR: "job-value",
       },
-      rules: [{ if: "$JOB_DISABLED =~ /true/i", when: "never" }, { when: "always" }],
+      rules: [
+        { if: "$JOB_DISABLED =~ /true/iu", when: "never" },
+        { when: "always" },
+      ],
     })
 
     const simulator = new PipelineSimulator()
@@ -229,16 +235,18 @@ describe("Pipeline Simulation", () => {
     const result = simulator.simulate(config, context)
 
     // Job should be skipped because job variable JOB_DISABLED="true" overrides context
-    expect(result.jobs[0]?.shouldRun).toBe(false)
+    expect(result.jobs[0]?.shouldRun).toBeFalsy()
     expect(result.jobs[0]?.when).toBe("never")
   })
 
   test("should evaluate exists rule when file exists", () => {
-    const config = new ConfigBuilder().stages("build").job("build-with-source", {
-      stage: "build",
-      script: "build .",
-      rules: [{ exists: ["src/index.ts"] }, { when: "never" }],
-    })
+    const config = new ConfigBuilder()
+      .stages("build")
+      .job("build-with-source", {
+        stage: "build",
+        script: "build .",
+        rules: [{ exists: ["src/index.ts"] }, { when: "never" }],
+      })
 
     const simulator = new PipelineSimulator()
 
@@ -250,17 +258,19 @@ describe("Pipeline Simulation", () => {
     const result = simulator.simulate(config, context)
 
     // Job should run because src/index.ts exists
-    const job = result.jobs[0]
-    expect(job?.shouldRun).toBe(true)
+    const [job] = result.jobs
+    expect(job?.shouldRun).toBeTruthy()
     expect(job?.name).toBe("build-with-source")
   })
 
   test("should skip job when exists rule file does not exist", () => {
-    const config = new ConfigBuilder().stages("build").job("build-with-dockerfile", {
-      stage: "build",
-      script: "docker build .",
-      rules: [{ exists: ["nonexistent-file.txt"] }, { when: "never" }],
-    })
+    const config = new ConfigBuilder()
+      .stages("build")
+      .job("build-with-dockerfile", {
+        stage: "build",
+        script: "docker build .",
+        rules: [{ exists: ["nonexistent-file.txt"] }, { when: "never" }],
+      })
 
     const simulator = new PipelineSimulator()
 
@@ -272,8 +282,8 @@ describe("Pipeline Simulation", () => {
     const result = simulator.simulate(config, context)
 
     // Job should not run because file doesn't exist and second rule is when: never
-    const job = result.jobs[0]
-    expect(job?.shouldRun).toBe(false)
+    const [job] = result.jobs
+    expect(job?.shouldRun).toBeFalsy()
     expect(job?.when).toBe("never")
   })
 
@@ -298,15 +308,18 @@ describe("Pipeline Simulation", () => {
     const result = simulator.simulate(config, context)
 
     // Job should run because src/index.ts exists
-    const job = result.jobs[0]
-    expect(job?.shouldRun).toBe(true)
+    const [job] = result.jobs
+    expect(job?.shouldRun).toBeTruthy()
   })
 
   test("should handle exists with multiple file patterns", () => {
     const config = new ConfigBuilder().stages("build").job("build-any", {
       stage: "build",
       script: "build.sh",
-      rules: [{ exists: ["package.json", "nonexistent.txt"] }, { when: "never" }],
+      rules: [
+        { exists: ["package.json", "nonexistent.txt"] },
+        { when: "never" },
+      ],
     })
 
     const simulator = new PipelineSimulator()
@@ -319,16 +332,18 @@ describe("Pipeline Simulation", () => {
     const result = simulator.simulate(config, context)
 
     // Job should run because at least one file (package.json) exists
-    const job = result.jobs[0]
-    expect(job?.shouldRun).toBe(true)
+    const [job] = result.jobs
+    expect(job?.shouldRun).toBeTruthy()
   })
 
   test("should skip exists rule when no basePath provided", () => {
-    const config = new ConfigBuilder().stages("build").job("build-with-dockerfile", {
-      stage: "build",
-      script: "docker build .",
-      rules: [{ exists: ["package.json"] }, { when: "always" }],
-    })
+    const config = new ConfigBuilder()
+      .stages("build")
+      .job("build-with-dockerfile", {
+        stage: "build",
+        script: "docker build .",
+        rules: [{ exists: ["package.json"] }, { when: "always" }],
+      })
 
     const simulator = new PipelineSimulator()
 
@@ -340,8 +355,8 @@ describe("Pipeline Simulation", () => {
     const result = simulator.simulate(config, context)
 
     // Should fall through to second rule (when: always)
-    const job = result.jobs[0]
-    expect(job?.shouldRun).toBe(true)
+    const [job] = result.jobs
+    expect(job?.shouldRun).toBeTruthy()
     expect(job?.when).toBe("always")
   })
 
@@ -349,7 +364,10 @@ describe("Pipeline Simulation", () => {
     const config = new ConfigBuilder().stages("build").job("build-main", {
       stage: "build",
       script: "docker build .",
-      rules: [{ exists: ["Dockerfile"], if: '$CI_COMMIT_BRANCH == "main"' }, { when: "never" }],
+      rules: [
+        { exists: ["Dockerfile"], if: '$CI_COMMIT_BRANCH == "main"' },
+        { when: "never" },
+      ],
     })
 
     const simulator = new PipelineSimulator()
@@ -361,7 +379,7 @@ describe("Pipeline Simulation", () => {
     }
 
     const developResult = simulator.simulate(config, developContext)
-    expect(developResult.jobs[0]?.shouldRun).toBe(false)
+    expect(developResult.jobs[0]?.shouldRun).toBeFalsy()
 
     // File exists and correct branch
     const mainContext: RuleContext = {
@@ -371,7 +389,7 @@ describe("Pipeline Simulation", () => {
 
     const mainResult = simulator.simulate(config, mainContext)
     // Should be true because Dockerfile exists and branch is main
-    expect(mainResult.jobs[0]?.shouldRun).toBe(true)
+    expect(mainResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
   test("should handle != (not equals) operator in rules", () => {
@@ -388,14 +406,14 @@ describe("Pipeline Simulation", () => {
       variables: { ENVIRONMENT: "development" },
     }
     const devResult = simulator.simulate(config, devContext)
-    expect(devResult.jobs[0]?.shouldRun).toBe(false)
+    expect(devResult.jobs[0]?.shouldRun).toBeFalsy()
 
     // Should run when ENVIRONMENT is production
     const prodContext: RuleContext = {
       variables: { ENVIRONMENT: "production" },
     }
     const prodResult = simulator.simulate(config, prodContext)
-    expect(prodResult.jobs[0]?.shouldRun).toBe(true)
+    expect(prodResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
   test("should handle !~ (regex not match) operator in rules", () => {
@@ -412,14 +430,14 @@ describe("Pipeline Simulation", () => {
       variables: { CI_COMMIT_BRANCH: "feature-new-ui" },
     }
     const featureResult = simulator.simulate(config, featureContext)
-    expect(featureResult.jobs[0]?.shouldRun).toBe(false)
+    expect(featureResult.jobs[0]?.shouldRun).toBeFalsy()
 
     // Should run when branch doesn't match
     const mainContext: RuleContext = {
       variables: { CI_COMMIT_BRANCH: "main" },
     }
     const mainResult = simulator.simulate(config, mainContext)
-    expect(mainResult.jobs[0]?.shouldRun).toBe(true)
+    expect(mainResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
   test("should handle variable existence check in rules", () => {
@@ -436,35 +454,35 @@ describe("Pipeline Simulation", () => {
       variables: {},
     }
     const noVarResult = simulator.simulate(config, noVarContext)
-    expect(noVarResult.jobs[0]?.shouldRun).toBe(false)
+    expect(noVarResult.jobs[0]?.shouldRun).toBeFalsy()
 
     // Should skip when variable is empty string
     const emptyContext: RuleContext = {
       variables: { CUSTOM_BUILD: "" },
     }
     const emptyResult = simulator.simulate(config, emptyContext)
-    expect(emptyResult.jobs[0]?.shouldRun).toBe(false)
+    expect(emptyResult.jobs[0]?.shouldRun).toBeFalsy()
 
     // Should skip when variable is "false"
     const falseContext: RuleContext = {
       variables: { CUSTOM_BUILD: "false" },
     }
     const falseResult = simulator.simulate(config, falseContext)
-    expect(falseResult.jobs[0]?.shouldRun).toBe(false)
+    expect(falseResult.jobs[0]?.shouldRun).toBeFalsy()
 
     // Should skip when variable is "0"
     const zeroContext: RuleContext = {
       variables: { CUSTOM_BUILD: "0" },
     }
     const zeroResult = simulator.simulate(config, zeroContext)
-    expect(zeroResult.jobs[0]?.shouldRun).toBe(false)
+    expect(zeroResult.jobs[0]?.shouldRun).toBeFalsy()
 
     // Should run when variable has truthy value
     const truthyContext: RuleContext = {
       variables: { CUSTOM_BUILD: "true" },
     }
     const truthyResult = simulator.simulate(config, truthyContext)
-    expect(truthyResult.jobs[0]?.shouldRun).toBe(true)
+    expect(truthyResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
   test("should handle $CI_COMMIT_BRANCH special variable", () => {
@@ -481,7 +499,7 @@ describe("Pipeline Simulation", () => {
       variables: {},
     }
     const noBranchResult = simulator.simulate(config, noBranchContext)
-    expect(noBranchResult.jobs[0]?.shouldRun).toBe(false)
+    expect(noBranchResult.jobs[0]?.shouldRun).toBeFalsy()
 
     // Should run when branch is main
     const branchContext: RuleContext = {
@@ -489,7 +507,7 @@ describe("Pipeline Simulation", () => {
       branch: "main",
     }
     const branchResult = simulator.simulate(config, branchContext)
-    expect(branchResult.jobs[0]?.shouldRun).toBe(true)
+    expect(branchResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
   test("should handle $CI_COMMIT_TAG special variable", () => {
@@ -506,7 +524,7 @@ describe("Pipeline Simulation", () => {
       variables: {},
     }
     const noTagResult = simulator.simulate(config, noTagContext)
-    expect(noTagResult.jobs[0]?.shouldRun).toBe(false)
+    expect(noTagResult.jobs[0]?.shouldRun).toBeFalsy()
 
     // Should run when tag matches pattern
     const tagContext: RuleContext = {
@@ -514,7 +532,7 @@ describe("Pipeline Simulation", () => {
       tag: "v1.0.0",
     }
     const tagResult = simulator.simulate(config, tagContext)
-    expect(tagResult.jobs[0]?.shouldRun).toBe(true)
+    expect(tagResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
   test("should handle $CI_MERGE_REQUEST_ID special variable", () => {
@@ -531,7 +549,7 @@ describe("Pipeline Simulation", () => {
       variables: {},
     }
     const noMrResult = simulator.simulate(config, noMrContext)
-    expect(noMrResult.jobs[0]?.shouldRun).toBe(false)
+    expect(noMrResult.jobs[0]?.shouldRun).toBeFalsy()
 
     // Should run when MR ID variable is set
     const mrContext: RuleContext = {
@@ -539,7 +557,7 @@ describe("Pipeline Simulation", () => {
       mergeRequestLabels: ["enhancement"],
     }
     const mrResult = simulator.simulate(config, mrContext)
-    expect(mrResult.jobs[0]?.shouldRun).toBe(true)
+    expect(mrResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
   test("should handle $CI_PIPELINE_SOURCE with merge_request_event", () => {
@@ -556,7 +574,7 @@ describe("Pipeline Simulation", () => {
       variables: {},
     }
     const noMrResult = simulator.simulate(config, noMrContext)
-    expect(noMrResult.jobs[0]?.shouldRun).toBe(false)
+    expect(noMrResult.jobs[0]?.shouldRun).toBeFalsy()
 
     // Should run when MR context is present
     const mrContext: RuleContext = {
@@ -564,7 +582,7 @@ describe("Pipeline Simulation", () => {
       mergeRequestLabels: ["enhancement"],
     }
     const mrResult = simulator.simulate(config, mrContext)
-    expect(mrResult.jobs[0]?.shouldRun).toBe(true)
+    expect(mrResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
   test("should handle $CI_PIPELINE_SOURCE with other values", () => {
@@ -581,14 +599,14 @@ describe("Pipeline Simulation", () => {
       variables: {},
     }
     const result = simulator.simulate(config, context)
-    expect(result.jobs[0]?.shouldRun).toBe(false)
+    expect(result.jobs[0]?.shouldRun).toBeFalsy()
   })
 
   test("should handle case-insensitive regex flags", () => {
     const config = new ConfigBuilder().stages("build").job("build-feature", {
       stage: "build",
       script: "build.sh",
-      rules: [{ if: "$CI_COMMIT_BRANCH =~ /^FEATURE-.+/i" }],
+      rules: [{ if: "$CI_COMMIT_BRANCH =~ /^FEATURE-.+/iu" }],
     })
 
     const simulator = new PipelineSimulator()
@@ -598,7 +616,7 @@ describe("Pipeline Simulation", () => {
       variables: { CI_COMMIT_BRANCH: "feature-new-ui" },
     }
     const result = simulator.simulate(config, context)
-    expect(result.jobs[0]?.shouldRun).toBe(true)
+    expect(result.jobs[0]?.shouldRun).toBeTruthy()
   })
 
   test("should handle undefined/empty condition edge cases", () => {
@@ -618,7 +636,7 @@ describe("Pipeline Simulation", () => {
       variables: {},
     }
     const result = simulator.simulate(config, context)
-    expect(result.jobs[0]?.shouldRun).toBe(true)
+    expect(result.jobs[0]?.shouldRun).toBeTruthy()
     expect(result.jobs[0]?.when).toBe("always")
   })
 
@@ -636,14 +654,14 @@ describe("Pipeline Simulation", () => {
       variables: { CI_COMMIT_BRANCH: "develop" },
     }
     const developResult = simulator.simulate(config, developContext)
-    expect(developResult.jobs[0]?.shouldRun).toBe(false)
+    expect(developResult.jobs[0]?.shouldRun).toBeFalsy()
 
     // Should run on other branches
     const mainContext: RuleContext = {
       variables: { CI_COMMIT_BRANCH: "main" },
     }
     const mainResult = simulator.simulate(config, mainContext)
-    expect(mainResult.jobs[0]?.shouldRun).toBe(true)
+    expect(mainResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
   test("should handle when: manual in rules", () => {
@@ -659,7 +677,7 @@ describe("Pipeline Simulation", () => {
       variables: { CI_COMMIT_BRANCH: "main" },
     }
     const result = simulator.simulate(config, context)
-    expect(result.jobs[0]?.shouldRun).toBe(true)
+    expect(result.jobs[0]?.shouldRun).toBeTruthy()
     expect(result.jobs[0]?.when).toBe("manual")
     expect(result.jobsToRun).toBe(1)
   })

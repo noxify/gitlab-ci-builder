@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -9,17 +10,22 @@ describe("ConfigBuilder - include (static YAML entries)", () => {
 
     const out = cfg.getPlainObject()
     expect(out.include).toBeDefined()
-    expect(out.include).toEqual([{ local: "build_jobs.yml" }])
+    expect(out.include).toStrictEqual([{ local: "build_jobs.yml" }])
   })
 
   it("should accept an object include with rules", () => {
     const cfg = new ConfigBuilder()
-    cfg.include({ local: "build_jobs.yml", rules: [{ if: '$INCLUDE_BUILDS == "true"' }] })
+    cfg.include({
+      local: "build_jobs.yml",
+      rules: [{ if: '$INCLUDE_BUILDS == "true"' }],
+    })
 
     const out = cfg.getPlainObject()
     expect(out.include).toBeDefined()
     const first = out.include?.[0]
-    if (!first) throw new Error("Expected include entries to be present")
+    if (!first) {
+      throw new Error("Expected include entries to be present")
+    }
     expect(first).toMatchObject({ local: "build_jobs.yml" })
     expect(first.rules).toBeDefined()
     expect(first.rules?.[0]).toMatchObject({ if: '$INCLUDE_BUILDS == "true"' })
@@ -30,14 +36,14 @@ describe("ConfigBuilder - include (static YAML entries)", () => {
     cfg.include(["a.yml", { local: "b.yml" }])
 
     const out = cfg.getPlainObject()
-    expect(out.include).toEqual([{ local: "a.yml" }, { local: "b.yml" }])
+    expect(out.include).toStrictEqual([{ local: "a.yml" }, { local: "b.yml" }])
   })
 
   it("should be chainable", () => {
     const cfg = new ConfigBuilder().include("a.yml").include({ local: "b.yml" })
 
     const out = cfg.getPlainObject()
-    expect(out.include).toEqual([{ local: "a.yml" }, { local: "b.yml" }])
+    expect(out.include).toStrictEqual([{ local: "a.yml" }, { local: "b.yml" }])
   })
 
   it("should normalize remote URL strings to remote includes", () => {
@@ -45,7 +51,9 @@ describe("ConfigBuilder - include (static YAML entries)", () => {
     cfg.include("https://example.com/remote.yml")
 
     const out = cfg.getPlainObject()
-    expect(out.include).toEqual([{ remote: "https://example.com/remote.yml" }])
+    expect(out.include).toStrictEqual([
+      { remote: "https://example.com/remote.yml" },
+    ])
   })
 
   it("should flatten nested arrays and normalize mixed entries", () => {
@@ -54,7 +62,7 @@ describe("ConfigBuilder - include (static YAML entries)", () => {
     cfg.include(nested)
 
     const out = cfg.getPlainObject()
-    expect(out.include).toEqual([
+    expect(out.include).toStrictEqual([
       { local: "a.yml" },
       { remote: "https://r.com/x.yml" },
       { local: "b.yml" },
