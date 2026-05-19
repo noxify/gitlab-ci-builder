@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs"
 // oxlint-disable vitest/no-conditional-expect
 // oxlint-disable vitest/max-expects
 import { mkdir, rm, writeFile } from "node:fs/promises"
@@ -20,6 +21,12 @@ describe("CLI simulate command - E2E Tests", () => {
   let session: Session | undefined
 
   beforeEach(async () => {
+    // Check if CLI file exists
+    if (!existsSync(CLI_PATH)) {
+      throw new Error(
+        `CLI file not found at ${CLI_PATH}. Make sure to build the project first.`
+      )
+    }
     // Create temp directory for test files
     await mkdir(TEST_DIR, { recursive: true })
     // oxlint-disable-next-line no-console
