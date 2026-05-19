@@ -55,7 +55,10 @@ function isReferenceTag(value: unknown): value is ReferenceTag {
  * // Returns: ['npm test']
  * ```
  */
-function resolveReference(parsed: Record<string, unknown>, path: string[]): unknown {
+function resolveReference(
+  parsed: Record<string, unknown>,
+  path: string[]
+): unknown {
   let current: unknown = parsed
 
   for (const segment of path) {
@@ -91,7 +94,7 @@ function resolveReference(parsed: Record<string, unknown>, path: string[]): unkn
 function resolveReferencesInValue(
   value: unknown,
   parsed: Record<string, unknown>,
-  visited = new Set<string>(),
+  visited = new Set<string>()
 ): unknown {
   // Handle arrays
   if (Array.isArray(value)) {
@@ -153,7 +156,9 @@ function resolveReferencesInValue(
  *
  * @see https://docs.gitlab.com/ee/ci/yaml/yaml_optimization.html#reference-tags
  */
-export function resolveReferences(parsed: Record<string, unknown>): Record<string, unknown> {
+export function resolveReferences(
+  parsed: Record<string, unknown>
+): Record<string, unknown> {
   const result: Record<string, unknown> = {}
 
   for (const [key, value] of Object.entries(parsed)) {

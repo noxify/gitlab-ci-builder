@@ -23,12 +23,12 @@ export const handlers = [
       }
 
       return HttpResponse.text("", { status: 404 })
-    },
+    }
   ),
 
   // Mock direct YAML files from example.com/ci-templates
-  http.get("https://example.com/ci-templates/base.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci-templates/base.yml", () =>
+    HttpResponse.text(dedent`
         .base:
         image: alpine:latest
         tags:
@@ -39,10 +39,10 @@ export const handlers = [
             - runner_system_failure
             - stuck_or_timeout_failure
     `)
-  }),
+  ),
 
-  http.get("https://example.com/ci-templates/deploy.yml", () => {
-    return HttpResponse.text(`
+  http.get("https://example.com/ci-templates/deploy.yml", () =>
+    HttpResponse.text(`
         .deploy:
         extends: .base
         stage: deploy
@@ -52,11 +52,11 @@ export const handlers = [
             name: production
             url: https://example.com
     `)
-  }),
+  ),
 
   // Mock templates/* URLs for remote-includes tests
-  http.get("https://example.com/templates/node.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/node.yml", () =>
+    HttpResponse.text(dedent`
       .node-base:
         image: node:20
         cache:
@@ -66,11 +66,11 @@ export const handlers = [
         before_script:
           - npm ci
     `)
-  }),
+  ),
 
   // Mock ci/* URLs for visualization tests
-  http.get("https://example.com/ci/base.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/base.yml", () =>
+    HttpResponse.text(dedent`
       .base-template:
         image: alpine:latest
         tags:
@@ -78,10 +78,10 @@ export const handlers = [
         retry:
           max: 2
     `)
-  }),
+  ),
 
-  http.get("https://example.com/ci/node.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/node.yml", () =>
+    HttpResponse.text(dedent`
       .node-base:
         extends: .base-template
         image: node:20
@@ -90,10 +90,10 @@ export const handlers = [
           paths:
             - node_modules/
     `)
-  }),
+  ),
 
-  http.get("https://example.com/ci/deploy.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/deploy.yml", () =>
+    HttpResponse.text(dedent`
       .deploy-job:
         stage: deploy
         rules:
@@ -101,23 +101,23 @@ export const handlers = [
         environment:
           name: production
     `)
-  }),
+  ),
 
-  http.get("https://example.com/ci/team-a.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/team-a.yml", () =>
+    HttpResponse.text(dedent`
       .team-a-template:
         image: node:20
         tags:
           - team-a
     `)
-  }),
+  ),
 
-  http.get("https://example.com/ci/missing.yml", () => {
-    return HttpResponse.text("", { status: 404 })
-  }),
+  http.get("https://example.com/ci/missing.yml", () =>
+    HttpResponse.text("", { status: 404 })
+  ),
 
-  http.get("https://example.com/ci/root.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/root.yml", () =>
+    HttpResponse.text(dedent`
       include:
         - remote: https://example.com/ci/shared/base.yml
 
@@ -125,18 +125,18 @@ export const handlers = [
         extends: .shared-base
         image: alpine:latest
     `)
-  }),
+  ),
 
-  http.get("https://example.com/ci/shared/base.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/shared/base.yml", () =>
+    HttpResponse.text(dedent`
       .shared-base:
         tags:
           - docker
     `)
-  }),
+  ),
 
-  http.get("https://example.com/ci/level1.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/level1.yml", () =>
+    HttpResponse.text(dedent`
       include:
         - remote: https://example.com/ci/level2.yml
 
@@ -145,10 +145,10 @@ export const handlers = [
         before_script:
           - echo "level1"
     `)
-  }),
+  ),
 
-  http.get("https://example.com/ci/level2.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/level2.yml", () =>
+    HttpResponse.text(dedent`
       include:
         - remote: https://example.com/ci/level3.yml
 
@@ -157,28 +157,28 @@ export const handlers = [
         before_script:
           - echo "level2"
     `)
-  }),
+  ),
 
-  http.get("https://example.com/ci/level3.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/level3.yml", () =>
+    HttpResponse.text(dedent`
       .level3:
         retry:
           max: 3
     `)
-  }),
+  ),
 
-  http.get("https://example.com/ci/circular-a.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/circular-a.yml", () =>
+    HttpResponse.text(dedent`
       include:
         - remote: https://example.com/ci/circular-b.yml
 
       .circular-a:
         image: alpine:latest
     `)
-  }),
+  ),
 
-  http.get("https://example.com/ci/circular-b.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/ci/circular-b.yml", () =>
+    HttpResponse.text(dedent`
       include:
         - remote: https://example.com/ci/circular-a.yml
 
@@ -186,19 +186,19 @@ export const handlers = [
         tags:
           - docker
     `)
-  }),
+  ),
 
-  http.get("https://example.com/templates/base.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/base.yml", () =>
+    HttpResponse.text(dedent`
       .base:
         image: alpine:latest
         tags:
           - docker
     `)
-  }),
+  ),
 
-  http.get("https://example.com/templates/deploy.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/deploy.yml", () =>
+    HttpResponse.text(dedent`
       .deploy:
         stage: deploy
         rules:
@@ -206,10 +206,10 @@ export const handlers = [
         environment:
           name: production
     `)
-  }),
+  ),
 
-  http.get("https://example.com/templates/chain.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/chain.yml", () =>
+    HttpResponse.text(dedent`
       .base:
         image: alpine:latest
 
@@ -221,20 +221,20 @@ export const handlers = [
         extends: .base
         image: docker:latest
     `)
-  }),
+  ),
 
-  http.get("https://example.com/templates/pipeline.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/pipeline.yml", () =>
+    HttpResponse.text(dedent`
       .test-base:
         image: node:20
         cache:
           paths:
             - node_modules/
     `)
-  }),
+  ),
 
-  http.get("https://example.com/templates/stages.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/stages.yml", () =>
+    HttpResponse.text(dedent`
       .lint:
         stage: lint
         image: node:20
@@ -243,10 +243,10 @@ export const handlers = [
         stage: security
         image: alpine:latest
     `)
-  }),
+  ),
 
-  http.get("https://example.com/templates/shared.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/shared.yml", () =>
+    HttpResponse.text(dedent`
       .shared-cache:
         cache:
           key: \${CI_COMMIT_REF_SLUG}
@@ -259,10 +259,10 @@ export const handlers = [
           when:
             - runner_system_failure
     `)
-  }),
+  ),
 
-  http.get("https://example.com/templates/complex.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/complex.yml", () =>
+    HttpResponse.text(dedent`
       .test:
         stage: test
         image: node:20
@@ -277,11 +277,11 @@ export const handlers = [
         services:
           - postgres:15
     `)
-  }),
+  ),
 
   // Mock GitLab project includes - exact match
-  http.get("https://gitlab.com/acme/ci-templates/-/raw/main/docker.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://gitlab.com/acme/ci-templates/-/raw/main/docker.yml", () =>
+    HttpResponse.text(dedent`
       .docker-build:
         image: docker:latest
         services:
@@ -289,5 +289,5 @@ export const handlers = [
         variables:
           DOCKER_TLS_CERTDIR: "/certs"
     `)
-  }),
+  ),
 ]

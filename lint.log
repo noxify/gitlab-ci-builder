@@ -1,0 +1,1607 @@
+$ ultracite check
+Checking formatting...
+
+All matched files use the correct format.
+Finished in 499ms on 146 files using 12 threads.
+
+  x vitest(expect-expect): Test has no assertions
+    ,-[tests/integration/gitlab-templates/infrastructure.test.ts:16:3]
+ 15 | describe("GitLab Templates: Infrastructure", () => {
+ 16 |   it("should handle OpenTofu.latest template", async () => {
+    :   ^^
+ 17 |     const yaml = loadLocalTemplate(
+    `----
+  help: Add assertion(s) in this Test
+
+  x vitest(expect-expect): Test has no assertions
+    ,-[tests/integration/gitlab-templates/infrastructure.test.ts:24:3]
+ 23 | 
+ 24 |   it("should handle Code-Quality template", async () => {
+    :   ^^
+ 25 |     const yaml = loadLocalTemplate(testFilesDir, "Code-Quality.gitlab-ci.yml")
+    `----
+  help: Add assertion(s) in this Test
+
+  x vitest(expect-expect): Test has no assertions
+    ,-[tests/integration/gitlab-templates/infrastructure.test.ts:29:3]
+ 28 | 
+ 29 |   it("should handle Getting-Started template", async () => {
+    :   ^^
+ 30 |     const yaml = loadLocalTemplate(
+    `----
+  help: Add assertion(s) in this Test
+
+  x vitest(no-conditional-expect): Unexpected conditional expect
+    ,-[tests/unit/remote-extends-normalization.test.ts:55:7]
+ 54 |     if (Array.isArray(extendsValue)) {
+ 55 |       expect(extendsValue).not.toHaveLength(5)
+    :       ^^^^^^
+ 56 |       expect(extendsValue).not.toStrictEqual([".", "b", "a", "s", "e"])
+    `----
+  help: Avoid calling `expect` conditionally
+
+  x vitest(no-conditional-expect): Unexpected conditional expect
+    ,-[tests/unit/remote-extends-normalization.test.ts:56:7]
+ 55 |       expect(extendsValue).not.toHaveLength(5)
+ 56 |       expect(extendsValue).not.toStrictEqual([".", "b", "a", "s", "e"])
+    :       ^^^^^^
+ 57 |     }
+    `----
+  help: Avoid calling `expect` conditionally
+
+  x unicorn(prefer-module): Do not use "__dirname".
+    ,-[tests/integration/multi-document-yaml/multi-document-yaml.test.ts:17:18]
+ 16 | 
+ 17 | const TEST_DIR = __dirname
+    :                  ^^^^^^^^^
+ 18 | const TEST_FILES_DIR = join(TEST_DIR, "test_files")
+    `----
+  help: Prefer ES modules over CommonJS globals.
+
+  x vitest(no-conditional-expect): Unexpected conditional expect
+    ,-[tests/integration/multi-document-yaml/opentofu-component.test.ts:85:7]
+ 84 |       const inputKeys = Object.keys(inputs)
+ 85 |       expect(inputKeys.length).toBeGreaterThan(0)
+    :       ^^^^^^
+ 86 | 
+    `----
+  help: Avoid calling `expect` conditionally
+
+  x vitest(no-conditional-expect): Unexpected conditional expect
+    ,-[tests/integration/multi-document-yaml/opentofu-component.test.ts:88:7]
+ 87 |       // Check for some key inputs
+ 88 |       expect(inputKeys).toContain("as")
+    :       ^^^^^^
+ 89 |       expect(inputKeys).toContain("stage")
+    `----
+  help: Avoid calling `expect` conditionally
+
+  x vitest(no-conditional-expect): Unexpected conditional expect
+    ,-[tests/integration/multi-document-yaml/opentofu-component.test.ts:89:7]
+ 88 |       expect(inputKeys).toContain("as")
+ 89 |       expect(inputKeys).toContain("stage")
+    :       ^^^^^^
+ 90 |       expect(inputKeys).toContain("opentofu_version")
+    `----
+  help: Avoid calling `expect` conditionally
+
+  x vitest(no-conditional-expect): Unexpected conditional expect
+    ,-[tests/integration/multi-document-yaml/opentofu-component.test.ts:90:7]
+ 89 |       expect(inputKeys).toContain("stage")
+ 90 |       expect(inputKeys).toContain("opentofu_version")
+    :       ^^^^^^
+ 91 |     }
+    `----
+  help: Avoid calling `expect` conditionally
+
+  x unicorn(prefer-module): Do not use "__dirname".
+    ,-[tests/integration/multi-document-yaml/opentofu-component.test.ts:17:18]
+ 16 | 
+ 17 | const TEST_DIR = __dirname
+    :                  ^^^^^^^^^
+ 18 | const TEST_FILES_DIR = join(TEST_DIR, "test_files")
+    `----
+  help: Prefer ES modules over CommonJS globals.
+
+  x eslint(no-unused-vars): Variable 'someValue' is declared but never used. Unused variables should start with a '_'.
+   ,-[tests/unit/fixtures/no-export.mjs:4:7]
+ 3 | 
+ 4 | const someValue = "test"
+   :       ^^^^|^^^^
+   :           `-- 'someValue' is declared here
+   `----
+  help: Consider removing this declaration.
+
+  x vitest(no-conditional-expect): Unexpected conditional expect
+    ,-[tests/unit/reference-array-flattening.test.ts:29:7]
+ 28 |     if (Array.isArray(testJob?.script)) {
+ 29 |       expect(testJob.script).toStrictEqual([
+    :       ^^^^^^
+ 30 |         "echo 'first'",
+    `----
+  help: Avoid calling `expect` conditionally
+
+  x vitest(no-conditional-expect): Unexpected conditional expect
+    ,-[tests/unit/reference-array-flattening.test.ts:63:7]
+ 62 |     if (Array.isArray(testJob?.script)) {
+ 63 |       expect(testJob.script).toStrictEqual([
+    :       ^^^^^^
+ 64 |         "echo 'before'",
+    `----
+  help: Avoid calling `expect` conditionally
+
+  x vitest(no-conditional-expect): Unexpected conditional expect
+     ,-[tests/unit/reference-array-flattening.test.ts:102:7]
+ 101 |     if (Array.isArray(testJob?.before_script)) {
+ 102 |       expect(testJob.before_script).toStrictEqual([
+     :       ^^^^^^
+ 103 |         "echo 'load secrets'",
+     `----
+  help: Avoid calling `expect` conditionally
+
+  x vitest(no-conditional-expect): Unexpected conditional expect
+     ,-[tests/unit/reference-array-flattening.test.ts:112:7]
+ 111 |     if (Array.isArray(testJob.after_script)) {
+ 112 |       expect(testJob.after_script).toStrictEqual([
+     :       ^^^^^^
+ 113 |         "echo 'custom cleanup'",
+     `----
+  help: Avoid calling `expect` conditionally
+
+  x unicorn(no-immediate-mutation): Do not call `push()` immediately after initializing an array.
+    ,-[src/importer/ts-factory/generator.ts:72:5]
+ 71 |     // Add import
+ 72 |     statements.push(this.createImport())
+    :     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 73 | 
+    `----
+  help: Move the elements from `push()` into the array initializer.
+
+  x eslint(class-methods-use-this): Expected method `createBodyStatements` to have this.
+     ,-[src/importer/ts-factory/generator.ts:148:11]
+ 147 |    */
+ 148 |   private createBodyStatements(
+     :           ^^^^^^^^^^^^^^^^^^^^
+ 149 |     topLevel: {
+     `----
+  help: Consider converting method `createBodyStatements` to a static method.
+
+  x import(no-named-as-default-member): "yaml" also has a named export "Type"
+   ,-[src/importer/yaml-parser/reference.ts:7:33]
+ 6 |  */
+ 7 | export const referenceTag = new yaml.Type("!reference", {
+   :                                 ^^^^^^^^^
+ 8 |   kind: "sequence",
+   `----
+  help: Check if you meant to write `import { Type } from "js-yaml"`
+
+  x import(no-named-as-default-member): "yaml" also has a named export "Type"
+    ,-[src/importer/yaml-parser/reference.ts:17:43]
+ 16 |  */
+ 17 | export const referenceTagResolvable = new yaml.Type("!reference", {
+    :                                           ^^^^^^^^^
+ 18 |   kind: "sequence",
+    `----
+  help: Check if you meant to write `import { Type } from "js-yaml"`
+
+  x unicorn(consistent-function-scoping): Function `isTemplate` does not capture any variables from its parent scope
+     ,-[src/simulation/pipeline-simulator.ts:146:11]
+ 145 |     // Helper to check if a job is a template (starts with .)
+ 146 |     const isTemplate = (name: string): boolean => name.startsWith(".")
+     :           ^^^^^^^^^^
+ 147 | 
+     `----
+  help: Move `isTemplate` to the outer scope to avoid recreating it on every call.
+
+  x unicorn(consistent-function-scoping): Function `shouldIncludeJob` does not capture any variables from its parent scope
+     ,-[src/simulation/pipeline-simulator.ts:149:11]
+ 148 |     // Helper to check if a job should be included in simulation
+ 149 |     const shouldIncludeJob = (job: JobDefinitionNormalized): boolean => {
+     :           ^^^^^^^^^^^^^^^^
+ 150 |       // A job must have at least one of these to be executable:
+     `----
+  help: Move `shouldIncludeJob` to the outer scope to avoid recreating it on every call.
+
+  x eslint(complexity): function has a complexity of 21. Maximum allowed is 20.
+     ,-[src/simulation/pipeline-simulator.ts:149:30]
+ 148 |         // Helper to check if a job should be included in simulation
+ 149 | ,->     const shouldIncludeJob = (job: JobDefinitionNormalized): boolean => {
+ 150 | |         // A job must have at least one of these to be executable:
+ 151 | |         // - script or run (actual commands to execute)
+ 152 | |         // - trigger (child pipeline or multi-project pipeline)
+ 153 | |         // - needs with pipeline keyword (parent-child pipeline trigger)
+ 154 | |         // - release (create a GitLab release)
+ 155 | |         // - pages (GitLab Pages deployment)
+ 156 | |         if (job.script ?? job.run) {
+ 157 | |           return true
+ 158 | |         }
+ 159 | |         if (job.trigger) {
+ 160 | |           return true
+ 161 | |         }
+ 162 | |         if (job.release) {
+ 163 | |           return true
+ 164 | |         }
+ 165 | |         if (job.pages) {
+ 166 | |           return true
+ 167 | |         }
+ 168 | |   
+ 169 | |         // Check if this is a child pipeline trigger via needs
+ 170 | |         if (job.needs && Array.isArray(job.needs)) {
+ 171 | |           const hasPipelineTrigger = job.needs.some((need) => {
+ 172 | |             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+ 173 | |             if (typeof need === "object" && need !== null) {
+ 174 | |               return "pipeline" in need
+ 175 | |             }
+ 176 | |             return false
+ 177 | |           })
+ 178 | |           if (hasPipelineTrigger) {
+ 179 | |             return true
+ 180 | |           }
+ 181 | |         }
+ 182 | |   
+ 183 | |         // Special case: Jobs that have a stage defined (not using default 'test')
+ 184 | |         // are likely real jobs where the script comes from remote includes
+ 185 | |         // Include them if they have any content beyond just the stage
+ 186 | |         if (job.stage && job.stage !== "test") {
+ 187 | |           // If the job has variables, rules, or other config, it's likely a real job
+ 188 | |           // being configured locally with the actual implementation in a remote include
+ 189 | |           const hasConfig =
+ 190 | |             (job.variables && Object.keys(job.variables).length > 0) ??
+ 191 | |             (job.rules && job.rules.length > 0) ??
+ 192 | |             job.image ??
+ 193 | |             job.before_script ??
+ 194 | |             job.after_script ??
+ 195 | |             job.tags ??
+ 196 | |             job.only ??
+ 197 | |             job.except
+ 198 | |           if (hasConfig) {
+ 199 | |             return true
+ 200 | |           }
+ 201 | |         }
+ 202 | |   
+ 203 | |         // Jobs with only variables/stage/tags/etc and no other content
+ 204 | |         // are pure template jobs that are meant to be extended
+ 205 | |         return false
+ 206 | `->     }
+ 207 |     
+     `----
+
+  x unicorn(prefer-ternary): Prefer ternary expressions over simple `if-else` statements.
+    ,-[src/simulation/pipeline-simulator.ts:87:9]
+ 86 |           for (const [key, val] of Object.entries(plain.variables)) {
+ 87 | ,->         if (val && typeof val === "object" && "value" in val) {
+ 88 | |             globalVariables[key] = String(val.value)
+ 89 | |           } else {
+ 90 | |             globalVariables[key] = String(val)
+ 91 | `->         }
+ 92 |           }
+    `----
+  help: Rewrite this `if`/`else` as a ternary expression.
+
+  x unicorn(prefer-ternary): Prefer ternary expressions over simple `if-else` statements.
+     ,-[src/simulation/pipeline-simulator.ts:284:9]
+ 283 |             // JobVariable can be string | number | boolean | { value: string, expand?: boolean }
+ 284 | ,->         if (val && typeof val === "object" && "value" in val) {
+ 285 | |             jobVariables[key] = String(val.value)
+ 286 | |           } else {
+ 287 | |             jobVariables[key] = String(val)
+ 288 | `->         }
+ 289 |           }
+     `----
+  help: Rewrite this `if`/`else` as a ternary expression.
+
+  x eslint(complexity): private method `evaluateCondition` has a complexity of 35. Maximum allowed is 20.
+     ,-[src/simulation/rule-evaluator.ts:138:28]
+ 137 |        */
+ 138 | ,->   private evaluateCondition(condition: string, context: RuleContext): boolean {
+ 139 | |       // Handle && operator (AND logic)
+ 140 | |       if (condition.includes(" && ")) {
+ 141 | |         const parts = condition.split(" && ")
+ 142 | |         return parts.every((part) => this.evaluateCondition(part.trim(), context))
+ 143 | |       }
+ 144 | |   
+ 145 | |       // Handle || operator (OR logic)
+ 146 | |       if (condition.includes(" || ")) {
+ 147 | |         const parts = condition.split(" || ")
+ 148 | |         return parts.some((part) => this.evaluateCondition(part.trim(), context))
+ 149 | |       }
+ 150 | |   
+ 151 | |       // $VAR_NAME == $OTHER_VAR (variable-to-variable comparison)
+ 152 | |       const varToVarMatchRegex = /\$(\w+)\s*==\s*\$(\w+)/
+ 153 | |       const varToVarMatch = varToVarMatchRegex.exec(condition)
+ 154 | |       if (varToVarMatch) {
+ 155 | |         const var1 = varToVarMatch[1]
+ 156 | |         const var2 = varToVarMatch[2]
+ 157 | |         if (!var1 || !var2) {
+ 158 | |           return false
+ 159 | |         }
+ 160 | |         return context.variables[var1] === context.variables[var2]
+ 161 | |       }
+ 162 | |   
+ 163 | |       // $VAR_NAME != $OTHER_VAR (variable-to-variable not equal)
+ 164 | |       const varToVarNotMatchRegex = /\$(\w+)\s*!=\s*\$(\w+)/
+ 165 | |       const varToVarNotMatch = varToVarNotMatchRegex.exec(condition)
+ 166 | |       if (varToVarNotMatch) {
+ 167 | |         const var1 = varToVarNotMatch[1]
+ 168 | |         const var2 = varToVarNotMatch[2]
+ 169 | |         if (!var1 || !var2) {
+ 170 | |           return false
+ 171 | |         }
+ 172 | |         return context.variables[var1] !== context.variables[var2]
+ 173 | |       }
+ 174 | |   
+ 175 | |       // $VAR_NAME == "value"
+ 176 | |       const exactMatchRegex = /\$(\w+)\s*==\s*["'](.+?)["']/
+ 177 | |       const exactMatch = exactMatchRegex.exec(condition)
+ 178 | |       if (exactMatch) {
+ 179 | |         const varName = exactMatch[1]
+ 180 | |         const value = exactMatch[2]
+ 181 | |         if (!varName || !value) {
+ 182 | |           return false
+ 183 | |         }
+ 184 | |         return context.variables[varName] === value
+ 185 | |       }
+ 186 | |   
+ 187 | |       // $VAR_NAME != "value"
+ 188 | |       const notMatchRegex = /\$(\w+)\s*!=\s*["'](.+?)["']/
+ 189 | |       const notMatch = notMatchRegex.exec(condition)
+ 190 | |       if (notMatch) {
+ 191 | |         const varName = notMatch[1]
+ 192 | |         const value = notMatch[2]
+ 193 | |         if (!varName || !value) {
+ 194 | |           return false
+ 195 | |         }
+ 196 | |         return context.variables[varName] !== value
+ 197 | |       }
+ 198 | |   
+ 199 | |       // $VAR_NAME =~ /pattern/iu (regex match, case insensitive)
+ 200 | |       const regexMatchRegex = /\$(\w+)\s*=~\s*\/(.+?)\/([i]?)/
+ 201 | |       const regexMatch = regexMatchRegex.exec(condition)
+ 202 | |       if (regexMatch) {
+ 203 | |         const varName = regexMatch[1]
+ 204 | |         const pattern = regexMatch[2]
+ 205 | |         const flags = regexMatch[3]
+ 206 | |         if (!varName || !pattern) {
+ 207 | |           return false
+ 208 | |         }
+ 209 | |         const value = context.variables[varName] ?? ""
+ 210 | |         const regex = new RegExp(pattern, flags)
+ 211 | |         return regex.test(value)
+ 212 | |       }
+ 213 | |   
+ 214 | |       // $VAR_NAME !~ /pattern/iu (regex not match)
+ 215 | |       const regexNotMatchRegex = /\$(\w+)\s*!~\s*\/(.+?)\/([i]?)/
+ 216 | |       const regexNotMatch = regexNotMatchRegex.exec(condition)
+ 217 | |       if (regexNotMatch) {
+ 218 | |         const varName = regexNotMatch[1]
+ 219 | |         const pattern = regexNotMatch[2]
+ 220 | |         const flags = regexNotMatch[3]
+ 221 | |         if (!varName || !pattern) {
+ 222 | |           return false
+ 223 | |         }
+ 224 | |         const value = context.variables[varName] ?? ""
+ 225 | |         const regex = new RegExp(pattern, flags)
+ 226 | |         return !regex.test(value)
+ 227 | |       }
+ 228 | |   
+ 229 | |       // $VAR_NAME (variable exists and is truthy)
+ 230 | |       const varExistsRegex = /^\$(\w+)$/
+ 231 | |       const varExists = varExistsRegex.exec(condition)
+ 232 | |       if (varExists) {
+ 233 | |         const varName = varExists[1]
+ 234 | |         if (!varName) {
+ 235 | |           return false
+ 236 | |         }
+ 237 | |         const value = context.variables[varName]
+ 238 | |         return (
+ 239 | |           value !== undefined &&
+ 240 | |           value !== "" &&
+ 241 | |           value !== "false" &&
+ 242 | |           value !== "0"
+ 243 | |         )
+ 244 | |       }
+ 245 | |   
+ 246 | |       // $CI_COMMIT_BRANCH (special variables)
+ 247 | |       if (condition === "$CI_COMMIT_BRANCH" && context.branch) {
+ 248 | |         return true
+ 249 | |       }
+ 250 | |   
+ 251 | |       if (condition === "$CI_COMMIT_TAG" && context.tag) {
+ 252 | |         return true
+ 253 | |       }
+ 254 | |   
+ 255 | |       // $CI_MERGE_REQUEST_ID (merge request check)
+ 256 | |       if (condition === "$CI_MERGE_REQUEST_ID") {
+ 257 | |         return !!context.mergeRequestLabels
+ 258 | |       }
+ 259 | |   
+ 260 | |       // $CI_PIPELINE_SOURCE == "merge_request_event"
+ 261 | |       const pipelineSourceRegex = /\$CI_PIPELINE_SOURCE\s*==\s*["'](.+?)["']/
+ 262 | |       const pipelineSource = pipelineSourceRegex.exec(condition)
+ 263 | |       if (pipelineSource) {
+ 264 | |         const [, source] = pipelineSource
+ 265 | |         if (source === "merge_request_event") {
+ 266 | |           return !!context.mergeRequestLabels
+ 267 | |         }
+ 268 | |         // For other sources, assume they don't match in simulation
+ 269 | |         return false
+ 270 | |       }
+ 271 | |   
+ 272 | |       // Default: assume condition doesn't match
+ 273 | |       return false
+ 274 | `->   }
+ 275 |     
+     `----
+
+  x eslint(prefer-destructuring): Use Array destructuring.
+     ,-[src/simulation/rule-evaluator.ts:155:20]
+ 154 |     if (varToVarMatch) {
+ 155 |       const var1 = varToVarMatch[1]
+     :                    ^^^^^^^^^^^^^^^^
+ 156 |       const var2 = varToVarMatch[2]
+     `----
+  help: Use array destructuring rather than direct member access.
+
+  x eslint(prefer-destructuring): Use Array destructuring.
+     ,-[src/simulation/rule-evaluator.ts:156:20]
+ 155 |       const var1 = varToVarMatch[1]
+ 156 |       const var2 = varToVarMatch[2]
+     :                    ^^^^^^^^^^^^^^^^
+ 157 |       if (!var1 || !var2) {
+     `----
+  help: Use array destructuring rather than direct member access.
+
+  x eslint(prefer-destructuring): Use Array destructuring.
+     ,-[src/simulation/rule-evaluator.ts:167:20]
+ 166 |     if (varToVarNotMatch) {
+ 167 |       const var1 = varToVarNotMatch[1]
+     :                    ^^^^^^^^^^^^^^^^^^^
+ 168 |       const var2 = varToVarNotMatch[2]
+     `----
+  help: Use array destructuring rather than direct member access.
+
+  x eslint(prefer-destructuring): Use Array destructuring.
+     ,-[src/simulation/rule-evaluator.ts:168:20]
+ 167 |       const var1 = varToVarNotMatch[1]
+ 168 |       const var2 = varToVarNotMatch[2]
+     :                    ^^^^^^^^^^^^^^^^^^^
+ 169 |       if (!var1 || !var2) {
+     `----
+  help: Use array destructuring rather than direct member access.
+
+  x eslint(prefer-destructuring): Use Array destructuring.
+     ,-[src/simulation/rule-evaluator.ts:179:23]
+ 178 |     if (exactMatch) {
+ 179 |       const varName = exactMatch[1]
+     :                       ^^^^^^^^^^^^^
+ 180 |       const value = exactMatch[2]
+     `----
+  help: Use array destructuring rather than direct member access.
+
+  x eslint(prefer-destructuring): Use Array destructuring.
+     ,-[src/simulation/rule-evaluator.ts:180:21]
+ 179 |       const varName = exactMatch[1]
+ 180 |       const value = exactMatch[2]
+     :                     ^^^^^^^^^^^^^
+ 181 |       if (!varName || !value) {
+     `----
+  help: Use array destructuring rather than direct member access.
+
+  x eslint(prefer-destructuring): Use Array destructuring.
+     ,-[src/simulation/rule-evaluator.ts:191:23]
+ 190 |     if (notMatch) {
+ 191 |       const varName = notMatch[1]
+     :                       ^^^^^^^^^^^
+ 192 |       const value = notMatch[2]
+     `----
+  help: Use array destructuring rather than direct member access.
+
+  x eslint(prefer-destructuring): Use Array destructuring.
+     ,-[src/simulation/rule-evaluator.ts:192:21]
+ 191 |       const varName = notMatch[1]
+ 192 |       const value = notMatch[2]
+     :                     ^^^^^^^^^^^
+ 193 |       if (!varName || !value) {
+     `----
+  help: Use array destructuring rather than direct member access.
+
+  x eslint(prefer-destructuring): Use Array destructuring.
+     ,-[src/simulation/rule-evaluator.ts:203:23]
+ 202 |     if (regexMatch) {
+ 203 |       const varName = regexMatch[1]
+     :                       ^^^^^^^^^^^^^
+ 204 |       const pattern = regexMatch[2]
+     `----
+  help: Use array destructuring rather than direct member access.
+
+  x eslint(prefer-destructuring): Use Array destructuring.
+     ,-[src/simulation/rule-evaluator.ts:204:23]
+ 203 |       const varName = regexMatch[1]
+ 204 |       const pattern = regexMatch[2]
+     :                       ^^^^^^^^^^^^^
+ 205 |       const flags = regexMatch[3]
+     `----
+  help: Use array destructuring rather than direct member access.
+
+  x eslint(prefer-destructuring): Use Array destructuring.
+     ,-[src/simulation/rule-evaluator.ts:205:21]
+ 204 |       const pattern = regexMatch[2]
+ 205 |       const flags = regexMatch[3]
+     :                     ^^^^^^^^^^^^^
+ 206 |       if (!varName || !pattern) {
+     `----
+  help: Use array destructuring rather than direct member access.
+
+  x eslint(prefer-destructuring): Use Array destructuring.
+     ,-[src/simulation/rule-evaluator.ts:218:23]
+ 217 |     if (regexNotMatch) {
+ 218 |       const varName = regexNotMatch[1]
+     :                       ^^^^^^^^^^^^^^^^
+ 219 |       const pattern = regexNotMatch[2]
+     `----
+  help: Use array destructuring rather than direct member access.
+
+  x eslint(prefer-destructuring): Use Array destructuring.
+     ,-[src/simulation/rule-evaluator.ts:219:23]
+ 218 |       const varName = regexNotMatch[1]
+ 219 |       const pattern = regexNotMatch[2]
+     :                       ^^^^^^^^^^^^^^^^
+ 220 |       const flags = regexNotMatch[3]
+     `----
+  help: Use array destructuring rather than direct member access.
+
+  x eslint(prefer-destructuring): Use Array destructuring.
+     ,-[src/simulation/rule-evaluator.ts:220:21]
+ 219 |       const pattern = regexNotMatch[2]
+ 220 |       const flags = regexNotMatch[3]
+     :                     ^^^^^^^^^^^^^^^^
+ 221 |       if (!varName || !pattern) {
+     `----
+  help: Use array destructuring rather than direct member access.
+
+  x eslint(prefer-destructuring): Use Array destructuring.
+     ,-[src/simulation/rule-evaluator.ts:233:23]
+ 232 |     if (varExists) {
+ 233 |       const varName = varExists[1]
+     :                       ^^^^^^^^^^^^
+ 234 |       if (!varName) {
+     `----
+  help: Use array destructuring rather than direct member access.
+
+  x eslint(class-methods-use-this): Expected method `interpolateVariables` to have this.
+     ,-[src/simulation/rule-evaluator.ts:124:11]
+ 123 |    */
+ 124 |   private interpolateVariables(
+     :           ^^^^^^^^^^^^^^^^^^^^
+ 125 |     str: string,
+     `----
+  help: Consider converting method `interpolateVariables` to a static method.
+
+  x vitest(prefer-hooks-in-order): Test hooks are not in a consistent order.
+     ,-[tests/integration/cli/remote-includes.test.ts:157:3]
+ 156 |   beforeAll(() => server.listen({ onUnhandledRequest: "error" }))
+ 157 |   afterAll(() => server.close())
+     :   ^^^^^^^^^^^^^^^|^^^^^^^^^^^^^^
+     :                  `-- "afterEach" hook should be called before this
+ 158 |   afterEach(() => server.resetHandlers())
+     :   ^^^^^^^^^^^^^^^^^^^|^^^^^^^^^^^^^^^^^^^
+     :                      `-- this should be moved to before the "afterAll" hook
+ 159 |   it("should resolve and visualize YAML with remote include via HTTP", async () => {
+     `----
+  help: "afterEach" hooks should be before any "afterAll" hooks
+
+  x eslint(complexity): function `loadChildPipelineConfig` has a complexity of 22. Maximum allowed is 20.
+     ,-[src/resolution/child-pipeline.ts:48:1]
+  47 |      */
+  48 | ,-> function loadChildPipelineConfig(
+  49 | |     triggerInclude: unknown,
+  50 | |     basePath?: string
+  51 | |   ): { config: ConfigBuilder; source: string } | null {
+  52 | |     if (!triggerInclude || typeof triggerInclude !== "object") {
+  53 | |       return null
+  54 | |     }
+  55 | |   
+  56 | |     const include = triggerInclude as Record<string, unknown>
+  57 | |   
+  58 | |     // Handle local file includes
+  59 | |     if ("local" in include && typeof include.local === "string") {
+  60 | |       try {
+  61 | |         const filePath = basePath
+  62 | |           ? resolve(basePath, include.local)
+  63 | |           : include.local
+  64 | |         const yamlContent = readFileSync(filePath, "utf-8")
+  65 | |         const parsed = parseYaml(yamlContent)
+  66 | |   
+  67 | |         const config = new ConfigBuilder()
+  68 | |   
+  69 | |         // Handle empty or null parsed result
+  70 | |         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  71 | |         if (!parsed || typeof parsed !== "object") {
+  72 | |           return { config, source: include.local }
+  73 | |         }
+  74 | |   
+  75 | |         // Add stages
+  76 | |         if (parsed.stages) {
+  77 | |           config.stages(
+  78 | |             ...((Array.isArray(parsed.stages)
+  79 | |               ? parsed.stages
+  80 | |               : [parsed.stages]) as string[])
+  81 | |           )
+  82 | |         }
+  83 | |   
+  84 | |         // Add jobs and templates
+  85 | |         for (const [name, definition] of Object.entries(parsed)) {
+  86 | |           if (
+  87 | |             typeof definition === "object" &&
+  88 | |             definition !== null &&
+  89 | |             ![
+  90 | |               "stages",
+  91 | |               "variables",
+  92 | |               "workflow",
+  93 | |               "include",
+  94 | |               "default",
+  95 | |               "spec",
+  96 | |             ].includes(name)
+  97 | |           ) {
+  98 | |             try {
+  99 | |               if (name.startsWith(".")) {
+ 100 | |                 config.template(name, definition)
+ 101 | |               } else {
+ 102 | |                 config.job(name, definition)
+ 103 | |               }
+ 104 | |             } catch {
+ 105 | |               // Skip invalid jobs
+ 106 | |             }
+ 107 | |           }
+ 108 | |         }
+ 109 | |   
+ 110 | |         return { config, source: include.local }
+ 111 | |       } catch {
+ 112 | |         return null
+ 113 | |       }
+ 114 | |     }
+ 115 | |   
+ 116 | |     // Handle artifact includes (can't be loaded at build time)
+ 117 | |     if ("artifact" in include && typeof include.artifact === "string") {
+ 118 | |       return {
+ 119 | |         config: new ConfigBuilder(),
+ 120 | |         source: `artifact:${include.artifact}`,
+ 121 | |       }
+ 122 | |     }
+ 123 | |   
+ 124 | |     // Handle array of includes
+ 125 | |     if (Array.isArray(include)) {
+ 126 | |       for (const item of include) {
+ 127 | |         const result = loadChildPipelineConfig(item, basePath)
+ 128 | |         if (result) {
+ 129 | |           return result
+ 130 | |         }
+ 131 | |       }
+ 132 | |     }
+ 133 | |   
+ 134 | |     return null
+ 135 | `-> }
+ 136 |     
+     `----
+
+  x import(no-cycle): Dependency cycle detected
+   ,-[src/resolution/child-pipeline.ts:4:31]
+ 3 | 
+ 4 | import { ConfigBuilder } from "../builder"
+   :                               ^^^^^^^^^^^^
+ 5 | import { parseYaml } from "../importer/parser"
+   `----
+  help: Refactor to remove the cycle. Consider extracting shared code into a separate module that both files can import.
+  note: These paths form a cycle:
+           ╭──▶ ../builder (src/builder/index.ts)
+           │         ⬇ imports
+           │    ./ConfigBuilder (src/builder/ConfigBuilder.ts)
+           │         ⬇ imports
+           │    ../resolution (src/resolution/index.ts)
+           │         ⬇ imports
+           │    ./child-pipeline (src/resolution/child-pipeline.ts)
+           ╰─────────╯ imports the current file
+
+  x oxc(no-barrel-file): Barrel file detected, 203 modules are loaded which exceeds the threshold of 100.
+   ,-[src/simulation/index.ts:1:15]
+ 1 | export * from "./pipeline-simulator"
+   :               ^^^^^^^^^^^|^^^^^^^^^^
+   :                          `-- 117 modules
+ 2 | export * from "./rule-evaluator"
+   :               ^^^^^^^^^|^^^^^^^^
+   :                        `-- 84 modules
+   `----
+  help: Consider importing directly from the specific modules instead of using `export *` or `import *`.
+        Loading 203 modules may be slow for runtimes and bundlers.
+  note: See: https://marvinh.dev/blog/speeding-up-javascript-ecosystem-part-7
+
+  x oxc(no-barrel-file): Barrel file detected, 852 modules are loaded which exceeds the threshold of 100.
+    ,-[src/index.ts:1:15]
+  1 | export * from "./schema"
+    :               ^^^^^|^^^^
+    :                    `-- 90 modules
+  2 | export * from "./merge"
+    :               ^^^^|^^^^
+    :                   `-- 92 modules
+  3 | export * from "./resolution"
+    :               ^^^^^^^|^^^^^^
+    :                      `-- 116 modules
+  4 | export * from "./model"
+    :               ^^^^|^^^^
+    :                   `-- 92 modules
+  5 | export * from "./builder"
+    :               ^^^^^|^^^^^
+    :                    `-- 116 modules
+  6 | export * from "./serializer"
+    :               ^^^^^^^|^^^^^^
+    :                      `-- 95 modules
+  7 | export * from "./importer"
+    :               ^^^^^^|^^^^^
+    :                     `-- 8 modules
+  8 | export * from "./resolver"
+    :               ^^^^^^|^^^^^
+    :                     `-- 116 modules
+  9 | export * from "./simulation"
+    :               ^^^^^^^|^^^^^^
+    :                      `-- 118 modules
+ 10 | export { ConfigBuilder } from "./builder/ConfigBuilder"
+    `----
+  help: Consider importing directly from the specific modules instead of using `export *` or `import *`.
+        Loading 852 modules may be slow for runtimes and bundlers.
+  note: See: https://marvinh.dev/blog/speeding-up-javascript-ecosystem-part-7
+
+  x eslint(no-useless-return): Unnecessary return statement.
+    ,-[src/schema/interpolation.ts:42:5]
+ 41 |   if (isGitLabInterpolation(value)) {
+ 42 |     return
+    :     ^^^^^^
+ 43 |   }
+    `----
+  help: Remove this redundant `return` statement.
+
+  x oxc(no-barrel-file): Barrel file detected, 815 modules are loaded which exceeds the threshold of 100.
+    ,-[src/schema/index.ts:1:15]
+  1 | export * from "./base"
+    :               ^^^^|^^^
+    :                   `-- 80 modules
+  2 | export * from "./defaults"
+    :               ^^^^^^|^^^^^
+    :                     `-- 84 modules
+  3 | export * from "./errors"
+    :               ^^^^^|^^^^
+    :                    `-- 79 modules
+  4 | export * from "./include"
+    :               ^^^^^|^^^^^
+    :                    `-- 84 modules
+  5 | export * from "./interpolation"
+    :               ^^^^^^^^|^^^^^^^^
+    :                       `-- 79 modules
+  6 | export * from "./job"
+    :               ^^^|^^^
+    :                  `-- 83 modules
+  7 | export * from "./policies"
+    :               ^^^^^^|^^^^^
+    :                     `-- 79 modules
+  8 | export * from "./spec"
+    :               ^^^^|^^^
+    :                   `-- 79 modules
+  9 | export * from "./steps"
+    :               ^^^^|^^^^
+    :                   `-- 79 modules
+ 10 | export * from "./workflow"
+    :               ^^^^^^|^^^^^
+    :                     `-- 79 modules
+ 11 | 
+    `----
+  help: Consider importing directly from the specific modules instead of using `export *` or `import *`.
+        Loading 815 modules may be slow for runtimes and bundlers.
+  note: See: https://marvinh.dev/blog/speeding-up-javascript-ecosystem-part-7
+
+  x unicorn(filename-case): Filename should be in kebab-case
+   ,-[src/builder/ConfigBuilder.ts:1:1]
+ 1 | import fs from "node:fs/promises"
+   : ^
+ 2 | import path from "node:path"
+   `----
+  help: Rename the file to 'config-builder.ts'
+
+  x import(no-cycle): Dependency cycle detected
+    ,-[src/builder/ConfigBuilder.ts:9:61]
+  8 | import { PipelineState } from "../model"
+  9 | import type { ExtendsGraphNode, VisualizationOptions } from "../resolution"
+    :                                                             ^^^^^^^^^^^^^^^
+ 10 | import {
+    `----
+  help: Refactor to remove the cycle. Consider extracting shared code into a separate module that both files can import.
+  note: These paths form a cycle:
+           ╭──▶ ../resolution (src/resolution/index.ts)
+           │         ⬇ imports
+           │    ./child-pipeline (src/resolution/child-pipeline.ts)
+           │         ⬇ imports
+           │    ../builder (src/builder/index.ts)
+           │         ⬇ imports
+           │    ./ConfigBuilder (src/builder/ConfigBuilder.ts)
+           ╰─────────╯ imports the current file
+
+  x import(no-cycle): Dependency cycle detected
+    ,-[src/builder/ConfigBuilder.ts:16:32]
+ 15 | } from "../resolution"
+ 16 | import { resolveExtends } from "../resolver"
+    :                                ^^^^^^^^^^^^^
+ 17 | import type {
+    `----
+  help: Refactor to remove the cycle. Consider extracting shared code into a separate module that both files can import.
+  note: These paths form a cycle:
+           ╭──▶ ../resolver (src/resolver/index.ts)
+           │         ⬇ imports
+           │    ./cli (src/resolver/cli.ts)
+           │         ⬇ imports
+           │    ../builder (src/builder/index.ts)
+           │         ⬇ imports
+           │    ./ConfigBuilder (src/builder/ConfigBuilder.ts)
+           ╰─────────╯ imports the current file
+
+  x unicorn(filename-case): Filename should be in kebab-case
+   ,-[src/builder/JobBuilder.ts:1:1]
+ 1 | import type {
+   : ^
+ 2 |   Artifacts,
+   `----
+  help: Rename the file to 'job-builder.ts'
+
+  x oxc(no-barrel-file): Barrel file detected, 326 modules are loaded which exceeds the threshold of 100.
+   ,-[src/resolution/index.ts:1:15]
+ 1 | export * from "./graph"
+   :               ^^^^|^^^^
+   :                   `-- 91 modules
+ 2 | export * from "./visualization"
+   :               ^^^^^^^^|^^^^^^^^
+   :                       `-- 116 modules
+ 3 | export * from "./child-pipeline"
+   :               ^^^^^^^^^|^^^^^^^^
+   :                        `-- 116 modules
+   `----
+  help: Consider importing directly from the specific modules instead of using `export *` or `import *`.
+        Loading 326 modules may be slow for runtimes and bundlers.
+  note: See: https://marvinh.dev/blog/speeding-up-javascript-ecosystem-part-7
+
+  x import(no-cycle): Dependency cycle detected
+   ,-[src/resolution/index.ts:3:15]
+ 2 | export * from "./visualization"
+ 3 | export * from "./child-pipeline"
+   :               ^^^^^^^^^^^^^^^^^^
+   `----
+  help: Refactor to remove the cycle. Consider extracting shared code into a separate module that both files can import.
+  note: These paths form a cycle:
+           ╭──▶ ./child-pipeline (src/resolution/child-pipeline.ts)
+           │         ⬇ imports
+           │    ../builder (src/builder/index.ts)
+           │         ⬇ imports
+           │    ./ConfigBuilder (src/builder/ConfigBuilder.ts)
+           │         ⬇ imports
+           │    ../resolution (src/resolution/index.ts)
+           ╰─────────╯ imports the current file
+
+  x import(no-cycle): Dependency cycle detected
+   ,-[src/resolution/index.ts:2:15]
+ 1 | export * from "./graph"
+ 2 | export * from "./visualization"
+   :               ^^^^^^^^^^^^^^^^^
+ 3 | export * from "./child-pipeline"
+   `----
+  help: Refactor to remove the cycle. Consider extracting shared code into a separate module that both files can import.
+  note: These paths form a cycle:
+           ╭──▶ ./visualization (src/resolution/visualization.ts)
+           │         ⬇ imports
+           │    ../builder/ConfigBuilder (src/builder/ConfigBuilder.ts)
+           │         ⬇ imports
+           │    ../resolution (src/resolution/index.ts)
+           ╰─────────╯ imports the current file
+
+  x eslint(complexity): function `resolveExtends` has a complexity of 23. Maximum allowed is 20.
+     ,-[src/resolver/builder.ts:51:8]
+  50 |      */
+  51 | ,-> export function resolveExtends(
+  52 | |     jobs: Record<string, JobDefinitionNormalized>,
+  53 | |     templates: Record<string, JobDefinitionNormalized>,
+  54 | |     jobOptionsMap: Record<string, JobOptions>,
+  55 | |     globalOptions: GlobalOptions
+  56 | |   ): {
+  57 | |     resolved: Record<string, JobDefinitionOutput>
+  58 | |     errors: ValidationError[]
+  59 | |     warnings: ValidationError[]
+  60 | |     skippedChecks: string[]
+  61 | |   } {
+  62 | |     const context: ResolutionContext = {
+  63 | |       jobOptions: jobOptionsMap,
+  64 | |       globalOptions,
+  65 | |       errors: [],
+  66 | |       warnings: [],
+  67 | |       skippedChecks: [],
+  68 | |     }
+  69 | |   
+  70 | |     // Build combined graph
+  71 | |     const graph = buildExtendsGraph(jobs, templates, jobOptionsMap)
+  72 | |   
+  73 | |     // Validate graph
+  74 | |     const validation = validateExtendsGraph(graph, globalOptions)
+  75 | |     context.errors.push(...validation.errors)
+  76 | |     context.warnings.push(...validation.warnings)
+  77 | |     context.skippedChecks.push(...validation.skippedChecks)
+  78 | |   
+  79 | |     // If there are errors, return early
+  80 | |     if (context.errors.length > 0) {
+  81 | |       return {
+  82 | |         resolved: {},
+  83 | |         errors: context.errors,
+  84 | |         warnings: context.warnings,
+  85 | |         skippedChecks: context.skippedChecks,
+  86 | |       }
+  87 | |     }
+  88 | |   
+  89 | |     // Topological sort to get correct merge order
+  90 | |     const sortedNames = topologicalSort(graph)
+  91 | |   
+  92 | |     // Resolve extends in topological order
+  93 | |     const resolved = new Map<string, JobDefinitionOutput>()
+  94 | |     const fullyResolved = new Map<string, JobDefinitionNormalized>()
+  95 | |   
+  96 | |     for (const name of sortedNames) {
+  97 | |       const node = graph.get(name)
+  98 | |       if (!node) {
+  99 | |         continue
+ 100 | |       }
+ 101 | |   
+ 102 | |       // Check if this job should have extends resolved
+ 103 | |       const jobOpts = context.jobOptions[name]
+ 104 | |       const mergeExtends = jobOpts?.mergeExtends ?? globalOptions.mergeExtends
+ 105 | |       const resolveTemplatesOnly =
+ 106 | |         jobOpts?.resolveTemplatesOnly ?? globalOptions.resolveTemplatesOnly
+ 107 | |       const { mergeRemoteExtends } = globalOptions
+ 108 | |   
+ 109 | |       // Start with empty definition
+ 110 | |       let mergedDef: JobDefinitionNormalized = {}
+ 111 | |   
+ 112 | |       // Collect all extends that should be kept (not merged)
+ 113 | |       const keptExtends: string[] = []
+ 114 | |   
+ 115 | |       // Recursively collect non-template extends from merged templates
+ 116 | |       const collectNonTemplateExtends = (
+ 117 | |         extendName: string,
+ 118 | |         visited = new Set<string>()
+ 119 | |       ): void => {
+ 120 | |         if (visited.has(extendName)) {
+ 121 | |           return
+ 122 | |         }
+ 123 | |         visited.add(extendName)
+ 124 | |   
+ 125 | |         const targetName = graph.has(extendName) ? extendName : `.${extendName}`
+ 126 | |         const targetNode = graph.get(targetName)
+ 127 | |   
+ 128 | |         if (!targetNode?.extends) {
+ 129 | |           return
+ 130 | |         }
+ 131 | |   
+ 132 | |         for (const nestedExtend of targetNode.extends) {
+ 133 | |           const nestedTargetName = graph.has(nestedExtend)
+ 134 | |             ? nestedExtend
+ 135 | |             : `.${nestedExtend}`
+ 136 | |           const nestedNode = graph.get(nestedTargetName)
+ 137 | |   
+ 138 | |           if (!nestedNode) {
+ 139 | |             // Unknown extend, keep it
+ 140 | |             if (!keptExtends.includes(nestedExtend)) {
+ 141 | |               keptExtends.push(nestedExtend)
+ 142 | |             }
+ 143 | |           } else if (nestedNode.isRemote && !mergeRemoteExtends) {
+ 144 | |             // Remote extend when mergeRemoteExtends is false, keep it
+ 145 | |             if (!keptExtends.includes(nestedExtend)) {
+ 146 | |               keptExtends.push(nestedExtend)
+ 147 | |             }
+ 148 | |           } else if (!nestedTargetName.startsWith(".")) {
+ 149 | |             // Normal job (not template), keep it
+ 150 | |             if (!keptExtends.includes(nestedExtend)) {
+ 151 | |               keptExtends.push(nestedExtend)
+ 152 | |             }
+ 153 | |           } else {
+ 154 | |             // It's a template, recurse into it
+ 155 | |             collectNonTemplateExtends(nestedExtend, visited)
+ 156 | |           }
+ 157 | |         }
+ 158 | |       }
+ 159 | |   
+ 160 | |       // Merge extends chain (ALWAYS resolve for merging, regardless of mergeExtends)
+ 161 | |       if (node.extends.length > 0) {
+ 162 | |         for (const extendName of node.extends) {
+ 163 | |           // Try with and without dot prefix
+ 164 | |           const targetName = graph.has(extendName) ? extendName : `.${extendName}`
+ 165 | |           const targetNode = graph.get(targetName)
+ 166 | |   
+ 167 | |           if (!targetNode) {
+ 168 | |             // Unknown target, keep in extends
+ 169 | |             keptExtends.push(extendName)
+ 170 | |             continue
+ 171 | |           }
+ 172 | |   
+ 173 | |           // Check if we should merge this extend
+ 174 | |           let shouldMerge = resolveTemplatesOnly
+ 175 | |             ? targetName.startsWith(".")
+ 176 | |             : true
+ 177 | |   
+ 178 | |           // Check if remote extends should be merged
+ 179 | |           if (targetNode.isRemote && !mergeRemoteExtends) {
+ 180 | |             shouldMerge = false
+ 181 | |           }
+ 182 | |   
+ 183 | |           if (shouldMerge) {
+ 184 | |             // Use fully resolved definition (without extends field) for merging
+ 185 | |             const targetDef = fullyResolved.get(targetName)
+ 186 | |             if (targetDef) {
+ 187 | |               mergedDef = mergeJobDefinitions(mergedDef, targetDef)
+ 188 | |             } else {
+ 189 | |               mergedDef = mergeJobDefinitions(mergedDef, targetNode.definition)
+ 190 | |             }
+ 191 | |   
+ 192 | |             // If resolveTemplatesOnly and this is a template, collect non-template extends from it
+ 193 | |             if (resolveTemplatesOnly && targetName.startsWith(".")) {
+ 194 | |               collectNonTemplateExtends(extendName)
+ 195 | |             }
+ 196 | |           } else {
+ 197 | |             // Don't merge, but keep in extends (normal job when resolveTemplatesOnly: true)
+ 198 | |             keptExtends.push(extendName)
+ 199 | |           }
+ 200 | |         }
+ 201 | |       }
+ 202 | |   
+ 203 | |       // Merge with the job's own definition (highest priority)
+ 204 | |       const finalDef = mergeJobDefinitions(mergedDef, node.definition)
+ 205 | |   
+ 206 | |       // Store fully resolved version (for use by jobs that extend from this)
+ 207 | |       fullyResolved.set(name, finalDef)
+ 208 | |   
+ 209 | |       // Determine what to output based on mergeExtends
+ 210 | |       if (mergeExtends === false) {
+ 211 | |         // Keep extends as-is in output
+ 212 | |         resolved.set(name, node.definition)
+ 213 | |         continue
+ 214 | |       }
+ 215 | |   
+ 216 | |       // Add kept extends to final definition (or remove extends entirely if none kept)
+ 217 | |       let outputDef: JobDefinitionOutput
+ 218 | |       if (keptExtends.length > 0) {
+ 219 | |         if (keptExtends.length === 1) {
+ 220 | |           outputDef = { ...finalDef, extends: keptExtends[0] }
+ 221 | |         } else {
+ 222 | |           outputDef = { ...finalDef, extends: keptExtends }
+ 223 | |         }
+ 224 | |       } else {
+ 225 | |         // Remove extends field entirely if nothing to keep
+ 226 | |         const { extends: _extends, ...rest } = finalDef
+ 227 | |         outputDef = rest as JobDefinitionOutput
+ 228 | |       }
+ 229 | |   
+ 230 | |       resolved.set(name, outputDef)
+ 231 | |     }
+ 232 | |   
+ 233 | |     // Convert Map back to Record
+ 234 | |     const resolvedRecord: Record<string, JobDefinitionOutput> = {}
+ 235 | |     for (const [name, def] of resolved.entries()) {
+ 236 | |       resolvedRecord[name] = def
+ 237 | |     }
+ 238 | |   
+ 239 | |     return {
+ 240 | |       resolved: resolvedRecord,
+ 241 | |       errors: context.errors,
+ 242 | |       warnings: context.warnings,
+ 243 | |       skippedChecks: context.skippedChecks,
+ 244 | |     }
+ 245 | `-> }
+     `----
+
+  x unicorn(no-negated-condition): Unexpected negated condition.
+     ,-[src/resolver/builder.ts:148:20]
+ 147 |           }
+ 148 |         } else if (!nestedTargetName.startsWith(".")) {
+     :                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 149 |           // Normal job (not template), keep it
+     `----
+  help: Remove the negation operator and switch the consequent and alternate branches.
+
+  x eslint(no-negated-condition): Unexpected negated condition.
+     ,-[src/resolver/builder.ts:148:20]
+ 147 |           }
+ 148 |         } else if (!nestedTargetName.startsWith(".")) {
+     :                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 149 |           // Normal job (not template), keep it
+     `----
+  help: Remove the negation operator and switch the consequent and alternate branches.
+
+  x unicorn(prefer-ternary): Prefer ternary expressions over simple `if-else` statements.
+     ,-[src/resolver/builder.ts:186:11]
+ 185 |               const targetDef = fullyResolved.get(targetName)
+ 186 | ,->           if (targetDef) {
+ 187 | |               mergedDef = mergeJobDefinitions(mergedDef, targetDef)
+ 188 | |             } else {
+ 189 | |               mergedDef = mergeJobDefinitions(mergedDef, targetNode.definition)
+ 190 | `->           }
+ 191 |     
+     `----
+  help: Rewrite this `if`/`else` as a ternary expression.
+
+  x unicorn(prefer-ternary): Prefer ternary expressions over simple `if-else` statements.
+     ,-[src/resolver/builder.ts:219:7]
+ 218 |         if (keptExtends.length > 0) {
+ 219 | ,->       if (keptExtends.length === 1) {
+ 220 | |           outputDef = { ...finalDef, extends: keptExtends[0] }
+ 221 | |         } else {
+ 222 | |           outputDef = { ...finalDef, extends: keptExtends }
+ 223 | `->       }
+ 224 |         } else {
+     `----
+  help: Rewrite this `if`/`else` as a ternary expression.
+
+  x vitest(require-mock-type-parameters): Missing type parameters on mock function call
+    ,-[tests/unit/dynamic-include.test.ts:10:16]
+  9 | vi.mock(import("tinyglobby"), () => ({
+ 10 |   globSync: vi.fn(),
+    :                ^^
+ 11 | }))
+    `----
+  help: Add a type parameter to the mock function, e.g. `vi.fn<() => void>()`.
+
+  x vitest(require-mock-type-parameters): Missing type parameters on mock function call
+    ,-[tests/unit/dynamic-include.test.ts:57:33]
+ 56 |   it("should call extendConfig for each matched file", async () => {
+ 57 |     const mockExtendConfig = vi.fn((cfg: ConfigBuilder) => {
+    :                                 ^^
+ 58 |       cfg.job("included-job", { script: ["echo included"] })
+    `----
+  help: Add a type parameter to the mock function, e.g. `vi.fn<() => void>()`.
+
+  x vitest(require-mock-type-parameters): Missing type parameters on mock function call
+     ,-[tests/unit/dynamic-include.test.ts:107:33]
+ 106 |   it("should work with multiple globs", async () => {
+ 107 |     const mockExtendConfig = vi.fn()
+     :                                 ^^
+ 108 | 
+     `----
+  help: Add a type parameter to the mock function, e.g. `vi.fn<() => void>()`.
+
+  x vitest(require-mock-type-parameters): Missing type parameters on mock function call
+     ,-[tests/unit/dynamic-include.test.ts:136:33]
+ 135 |   it("should support default export", async () => {
+ 136 |     const mockExtendConfig = vi.fn((cfg: ConfigBuilder) => {
+     :                                 ^^
+ 137 |       cfg.job("default-job", { script: ["echo default"] })
+     `----
+  help: Add a type parameter to the mock function, e.g. `vi.fn<() => void>()`.
+
+  x vitest(require-mock-type-parameters): Missing type parameters on mock function call
+     ,-[tests/unit/dynamic-include.test.ts:156:28]
+ 155 |   it("should prefer default export over named extendConfig", async () => {
+ 156 |     const mockDefault = vi.fn()
+     :                            ^^
+ 157 |     const mockNamed = vi.fn()
+     `----
+  help: Add a type parameter to the mock function, e.g. `vi.fn<() => void>()`.
+
+  x vitest(require-mock-type-parameters): Missing type parameters on mock function call
+     ,-[tests/unit/dynamic-include.test.ts:157:26]
+ 156 |     const mockDefault = vi.fn()
+ 157 |     const mockNamed = vi.fn()
+     :                          ^^
+ 158 | 
+     `----
+  help: Add a type parameter to the mock function, e.g. `vi.fn<() => void>()`.
+
+  x vitest(prefer-called-exactly-once-with): Prefer `toHaveBeenCalledExactlyOnceWith` over `toHaveBeenCalledOnce` and `toHaveBeenCalledWith` on the same target.
+     ,-[tests/unit/dynamic-include.test.ts:149:5]
+ 148 | 
+ 149 |     expect(mockExtendConfig).toHaveBeenCalledOnce()
+     :     ^^^^^^^^^^^^^^^^^^^^^^^|^^^^^^^^^^^^^^^^^^^^^^^
+     :                            `-- Replace with `toHaveBeenCalledExactlyOnceWith`
+ 150 |     expect(mockExtendConfig).toHaveBeenCalledWith(config)
+     : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^|^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     :                              `-- Remove this expect
+ 151 | 
+ 152 |     vi.doUnmock("/fake/default.ts")
+     `----
+  help: Replace with `toHaveBeenCalledExactlyOnceWith` and remove redundant expect
+
+  x import(no-named-as-default-member): "yaml" also has a named export "DEFAULT_SCHEMA"
+   ,-[src/importer/parser.ts:5:23]
+ 4 | 
+ 5 | const CUSTOM_SCHEMA = yaml.DEFAULT_SCHEMA.extend({ explicit: [referenceTag] })
+   :                       ^^^^^^^^^^^^^^^^^^^
+ 6 | 
+   `----
+  help: Check if you meant to write `import { DEFAULT_SCHEMA } from "js-yaml"`
+
+  x import(no-named-as-default-member): "yaml" also has a named export "loadAll"
+    ,-[src/importer/parser.ts:35:21]
+ 34 |   // Try to load all documents
+ 35 |   const documents = yaml.loadAll(yamlContent, null, { schema: CUSTOM_SCHEMA })
+    :                     ^^^^^^^^^^^^
+ 36 | 
+    `----
+  help: Check if you meant to write `import { loadAll } from "js-yaml"`
+
+  x oxc(no-barrel-file): Barrel file detected, 234 modules are loaded which exceeds the threshold of 100.
+   ,-[src/builder/index.ts:1:15]
+ 1 | export * from "./ConfigBuilder"
+   :               ^^^^^^^^|^^^^^^^^
+   :                       `-- 116 modules
+ 2 | export * from "./JobBuilder"
+   :               ^^^^^^^|^^^^^^
+   :                      `-- 116 modules
+   `----
+  help: Consider importing directly from the specific modules instead of using `export *` or `import *`.
+        Loading 234 modules may be slow for runtimes and bundlers.
+  note: See: https://marvinh.dev/blog/speeding-up-javascript-ecosystem-part-7
+
+  x import(no-cycle): Dependency cycle detected
+   ,-[src/builder/index.ts:1:15]
+ 1 | export * from "./ConfigBuilder"
+   :               ^^^^^^^^^^^^^^^^^
+ 2 | export * from "./JobBuilder"
+   `----
+  help: Refactor to remove the cycle. Consider extracting shared code into a separate module that both files can import.
+  note: These paths form a cycle:
+           ╭──▶ ./ConfigBuilder (src/builder/ConfigBuilder.ts)
+           │         ⬇ imports
+           │    ../resolution (src/resolution/index.ts)
+           │         ⬇ imports
+           │    ./child-pipeline (src/resolution/child-pipeline.ts)
+           │         ⬇ imports
+           │    ../builder (src/builder/index.ts)
+           ╰─────────╯ imports the current file
+
+  x unicorn(no-array-for-each): Do not use `Array#forEach`
+     ,-[src/model/pipeline.ts:171:12]
+ 170 |     const set = new Set(this.stagesValue)
+ 171 |     stages.forEach((s) => set.add(s))
+     :            ^^^^^^^
+ 172 |     this.stagesValue = [...set]
+     `----
+  help: Replace it with a for loop. For loop is faster, more readable, and you can use `break` or `return` to exit early.
+
+  x oxc(no-barrel-file): Barrel file detected, 212 modules are loaded which exceeds the threshold of 100.
+   ,-[src/resolver/index.ts:1:15]
+ 1 | export * from "./builder"
+   :               ^^^^^|^^^^^
+   :                    `-- 94 modules
+ 2 | export * from "./cli"
+   :               ^^^|^^^
+   :                  `-- 116 modules
+   `----
+  help: Consider importing directly from the specific modules instead of using `export *` or `import *`.
+        Loading 212 modules may be slow for runtimes and bundlers.
+  note: See: https://marvinh.dev/blog/speeding-up-javascript-ecosystem-part-7
+
+  x import(no-cycle): Dependency cycle detected
+   ,-[src/resolver/index.ts:2:15]
+ 1 | export * from "./builder"
+ 2 | export * from "./cli"
+   :               ^^^^^^^
+   `----
+  help: Refactor to remove the cycle. Consider extracting shared code into a separate module that both files can import.
+  note: These paths form a cycle:
+           ╭──▶ ./cli (src/resolver/cli.ts)
+           │         ⬇ imports
+           │    ../builder (src/builder/index.ts)
+           │         ⬇ imports
+           │    ./ConfigBuilder (src/builder/ConfigBuilder.ts)
+           │         ⬇ imports
+           │    ../resolver (src/resolver/index.ts)
+           ╰─────────╯ imports the current file
+
+  x import(no-named-as-default-member): "yaml" also has a named export "DEFAULT_SCHEMA"
+    ,-[src/resolver/cli.ts:12:27]
+ 11 | 
+ 12 | const RESOLVABLE_SCHEMA = yaml.DEFAULT_SCHEMA.extend({
+    :                           ^^^^^^^^^^^^^^^^^^^
+ 13 |   explicit: [referenceTagResolvable],
+    `----
+  help: Check if you meant to write `import { DEFAULT_SCHEMA } from "js-yaml"`
+
+  x import(no-named-as-default-member): "yaml" also has a named export "loadAll"
+    ,-[src/resolver/cli.ts:37:21]
+ 36 | function parseYamlResolvable(yamlContent: string): Record<string, unknown> {
+ 37 |   const documents = yaml.loadAll(yamlContent, null, {
+    :                     ^^^^^^^^^^^^
+ 38 |     schema: RESOLVABLE_SCHEMA,
+    `----
+  help: Check if you meant to write `import { loadAll } from "js-yaml"`
+
+  x eslint(complexity): async function `resolveInclude` has a complexity of 33. Maximum allowed is 20.
+     ,-[src/resolver/cli.ts:235:1]
+ 234 |      */
+ 235 | ,-> async function resolveInclude(
+ 236 | |     include: IncludeEntry,
+ 237 | |     basePath: string,
+ 238 | |     options: ResolverOptions,
+ 239 | |     visited: Set<string>
+ 240 | |   ): Promise<string | null> {
+ 241 | |     // Local file
+ 242 | |     if ("local" in include && include.local) {
+ 243 | |       const localPath = isAbsolute(include.local)
+ 244 | |         ? include.local
+ 245 | |         : resolve(basePath, include.local)
+ 246 | |   
+ 247 | |       if (visited.has(localPath)) {
+ 248 | |         return null // Avoid circular includes
+ 249 | |       }
+ 250 | |       visited.add(localPath)
+ 251 | |   
+ 252 | |       try {
+ 253 | |         return readFileSync(localPath, "utf-8")
+ 254 | |       } catch {
+ 255 | |         throw new Error(`Failed to read local include: ${localPath}`)
+ 256 | |       }
+ 257 | |     }
+ 258 | |   
+ 259 | |     // Remote file
+ 260 | |     if ("remote" in include && include.remote) {
+ 261 | |       if (visited.has(include.remote)) {
+ 262 | |         return null
+ 263 | |       }
+ 264 | |       visited.add(include.remote)
+ 265 | |   
+ 266 | |       try {
+ 267 | |         const headers: Record<string, string> = {}
+ 268 | |         if (options.gitlabToken) {
+ 269 | |           headers.Authorization = `Bearer ${options.gitlabToken}`
+ 270 | |         }
+ 271 | |   
+ 272 | |         const response = await fetch(include.remote, { headers })
+ 273 | |         if (!response.ok) {
+ 274 | |           // Always warn about failed remote includes
+ 275 | |           // eslint-disable-next-line no-console
+ 276 | |           console.warn(
+ 277 | |             `⚠️  Could not fetch remote include: ${include.remote} (${response.status} ${response.statusText})`
+ 278 | |           )
+ 279 | |           return null
+ 280 | |         }
+ 281 | |         return await response.text()
+ 282 | |       } catch (error) {
+ 283 | |         // Always warn about failed remote includes
+ 284 | |         // eslint-disable-next-line no-console
+ 285 | |         console.warn(
+ 286 | |           `⚠️  Could not fetch remote include: ${include.remote} - ${error instanceof Error ? error.message : "Unknown error"}`
+ 287 | |         )
+ 288 | |         return null
+ 289 | |       }
+ 290 | |     }
+ 291 | |   
+ 292 | |     // Project include
+ 293 | |     if (
+ 294 | |       "project" in include &&
+ 295 | |       include.project &&
+ 296 | |       "file" in include &&
+ 297 | |       include.file
+ 298 | |     ) {
+ 299 | |       const file = Array.isArray(include.file) ? include.file[0] : include.file
+ 300 | |       const ref = include.ref ?? "main"
+ 301 | |       const projectPath = `${options.gitlabUrl ?? "https://gitlab.com"}/${include.project}/-/raw/${ref}/${file}`
+ 302 | |   
+ 303 | |       if (visited.has(projectPath)) {
+ 304 | |         return null
+ 305 | |       }
+ 306 | |       visited.add(projectPath)
+ 307 | |   
+ 308 | |       try {
+ 309 | |         const headers: Record<string, string> = {}
+ 310 | |         if (options.gitlabToken) {
+ 311 | |           headers["PRIVATE-TOKEN"] = options.gitlabToken
+ 312 | |         }
+ 313 | |   
+ 314 | |         const response = await fetch(projectPath, { headers })
+ 315 | |         if (!response.ok) {
+ 316 | |           throw new Error(`Failed to fetch project include: ${projectPath}`)
+ 317 | |         }
+ 318 | |         return await response.text()
+ 319 | |       } catch (error) {
+ 320 | |         throw new Error(
+ 321 | |           `Failed to fetch project include: ${projectPath} - ${error instanceof Error ? error.message : String(error)}`,
+ 322 | |           { cause: error }
+ 323 | |         )
+ 324 | |       }
+ 325 | |     }
+ 326 | |   
+ 327 | |     // Template include (GitLab CI/CD templates)
+ 328 | |     if ("template" in include && include.template) {
+ 329 | |       const templatePath = `https://gitlab.com/gitlab-org/gitlab/-/raw/master/lib/gitlab/ci/templates/${include.template}`
+ 330 | |   
+ 331 | |       if (visited.has(templatePath)) {
+ 332 | |         return null
+ 333 | |       }
+ 334 | |       visited.add(templatePath)
+ 335 | |   
+ 336 | |       try {
+ 337 | |         const response = await fetch(templatePath)
+ 338 | |         if (!response.ok) {
+ 339 | |           throw new Error(`Failed to fetch template: ${include.template}`)
+ 340 | |         }
+ 341 | |         return await response.text()
+ 342 | |       } catch (error) {
+ 343 | |         throw new Error(
+ 344 | |           `Failed to fetch template: ${include.template} - ${error instanceof Error ? error.message : String(error)}`,
+ 345 | |           { cause: error }
+ 346 | |         )
+ 347 | |       }
+ 348 | |     }
+ 349 | |   
+ 350 | |     // Component include
+ 351 | |     if ("component" in include && include.component) {
+ 352 | |       throw new Error("Component includes are not yet supported")
+ 353 | |     }
+ 354 | |   
+ 355 | |     return null
+ 356 | `-> }
+ 357 |     
+     `----
+
+  x unicorn(no-lonely-if): Unexpected `if` as the only statement in a `if` block without `else`.
+     ,-[src/resolver/cli.ts:139:7]
+ 138 |       const identifier = getIncludeIdentifier(include)
+ 139 |       if (result === null && identifier && !visited.has(identifier)) {
+     :       ^^
+ 140 |         if (!failedIncludes.includes(identifier)) {
+     :         ^^
+ 141 |           failedIncludes.push(identifier)
+     `----
+  help: Move the inner `if` test to the outer `if` test.
+
+  x import(no-cycle): Dependency cycle detected
+   ,-[src/resolver/cli.ts:6:36]
+ 5 | 
+ 6 | import type { ConfigBuilder } from "../builder"
+   :                                    ^^^^^^^^^^^^
+ 7 | import { ConfigBuilder as Builder } from "../builder"
+   `----
+  help: Refactor to remove the cycle. Consider extracting shared code into a separate module that both files can import.
+  note: These paths form a cycle:
+           ╭──▶ ../builder (src/builder/index.ts)
+           │         ⬇ imports
+           │    ./ConfigBuilder (src/builder/ConfigBuilder.ts)
+           │         ⬇ imports
+           │    ../resolution (src/resolution/index.ts)
+           │         ⬇ imports
+           │    ./visualization (src/resolution/visualization.ts)
+           │         ⬇ imports
+           │    ../resolver/cli (src/resolver/cli.ts)
+           ╰─────────╯ imports the current file
+
+  x unicorn(consistent-function-scoping): Function `getServiceName` does not capture any variables from its parent scope
+     ,-[src/merge/rules.ts:273:9]
+ 257 |  */
+ 258 | function mergeServices(
+     :          ^^^^^^|^^^^^^
+     :                `-- Outer scope where this function is defined
+ 259 |   parent: JobDefinitionNormalized["services"],
+ 260 |   child: JobDefinitionNormalized["services"]
+ 261 | ): JobDefinitionNormalized["services"] {
+ 262 |   if (!parent && !child) {
+ 263 |     return undefined
+ 264 |   }
+ 265 |   if (!parent) {
+ 266 |     return child
+ 267 |   }
+ 268 |   if (!child) {
+ 269 |     return parent
+ 270 |   }
+ 271 | 
+ 272 |   // Helper to get service name, handling nested arrays
+ 273 |   const getServiceName = (service: (typeof parent)[number]): string => {
+     :         ^^^^^^^|^^^^^^
+     :                `-- This function does not use any variables from the parent function
+ 274 |     if (typeof service === "string") {
+     `----
+  help: Move `getServiceName` to the outer scope to avoid recreating it on every call.
+
+  x unicorn(prefer-ternary): Prefer ternary expressions over simple `if-else` statements.
+     ,-[src/merge/rules.ts:125:9]
+ 124 |             const parentValue = result[key]
+ 125 | ,->         if (
+ 126 | |             typeof parentValue === "object" &&
+ 127 | |             parentValue !== null &&
+ 128 | |             typeof value === "object" &&
+ 129 | |             value !== null &&
+ 130 | |             !Array.isArray(parentValue) &&
+ 131 | |             !Array.isArray(value)
+ 132 | |           ) {
+ 133 | |             result[key] = deepMerge(parentValue, value)
+ 134 | |           } else {
+ 135 | |             result[key] = value
+ 136 | `->         }
+ 137 |           } else {
+     `----
+  help: Rewrite this `if`/`else` as a ternary expression.
+
+  x unicorn(prefer-ternary): Prefer ternary expressions over simple `if-else` statements.
+     ,-[src/merge/rules.ts:224:9]
+ 223 |           case "union": {
+ 224 | ,->         if (key === "services") {
+ 225 | |             // Services: union by service name
+ 226 | |             result[key] = mergeServices(
+ 227 | |               parentValue as JobDefinitionNormalized["services"],
+ 228 | |               childValue as JobDefinitionNormalized["services"]
+ 229 | |             )
+ 230 | |           } else {
+ 231 | |             result[key] = unionArrays(
+ 232 | |               parentValue as unknown[] | undefined,
+ 233 | |               childValue as unknown[] | undefined
+ 234 | |             )
+ 235 | `->         }
+ 236 |             break
+     `----
+  help: Rewrite this `if`/`else` as a ternary expression.
+
+  x unicorn(no-useless-switch-case): Useless case in switch statement.
+     ,-[src/merge/rules.ts:244:7]
+ 243 | 
+ 244 |       case "replace":
+     :       ^^^^^^^^^^^^^^^
+ 245 |       default: {
+     `----
+  help: Consider removing this case or removing the `default` case.
+
+  x import(no-cycle): Dependency cycle detected
+   ,-[src/resolution/visualization.ts:4:31]
+ 3 | 
+ 4 | import { ConfigBuilder } from "../builder/ConfigBuilder"
+   :                               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 5 | import { parseYaml } from "../importer/parser"
+   `----
+  help: Refactor to remove the cycle. Consider extracting shared code into a separate module that both files can import.
+  note: These paths form a cycle:
+           ╭──▶ ../builder/ConfigBuilder (src/builder/ConfigBuilder.ts)
+           │         ⬇ imports
+           │    ../resolution (src/resolution/index.ts)
+           │         ⬇ imports
+           │    ./visualization (src/resolution/visualization.ts)
+           ╰─────────╯ imports the current file
+
+  x import(no-cycle): Dependency cycle detected
+   ,-[src/resolution/visualization.ts:6:33]
+ 5 | import { parseYaml } from "../importer/parser"
+ 6 | import { resolveIncludes } from "../resolver/cli"
+   :                                 ^^^^^^^^^^^^^^^^^
+ 7 | import type { IncludeInput, Stage, Workflow } from "../schema"
+   `----
+  help: Refactor to remove the cycle. Consider extracting shared code into a separate module that both files can import.
+  note: These paths form a cycle:
+           ╭──▶ ../resolver/cli (src/resolver/cli.ts)
+           │         ⬇ imports
+           │    ../builder (src/builder/index.ts)
+           │         ⬇ imports
+           │    ./ConfigBuilder (src/builder/ConfigBuilder.ts)
+           │         ⬇ imports
+           │    ../resolution (src/resolution/index.ts)
+           │         ⬇ imports
+           │    ./visualization (src/resolution/visualization.ts)
+           ╰─────────╯ imports the current file
+
+  x import(no-cycle): Dependency cycle detected
+    ,-[src/resolution/visualization.ts:9:43]
+  8 | import type { BaseJob } from "../schema/job"
+  9 | import type { TrackedChildPipeline } from "./child-pipeline"
+    :                                           ^^^^^^^^^^^^^^^^^^
+ 10 | import { extractChildPipelines } from "./child-pipeline"
+    `----
+  help: Refactor to remove the cycle. Consider extracting shared code into a separate module that both files can import.
+  note: These paths form a cycle:
+           ╭──▶ ./child-pipeline (src/resolution/child-pipeline.ts)
+           │         ⬇ imports
+           │    ../builder (src/builder/index.ts)
+           │         ⬇ imports
+           │    ./ConfigBuilder (src/builder/ConfigBuilder.ts)
+           │         ⬇ imports
+           │    ../resolution (src/resolution/index.ts)
+           │         ⬇ imports
+           │    ./visualization (src/resolution/visualization.ts)
+           ╰─────────╯ imports the current file
+
+Found 0 warnings and 87 errors.
+Finished in 193ms on 109 files with 445 rules using 12 threads.
+[ELIFECYCLE] Command failed with exit code 1.

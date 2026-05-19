@@ -659,10 +659,12 @@ Define child pipelines programmatically using a callback-based API. This elimina
 ```ts
 import { ConfigBuilder } from "@noxify/gitlab-ci-builder"
 
-const config = new ConfigBuilder().stages("build", "test", "deploy").job("build", {
-  stage: "build",
-  script: ["npm run build"],
-})
+const config = new ConfigBuilder()
+  .stages("build", "test", "deploy")
+  .job("build", {
+    stage: "build",
+    script: ["npm run build"],
+  })
 
 // Define a child pipeline with callback
 config.childPipeline("security-scan", (child) => {
@@ -724,7 +726,7 @@ config.childPipeline(
       stage: "deploy",
       rules: [{ if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" }],
     },
-  },
+  }
 )
 ```
 
@@ -1059,7 +1061,11 @@ config.job("base", { image: "node:22" }, { hidden: true })
 
 // Replace instead of merge
 config.job("build", { stage: "build", script: ["npm run build"] })
-config.job("build", { script: ["npm run build:prod"] }, { mergeExisting: false })
+config.job(
+  "build",
+  { script: ["npm run build:prod"] },
+  { mergeExisting: false }
+)
 // Result: { script: ["npm run build:prod"] } (stage removed)
 
 // Keep extends reference (don't resolve parent)
@@ -1073,13 +1079,17 @@ config.job("basejob", { script: ["job"] })
 config.job(
   "child",
   { extends: [".base", "basejob"], stage: "test" },
-  { resolveTemplatesOnly: true },
+  { resolveTemplatesOnly: true }
 )
 // Output: script: ["template"], extends removed
 
 // Mark job/template as remote (excluded from merging)
 config.job("remote-job", { script: ["do something remote"] }, { remote: true })
-config.template(".remote-template", { script: ["remote template"] }, { remote: true })
+config.template(
+  ".remote-template",
+  { script: ["remote template"] },
+  { remote: true }
+)
 // These will be ignored during merging and not appear in the output
 ```
 
@@ -1111,7 +1121,7 @@ config.job("job2", { extends: [".base", "basejob"], stage: "test" })
 config.job(
   "job3",
   { extends: [".base", "basejob"], stage: "test" },
-  { resolveTemplatesOnly: false },
+  { resolveTemplatesOnly: false }
 )
 // Output: script: ["job", "base"], extends removed
 ```
@@ -1168,7 +1178,10 @@ config.template(".b", { extends: ".a" })
 
 // ✅ Good: Linear inheritance chain
 config.template(".base", { image: "node:22" })
-config.template(".with-cache", { extends: ".base", cache: { paths: ["node_modules"] } })
+config.template(".with-cache", {
+  extends: ".base",
+  cache: { paths: ["node_modules"] },
+})
 config.job("build", { extends: ".with-cache", script: ["npm run build"] })
 ```
 
@@ -1213,7 +1226,7 @@ config.job(
     extends: ".base",
     script: ["npm run build"],
   },
-  { mergeExisting: false },
+  { mergeExisting: false }
 )
 // Result: script: ["npm run build"] ← Only new script
 ```

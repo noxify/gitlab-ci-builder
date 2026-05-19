@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import dedent from "dedent"
 import { load as parseYaml } from "js-yaml"
 import { http, HttpResponse } from "msw"
@@ -7,8 +8,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
 import { ConfigBuilder, resolveIncludes, visualizeYaml } from "../../../src"
 
 const restHandlers = [
-  http.get("https://example.com/templates/node.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/node.yml", () =>
+    HttpResponse.text(dedent`
       .node-base:
         image: node:20
         cache:
@@ -18,19 +19,19 @@ const restHandlers = [
         before_script:
           - npm ci
     `)
-  }),
+  ),
 
-  http.get("https://example.com/templates/base.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/base.yml", () =>
+    HttpResponse.text(dedent`
       .base:
         image: alpine:latest
         tags:
           - docker
     `)
-  }),
+  ),
 
-  http.get("https://example.com/templates/deploy.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/deploy.yml", () =>
+    HttpResponse.text(dedent`
       .deploy:
         stage: deploy
         rules:
@@ -38,10 +39,10 @@ const restHandlers = [
         environment:
           name: production
     `)
-  }),
+  ),
 
-  http.get("https://example.com/templates/chain.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/chain.yml", () =>
+    HttpResponse.text(dedent`
       .base:
         image: alpine:latest
 
@@ -53,20 +54,20 @@ const restHandlers = [
         extends: .base
         image: docker:latest
     `)
-  }),
+  ),
 
-  http.get("https://example.com/templates/pipeline.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/pipeline.yml", () =>
+    HttpResponse.text(dedent`
       .test-base:
         image: node:20
         cache:
           paths:
             - node_modules/
     `)
-  }),
+  ),
 
-  http.get("https://example.com/templates/stages.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/stages.yml", () =>
+    HttpResponse.text(dedent`
       .lint:
         stage: lint
         image: node:20
@@ -75,10 +76,10 @@ const restHandlers = [
         stage: security
         image: alpine:latest
     `)
-  }),
+  ),
 
-  http.get("https://example.com/templates/shared.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/shared.yml", () =>
+    HttpResponse.text(dedent`
       .shared-cache:
         cache:
           key: \${CI_COMMIT_REF_SLUG}
@@ -91,10 +92,10 @@ const restHandlers = [
           when:
             - runner_system_failure
     `)
-  }),
+  ),
 
-  http.get("https://example.com/templates/complex.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/complex.yml", () =>
+    HttpResponse.text(dedent`
       .test:
         stage: test
         image: node:20
@@ -109,11 +110,11 @@ const restHandlers = [
         services:
           - postgres:15
     `)
-  }),
+  ),
 
   // Nested remote includes test - parent includes child
-  http.get("https://example.com/templates/parent.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/parent.yml", () =>
+    HttpResponse.text(dedent`
       include:
         - remote: https://example.com/templates/child.yml
 
@@ -122,10 +123,10 @@ const restHandlers = [
         variables:
           PARENT_VAR: "from-parent"
     `)
-  }),
+  ),
 
-  http.get("https://example.com/templates/child.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://example.com/templates/child.yml", () =>
+    HttpResponse.text(dedent`
       .child-template:
         cache:
           key: \${CI_COMMIT_REF_SLUG}
@@ -134,11 +135,11 @@ const restHandlers = [
         variables:
           CHILD_VAR: "from-child"
     `)
-  }),
+  ),
 
   // GitLab project includes - exact match first
-  http.get("https://gitlab.com/acme/ci-templates/-/raw/main/docker.yml", () => {
-    return HttpResponse.text(dedent`
+  http.get("https://gitlab.com/acme/ci-templates/-/raw/main/docker.yml", () =>
+    HttpResponse.text(dedent`
       .docker-build:
         image: docker:latest
         services:
@@ -146,15 +147,16 @@ const restHandlers = [
         variables:
           DOCKER_TLS_CERTDIR: "/certs"
     `)
-  }),
+  ),
 ]
 
 const server = setupServer(...restHandlers)
 
 describe("visualizeYaml with remote includes", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "error" }))
-  afterAll(() => server.close())
   afterEach(() => server.resetHandlers())
+  afterAll(() => server.close())
+
   it("should resolve and visualize YAML with remote include via HTTP", async () => {
     const yaml = dedent`
       include:
@@ -536,7 +538,9 @@ describe("visualizeYaml with remote includes", () => {
 
     if (parsed.stages) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      config.stages(...(Array.isArray(parsed.stages) ? parsed.stages : [parsed.stages]))
+      config.stages(
+        ...(Array.isArray(parsed.stages) ? parsed.stages : [parsed.stages])
+      )
     }
 
     if (parsed.include) {
@@ -550,7 +554,14 @@ describe("visualizeYaml with remote includes", () => {
       if (
         typeof definition === "object" &&
         definition !== null &&
-        !["stages", "variables", "workflow", "include", "default", "spec"].includes(name)
+        ![
+          "stages",
+          "variables",
+          "workflow",
+          "include",
+          "default",
+          "spec",
+        ].includes(name)
       ) {
         if (name.startsWith(".")) {
           config.template(name, definition)
@@ -564,13 +575,13 @@ describe("visualizeYaml with remote includes", () => {
 
     // Check that remote items are marked as remote
     const sharedCacheNode = graph.get(".shared-cache")
-    expect(sharedCacheNode?.isRemote).toBe(true)
+    expect(sharedCacheNode?.isRemote).toBeTruthy()
 
     const sharedRetryNode = graph.get(".shared-retry")
-    expect(sharedRetryNode?.isRemote).toBe(true)
+    expect(sharedRetryNode?.isRemote).toBeTruthy()
 
     // Check that local items are NOT marked as remote
     const testLocalNode = graph.get("test-local")
-    expect(testLocalNode?.isRemote).toBe(false)
+    expect(testLocalNode?.isRemote).toBeFalsy()
   })
 })

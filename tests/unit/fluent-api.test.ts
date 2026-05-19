@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -6,24 +7,33 @@ describe("Fluent Job Builder API", () => {
   it("should support addJob with chaining", () => {
     const config = new ConfigBuilder()
 
-    config.addJob("test").stage("test").image("node:20").script(["npm test"]).done()
+    config
+      .addJob("test")
+      .stage("test")
+      .image("node:20")
+      .script(["npm test"])
+      .done()
 
     const plain = config.getPlainObject()
     expect(plain.jobs?.test).toBeDefined()
     expect(plain.jobs?.test?.stage).toBe("test")
     expect(plain.jobs?.test?.image).toBe("node:20")
-    expect(plain.jobs?.test?.script).toEqual(["npm test"])
+    expect(plain.jobs?.test?.script).toStrictEqual(["npm test"])
   })
 
   it("should support addTemplate with chaining", () => {
     const config = new ConfigBuilder()
 
-    config.addTemplate(".base").image("alpine:latest").beforeScript(["apk add curl"]).done()
+    config
+      .addTemplate(".base")
+      .image("alpine:latest")
+      .beforeScript(["apk add curl"])
+      .done()
 
     const plain = config.getPlainObject()
     expect(plain.jobs?.[".base"]).toBeDefined()
     expect(plain.jobs?.[".base"]?.image).toBe("alpine:latest")
-    expect(plain.jobs?.[".base"]?.before_script).toEqual(["apk add curl"])
+    expect(plain.jobs?.[".base"]?.before_script).toStrictEqual(["apk add curl"])
   })
 
   it("should support auto-return when calling addJob/addTemplate", () => {
@@ -63,8 +73,8 @@ describe("Fluent Job Builder API", () => {
     const plain = config.getPlainObject()
     expect(plain.jobs?.test?.stage).toBe("test")
     expect(plain.jobs?.test?.image).toBe("node:20")
-    expect(plain.jobs?.test?.script).toEqual(["npm test"])
-    expect(plain.jobs?.test?.cache).toEqual({ paths: ["node_modules/"] })
+    expect(plain.jobs?.test?.script).toStrictEqual(["npm test"])
+    expect(plain.jobs?.test?.cache).toStrictEqual({ paths: ["node_modules/"] })
   })
 
   it("should support jobOptions for remote jobs", () => {
@@ -74,7 +84,7 @@ describe("Fluent Job Builder API", () => {
 
     const graph = config.getExtendsGraph()
     const node = graph.get("remote-job")
-    expect(node?.isRemote).toBe(true)
+    expect(node?.isRemote).toBeTruthy()
   })
 
   it("should support all common job properties", () => {
@@ -92,7 +102,10 @@ describe("Fluent Job Builder API", () => {
       .artifacts({
         paths: ["coverage/"],
         reports: {
-          coverage_report: { coverage_format: "cobertura", path: "coverage/cobertura.xml" },
+          coverage_report: {
+            coverage_format: "cobertura",
+            path: "coverage/cobertura.xml",
+          },
         },
       })
       .setVariables({ NODE_ENV: "test" })
@@ -112,23 +125,29 @@ describe("Fluent Job Builder API", () => {
     const job = plain.jobs?.complex
 
     expect(job?.stage).toBe("test")
-    expect(job?.image).toEqual({ name: "node:20", entrypoint: ["/bin/sh"] })
-    expect(job?.services).toEqual([{ name: "postgres:13" }])
-    expect(job?.script).toEqual(["npm test"])
-    expect(job?.before_script).toEqual(["npm ci"])
-    expect(job?.after_script).toEqual(["npm run cleanup"])
-    expect(job?.cache).toEqual({ paths: ["node_modules/"], key: "test" })
-    expect(job?.variables).toEqual({ NODE_ENV: "test" })
-    expect(job?.environment).toEqual({ name: "test", url: "https://test.example.com" })
+    expect(job?.image).toStrictEqual({
+      name: "node:20",
+      entrypoint: ["/bin/sh"],
+    })
+    expect(job?.services).toStrictEqual([{ name: "postgres:13" }])
+    expect(job?.script).toStrictEqual(["npm test"])
+    expect(job?.before_script).toStrictEqual(["npm ci"])
+    expect(job?.after_script).toStrictEqual(["npm run cleanup"])
+    expect(job?.cache).toStrictEqual({ paths: ["node_modules/"], key: "test" })
+    expect(job?.variables).toStrictEqual({ NODE_ENV: "test" })
+    expect(job?.environment).toStrictEqual({
+      name: "test",
+      url: "https://test.example.com",
+    })
     expect(job?.when).toBe("on_success")
-    expect(job?.allow_failure).toBe(false)
-    expect(job?.tags).toEqual(["docker"])
-    expect(job?.needs).toEqual(["build"])
-    expect(job?.dependencies).toEqual(["build"])
+    expect(job?.allow_failure).toBeFalsy()
+    expect(job?.tags).toStrictEqual(["docker"])
+    expect(job?.needs).toStrictEqual(["build"])
+    expect(job?.dependencies).toStrictEqual(["build"])
     expect(job?.timeout).toBe("1h")
-    expect(job?.retry).toEqual({ max: 2 })
+    expect(job?.retry).toStrictEqual({ max: 2 })
     expect(job?.coverage).toBe("/Coverage: \\d+\\.\\d+/")
-    expect(job?.interruptible).toBe(true)
+    expect(job?.interruptible).toBeTruthy()
   })
 
   it("should support mixing fluent API with regular job() method", () => {
@@ -163,8 +182,8 @@ describe("Fluent Job Builder API", () => {
 
     const plain = config.getPlainObject()
     expect(plain.jobs?.test?.stage).toBe("test")
-    expect(plain.jobs?.test?.script).toEqual(["npm test"])
-    expect(plain.jobs?.test?.cache).toEqual({ paths: ["node_modules/"] })
+    expect(plain.jobs?.test?.script).toStrictEqual(["npm test"])
+    expect(plain.jobs?.test?.cache).toStrictEqual({ paths: ["node_modules/"] })
   })
 
   it("should support complex chaining with stages and variables", () => {
@@ -186,8 +205,8 @@ describe("Fluent Job Builder API", () => {
       .done()
 
     const plain = config.getPlainObject()
-    expect(plain.stages).toEqual(["build", "test", "deploy"])
-    expect(plain.variables).toEqual({ CI_DEBUG: "true" })
+    expect(plain.stages).toStrictEqual(["build", "test", "deploy"])
+    expect(plain.variables).toStrictEqual({ CI_DEBUG: "true" })
     expect(plain.jobs?.[".base"]).toBeDefined()
     expect(plain.jobs?.build).toBeDefined()
     expect(plain.jobs?.test).toBeDefined()
@@ -206,10 +225,12 @@ describe("Fluent Job Builder API", () => {
     })
 
     it("should set trigger as string (project path)", () => {
-      const config = new ConfigBuilder().stages("deploy").job("trigger-downstream", {
-        stage: "deploy",
-        trigger: "my-group/my-project",
-      })
+      const config = new ConfigBuilder()
+        .stages("deploy")
+        .job("trigger-downstream", {
+          stage: "deploy",
+          trigger: "my-group/my-project",
+        })
 
       const yaml = config.toYaml()
       expect(yaml).toContain("trigger: my-group/my-project")

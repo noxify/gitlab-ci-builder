@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest"
+// oxlint-disable vitest/no-conditional-expect
+// oxlint-disable vitest/max-expects
+import { describe, expect, it, expectTypeOf } from "vitest"
 
 import { ConfigBuilder } from "../../src"
 
@@ -39,7 +41,7 @@ describe("ConfigBuilder - remote job extends normalization", () => {
           // @ts-expect-error - intentional invalid property
           invalidProperty: "invalid",
         },
-        { remote: true, mergeExtends: false },
+        { remote: true, mergeExtends: false }
       )
 
     const plain = config.getPlainObject({ skipValidation: true })
@@ -47,12 +49,12 @@ describe("ConfigBuilder - remote job extends normalization", () => {
     // Verify extends is not split into characters like ['.', 'b', 'a', 's', 'e']
     const extendsValue = plain.jobs?.["job-with-extends"]?.extends
     expect(extendsValue).toBe(".base")
-    expect(typeof extendsValue).toBe("string")
+    expectTypeOf(extendsValue as string).toBeString()
 
     // Additional check: if it were wrongly split, it would be an array with length 5
     if (Array.isArray(extendsValue)) {
       expect(extendsValue).not.toHaveLength(5)
-      expect(extendsValue).not.toEqual([".", "b", "a", "s", "e"])
+      expect(extendsValue).not.toStrictEqual([".", "b", "a", "s", "e"])
     }
   })
 })

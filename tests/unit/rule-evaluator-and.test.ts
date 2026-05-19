@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { describe, expect, it } from "vitest"
 
 import { RuleEvaluator } from "../../src/simulation/rule-evaluator"
@@ -14,10 +15,10 @@ describe("RuleEvaluator - && Operator", () => {
       {
         variables: { VAR1: "a", VAR2: "b" },
         branch: "main",
-      },
+      }
     )
 
-    expect(result).toEqual({ type: "match", when: "always" })
+    expect(result).toStrictEqual({ type: "match", when: "always" })
   })
 
   it("should evaluate AND operator - first false", () => {
@@ -29,10 +30,10 @@ describe("RuleEvaluator - && Operator", () => {
       {
         variables: { VAR1: "a", VAR2: "b" },
         branch: "main",
-      },
+      }
     )
 
-    expect(result).toEqual({ type: "no_match" })
+    expect(result).toStrictEqual({ type: "no_match" })
   })
 
   it("should evaluate AND operator - second false", () => {
@@ -44,10 +45,10 @@ describe("RuleEvaluator - && Operator", () => {
       {
         variables: { VAR1: "a", VAR2: "b" },
         branch: "main",
-      },
+      }
     )
 
-    expect(result).toEqual({ type: "no_match" })
+    expect(result).toStrictEqual({ type: "no_match" })
   })
 
   it("should evaluate variable comparison AND regex pattern", () => {
@@ -63,11 +64,11 @@ describe("RuleEvaluator - && Operator", () => {
           CI_COMMIT_MESSAGE: "",
         },
         branch: "main",
-      },
+      }
     )
 
     // Should NOT match because CI_COMMIT_MESSAGE doesn't contain "release"
-    expect(result).toEqual({ type: "no_match" })
+    expect(result).toStrictEqual({ type: "no_match" })
   })
 
   it("should evaluate variable-to-variable comparison", () => {
@@ -81,10 +82,10 @@ describe("RuleEvaluator - && Operator", () => {
           CI_DEFAULT_BRANCH: "main",
         },
         branch: "main",
-      },
+      }
     )
 
     // Should match with implicit when: on_success
-    expect(result).toEqual({ type: "match", when: undefined })
+    expect(result).toStrictEqual({ type: "match", when: undefined })
   })
 })

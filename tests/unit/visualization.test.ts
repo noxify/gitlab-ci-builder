@@ -1,9 +1,9 @@
+// oxlint-disable vitest/max-expects
 import dedent from "dedent"
 import { http, HttpResponse } from "msw"
 import { setupServer } from "msw/node"
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
 
-import type { JobDefinitionNormalized } from "../../src/schema"
 import {
   buildExtendsGraph,
   generateAsciiTree,
@@ -11,6 +11,7 @@ import {
   generateStageTable,
   visualizeYaml,
 } from "../../src"
+import type { JobDefinitionNormalized } from "../../src/schema"
 
 describe("Graph Visualization", () => {
   it("should generate Mermaid diagram", () => {
@@ -43,7 +44,11 @@ describe("Graph Visualization", () => {
 
     const graph = buildExtendsGraph(jobs, templates)
     const resolvedConfig = { jobs }
-    const mermaid = generateMermaidDiagram({ graph, resolvedConfig, options: { showStages: true } })
+    const mermaid = generateMermaidDiagram({
+      graph,
+      resolvedConfig,
+      options: { showStages: true },
+    })
 
     expect(mermaid).toContain("layout: elk")
     expect(mermaid).toContain("graph LR")
@@ -78,12 +83,16 @@ describe("Graph Visualization", () => {
 
     const graph = buildExtendsGraph(jobs, templates)
     const resolvedConfig = { jobs }
-    const ascii = generateAsciiTree({ graph, resolvedConfig, options: { showStages: true } })
+    const ascii = generateAsciiTree({
+      graph,
+      resolvedConfig,
+      options: { showStages: true },
+    })
 
     expect(ascii).toContain("build")
     expect(ascii).toContain("test")
     expect(ascii).toContain(".node [T]")
-    expect(ascii).toMatch(/[└├]─/)
+    expect(ascii).toMatch(/[└├]─/u)
   })
 
   it("should generate stage table", () => {
@@ -113,7 +122,11 @@ describe("Graph Visualization", () => {
 
     const graph = buildExtendsGraph(jobs, templates)
     const resolvedConfig = { jobs, stages: ["build", "test", "deploy"] }
-    const table = generateStageTable({ graph, resolvedConfig, options: { showRemote: true } })
+    const table = generateStageTable({
+      graph,
+      resolvedConfig,
+      options: { showRemote: true },
+    })
 
     expect(table).toContain("build")
     expect(table).toContain("test")
@@ -139,8 +152,16 @@ describe("Graph Visualization", () => {
 
     const graph = buildExtendsGraph(jobs, {}, jobOptions)
     const resolvedConfig = { jobs }
-    const mermaid = generateMermaidDiagram({ graph, resolvedConfig, options: { showRemote: true } })
-    const ascii = generateAsciiTree({ graph, resolvedConfig, options: { showRemote: true } })
+    const mermaid = generateMermaidDiagram({
+      graph,
+      resolvedConfig,
+      options: { showRemote: true },
+    })
+    const ascii = generateAsciiTree({
+      graph,
+      resolvedConfig,
+      options: { showRemote: true },
+    })
 
     expect(mermaid).toContain("🌐")
     expect(ascii).toContain("🌐")
@@ -188,8 +209,16 @@ describe("Graph Visualization", () => {
 
     const graph = buildExtendsGraph(jobs, templates)
     const resolvedConfig = { jobs }
-    const ascii = generateAsciiTree({ graph, resolvedConfig, options: { showStages: true } })
-    const mermaid = generateMermaidDiagram({ graph, resolvedConfig, options: { showStages: true } })
+    const ascii = generateAsciiTree({
+      graph,
+      resolvedConfig,
+      options: { showStages: true },
+    })
+    const mermaid = generateMermaidDiagram({
+      graph,
+      resolvedConfig,
+      options: { showStages: true },
+    })
 
     expect(ascii).toContain(".base")
     expect(ascii).toContain(".node")
@@ -339,7 +368,7 @@ describe("Graph Visualization", () => {
       const mermaid = generateMermaidDiagram({ graph, resolvedConfig })
 
       // Count edges - should have 4 edges: build->.node, test->.node, deploy->build, .node->.base
-      const edges = mermaid.match(/-->/g)
+      const edges = mermaid.match(/-->/gu)
       expect(edges).toBeDefined()
       expect(edges?.length).toBe(4)
     })
@@ -530,7 +559,7 @@ describe("Graph Visualization", () => {
       expect(mermaid).toContain("job")
 
       // Should have edges for the chain
-      const edges = mermaid.match(/-->/g)
+      const edges = mermaid.match(/-->/gu)
       expect(edges).toBeDefined()
       expect(edges?.length).toBe(3) // job->.level3, .level3->.level2, .level2->.level1
     })
@@ -558,10 +587,10 @@ describe("Graph Visualization", () => {
       const mermaid = generateMermaidDiagram({ graph, resolvedConfig })
 
       // Should have edges to both templates
-      const buildNode = /n\d+\["build.*"\]/.exec(mermaid)?.[0]
+      const buildNode = /n\d+\["build.*"\]/u.exec(mermaid)?.[0]
       expect(buildNode).toBeDefined()
 
-      const edges = mermaid.match(/-->/g)
+      const edges = mermaid.match(/-->/gu)
       expect(edges).toBeDefined()
       expect(edges?.length).toBe(2) // build->.cache and build->.artifacts
     })
@@ -666,7 +695,7 @@ describe("Graph Visualization", () => {
       const ascii = generateAsciiTree({ graph, resolvedConfig })
 
       // Should use proper box drawing characters
-      expect(ascii).toMatch(/[├└]─/)
+      expect(ascii).toMatch(/[├└]─/u)
     })
 
     it("should show stages when showStages is true", () => {
@@ -683,7 +712,11 @@ describe("Graph Visualization", () => {
 
       const graph = buildExtendsGraph(jobs, {})
       const resolvedConfig = { jobs }
-      const ascii = generateAsciiTree({ graph, resolvedConfig, options: { showStages: true } })
+      const ascii = generateAsciiTree({
+        graph,
+        resolvedConfig,
+        options: { showStages: true },
+      })
 
       expect(ascii).toContain("(build)")
       expect(ascii).toContain("(test)")
@@ -699,7 +732,11 @@ describe("Graph Visualization", () => {
 
       const graph = buildExtendsGraph(jobs, {})
       const resolvedConfig = { jobs }
-      const ascii = generateAsciiTree({ graph, resolvedConfig, options: { showStages: false } })
+      const ascii = generateAsciiTree({
+        graph,
+        resolvedConfig,
+        options: { showStages: false },
+      })
 
       expect(ascii).not.toContain("(build)")
     })
@@ -743,7 +780,11 @@ describe("Graph Visualization", () => {
 
       const graph = buildExtendsGraph(jobs, {}, jobOptions)
       const resolvedConfig = { jobs }
-      const ascii = generateAsciiTree({ graph, resolvedConfig, options: { showRemote: true } })
+      const ascii = generateAsciiTree({
+        graph,
+        resolvedConfig,
+        options: { showRemote: true },
+      })
 
       expect(ascii).toContain("remote 🌐")
     })
@@ -844,7 +885,7 @@ describe("Graph Visualization", () => {
       const ascii = generateAsciiTree({ graph, resolvedConfig })
 
       // Should show .base multiple times (once per branch)
-      const baseMatches = ascii.match(/\.base/g)
+      const baseMatches = ascii.match(/\.base/gu)
       expect(baseMatches).toBeDefined()
       expect(baseMatches?.length).toBeGreaterThanOrEqual(2)
     })
@@ -912,7 +953,7 @@ describe("Graph Visualization", () => {
       expect(table).toContain("build:backend")
 
       // Should repeat stage name for each job
-      const buildMatches = table.match(/build/g)
+      const buildMatches = table.match(/build/gu)
       expect(buildMatches).toBeDefined()
       expect(buildMatches?.length).toBeGreaterThanOrEqual(2)
     })
@@ -984,7 +1025,11 @@ describe("Graph Visualization", () => {
 
       const graph = buildExtendsGraph(jobs, {}, jobOptions)
       const resolvedConfig = { jobs, stages: ["test"] }
-      const table = generateStageTable({ graph, resolvedConfig, options: { showRemote: true } })
+      const table = generateStageTable({
+        graph,
+        resolvedConfig,
+        options: { showRemote: true },
+      })
 
       expect(table).toContain("🌐")
     })
@@ -1067,7 +1112,7 @@ describe("Graph Visualization", () => {
       expect(table).toContain("e2e-tests")
 
       // Stage should appear for each job
-      const testMatches = table.match(/test/g)
+      const testMatches = table.match(/test/gu)
       expect(testMatches).toBeDefined()
       expect(testMatches?.length).toBeGreaterThanOrEqual(3)
     })
@@ -1075,8 +1120,8 @@ describe("Graph Visualization", () => {
 
   describe("Remote Includes Visualization", () => {
     const restHandlers = [
-      http.get("https://example.com/ci/base.yml", () => {
-        return HttpResponse.text(dedent`
+      http.get("https://example.com/ci/base.yml", () =>
+        HttpResponse.text(dedent`
           .base-template:
             image: alpine:latest
             cache:
@@ -1084,20 +1129,20 @@ describe("Graph Visualization", () => {
               paths:
                 - .cache/
         `)
-      }),
+      ),
 
-      http.get("https://example.com/ci/node.yml", () => {
-        return HttpResponse.text(dedent`
+      http.get("https://example.com/ci/node.yml", () =>
+        HttpResponse.text(dedent`
           .node-base:
             extends: .base-template
             image: node:20
             before_script:
               - npm ci
         `)
-      }),
+      ),
 
-      http.get("https://example.com/ci/deploy.yml", () => {
-        return HttpResponse.text(dedent`
+      http.get("https://example.com/ci/deploy.yml", () =>
+        HttpResponse.text(dedent`
           .deploy-template:
             stage: deploy
             environment:
@@ -1105,14 +1150,14 @@ describe("Graph Visualization", () => {
             rules:
               - if: $CI_COMMIT_BRANCH == "main"
         `)
-      }),
+      ),
     ]
 
     const server = setupServer(...restHandlers)
 
     beforeAll(() => server.listen({ onUnhandledRequest: "error" }))
-    afterAll(() => server.close())
     afterEach(() => server.resetHandlers())
+    afterAll(() => server.close())
 
     it("should visualize pipeline with remote includes in Mermaid format", async () => {
       const yaml = dedent`
@@ -1202,7 +1247,7 @@ describe("Graph Visualization", () => {
       expect(result.ascii).toContain("(test)")
 
       // Should use proper box drawing characters
-      expect(result.ascii).toMatch(/[├└]─/)
+      expect(result.ascii).toMatch(/[├└]─/u)
     })
 
     it("should visualize pipeline with remote includes in table format", async () => {
@@ -1286,17 +1331,19 @@ describe("Graph Visualization", () => {
 
       // Table should show full extends chain
       expect(result.table).toBeDefined()
-      expect(result.table).toContain("build ← .local-template ← .node-base ← .base-template")
+      expect(result.table).toContain(
+        "build ← .local-template ← .node-base ← .base-template"
+      )
     })
 
     it("should handle multiple remote includes with same template names", async () => {
       server.use(
-        http.get("https://example.com/ci/team-a.yml", () => {
-          return HttpResponse.text(dedent`
+        http.get("https://example.com/ci/team-a.yml", () =>
+          HttpResponse.text(dedent`
             .shared:
               image: alpine:latest
           `)
-        }),
+        )
       )
 
       const yaml = dedent`
@@ -1326,9 +1373,9 @@ describe("Graph Visualization", () => {
 
     it("should handle missing remote includes gracefully", async () => {
       server.use(
-        http.get("https://example.com/ci/missing.yml", () => {
-          return HttpResponse.error()
-        }),
+        http.get("https://example.com/ci/missing.yml", () =>
+          HttpResponse.error()
+        )
       )
 
       const yaml = dedent`
@@ -1356,8 +1403,8 @@ describe("Graph Visualization", () => {
     it("should handle nested remote includes (remote file includes another remote file)", async () => {
       // Add handlers for nested includes
       server.use(
-        http.get("https://example.com/ci/root.yml", () => {
-          return HttpResponse.text(dedent`
+        http.get("https://example.com/ci/root.yml", () =>
+          HttpResponse.text(dedent`
             include:
               - remote: https://example.com/ci/shared/base.yml
 
@@ -1367,15 +1414,15 @@ describe("Graph Visualization", () => {
                 paths:
                   - .npm/
           `)
-        }),
-        http.get("https://example.com/ci/shared/base.yml", () => {
-          return HttpResponse.text(dedent`
+        ),
+        http.get("https://example.com/ci/shared/base.yml", () =>
+          HttpResponse.text(dedent`
             .shared-base:
               image: alpine:latest
               tags:
                 - docker
           `)
-        }),
+        )
       )
 
       const yaml = dedent`
@@ -1418,8 +1465,8 @@ describe("Graph Visualization", () => {
 
     it("should handle multiple levels of nested remote includes", async () => {
       server.use(
-        http.get("https://example.com/ci/level1.yml", () => {
-          return HttpResponse.text(dedent`
+        http.get("https://example.com/ci/level1.yml", () =>
+          HttpResponse.text(dedent`
             include:
               - remote: https://example.com/ci/level2.yml
 
@@ -1428,9 +1475,9 @@ describe("Graph Visualization", () => {
               before_script:
                 - echo "level1"
           `)
-        }),
-        http.get("https://example.com/ci/level2.yml", () => {
-          return HttpResponse.text(dedent`
+        ),
+        http.get("https://example.com/ci/level2.yml", () =>
+          HttpResponse.text(dedent`
             include:
               - remote: https://example.com/ci/level3.yml
 
@@ -1439,15 +1486,15 @@ describe("Graph Visualization", () => {
               before_script:
                 - echo "level2"
           `)
-        }),
-        http.get("https://example.com/ci/level3.yml", () => {
-          return HttpResponse.text(dedent`
+        ),
+        http.get("https://example.com/ci/level3.yml", () =>
+          HttpResponse.text(dedent`
             .level3:
               image: alpine:latest
               before_script:
                 - echo "level3"
           `)
-        }),
+        )
       )
 
       const yaml = dedent`
@@ -1476,29 +1523,31 @@ describe("Graph Visualization", () => {
       expect(result.ascii).toContain(".level3")
 
       // Should show the full chain with proper nesting
-      expect(result.ascii).toMatch(/test.*\n.*\.level1.*\n.*\.level2.*\n.*\.level3/s)
+      expect(result.ascii).toMatch(
+        /test.*\n.*\.level1.*\n.*\.level2.*\n.*\.level3/su
+      )
     })
 
     it("should handle circular remote includes gracefully", async () => {
       server.use(
-        http.get("https://example.com/ci/circular-a.yml", () => {
-          return HttpResponse.text(dedent`
+        http.get("https://example.com/ci/circular-a.yml", () =>
+          HttpResponse.text(dedent`
             include:
               - remote: https://example.com/ci/circular-b.yml
 
             .template-a:
               image: alpine:latest
           `)
-        }),
-        http.get("https://example.com/ci/circular-b.yml", () => {
-          return HttpResponse.text(dedent`
+        ),
+        http.get("https://example.com/ci/circular-b.yml", () =>
+          HttpResponse.text(dedent`
             include:
               - remote: https://example.com/ci/circular-a.yml
 
             .template-b:
               image: node:20
           `)
-        }),
+        )
       )
 
       const yaml = dedent`

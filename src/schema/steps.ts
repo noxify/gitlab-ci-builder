@@ -3,7 +3,7 @@ import { z } from "zod"
 /**
  * Step name pattern
  */
-export const StepNameSchema = z.string().regex(/^[a-zA-Z_][a-zA-Z0-9_]*$/)
+export const StepNameSchema = z.string().regex(/^[a-zA-Z_][a-zA-Z0-9_]*$/u)
 
 /**
  * Named strings for environment variables
@@ -15,7 +15,14 @@ export const StepNamedStringsSchema = z.record(StepNameSchema, z.string())
  */
 export const StepNamedValuesSchema = z.record(
   StepNameSchema,
-  z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(z.any()), z.object({})]),
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(z.any()),
+    z.object({}),
+  ])
 )
 
 /**
@@ -62,7 +69,11 @@ export const StepSchema: z.ZodType<any> = z.lazy(() =>
       name: StepNameSchema,
       env: StepNamedStringsSchema.optional(),
       inputs: StepNamedValuesSchema.optional(),
-      step: z.union([z.string(), StepGitReferenceSchema, StepOciReferenceSchema]),
+      step: z.union([
+        z.string(),
+        StepGitReferenceSchema,
+        StepOciReferenceSchema,
+      ]),
     }),
     // Sequence of steps
     z.object({
@@ -89,7 +100,7 @@ export const StepSchema: z.ZodType<any> = z.lazy(() =>
       env: StepNamedStringsSchema.optional(),
       exec: StepExecSchema,
     }),
-  ]),
+  ])
 )
 
 export const StepsSchema = z.array(StepSchema)

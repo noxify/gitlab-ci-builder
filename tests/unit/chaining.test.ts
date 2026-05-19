@@ -21,10 +21,11 @@ describe("ConfigBuilder - chaining", () => {
     expect(result).toBe(config)
 
     const plain = config.getPlainObject()
-    expect(plain.stages).toEqual(["build", "test", "deploy"])
+    expect(plain.stages).toStrictEqual(["build", "test", "deploy"])
     expect(plain.variables?.NODE_ENV).toBe("production")
     expect(plain.default?.image).toBe("node:22")
     expect(plain.jobs?.build).toBeDefined()
+    // oxlint-disable-next-line vitest/max-expects
     expect(plain.jobs?.test).toBeDefined()
   })
 })

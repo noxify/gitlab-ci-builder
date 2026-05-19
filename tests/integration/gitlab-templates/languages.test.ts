@@ -1,8 +1,16 @@
+// oxlint-disable vitest/expect-expect,vitest/max-expects
 import { describe, it } from "vitest"
 
-import { loadLocalTemplate, setupTemplateTest, testTemplateRoundTrip } from "./test-helper"
+import {
+  loadLocalTemplate,
+  setupTemplateTest,
+  testTemplateRoundTrip,
+} from "./test-helper"
 
-const { generatedDir, testFilesDir } = setupTemplateTest(import.meta.dirname, "languages")
+const { generatedDir, testFilesDir } = setupTemplateTest(
+  import.meta.dirname,
+  "languages"
+)
 
 describe("GitLab Templates: Languages", () => {
   it("should handle Android template", async () => {

@@ -1,3 +1,5 @@
+// oxlint-disable vitest/no-conditional-expect
+// oxlint-disable vitest/max-expects
 import { describe, expect, it } from "vitest"
 
 import { convertYamlToConfig } from "../../src/resolver/cli"
@@ -25,10 +27,14 @@ test_job:
 
     // The script should be flattened, not nested
     if (Array.isArray(testJob?.script)) {
-      expect(testJob.script).toEqual(["echo 'first'", "echo 'second'", "echo 'third'"])
+      expect(testJob.script).toStrictEqual([
+        "echo 'first'",
+        "echo 'second'",
+        "echo 'third'",
+      ])
       // Should NOT be: [["echo 'first'", "echo 'second'"], "echo 'third'"]
     } else {
-      throw new Error("Script should be an array")
+      throw new TypeError("Script should be an array")
     }
   })
 
@@ -55,9 +61,13 @@ test_job:
 
     expect(testJob).toBeDefined()
     if (Array.isArray(testJob?.script)) {
-      expect(testJob.script).toEqual(["echo 'before'", "echo 'middle'", "echo 'after'"])
+      expect(testJob.script).toStrictEqual([
+        "echo 'before'",
+        "echo 'middle'",
+        "echo 'after'",
+      ])
     } else {
-      throw new Error("Script should be an array")
+      throw new TypeError("Script should be an array")
     }
   })
 
@@ -90,19 +100,22 @@ test_job:
     expect(testJob).toBeDefined()
 
     if (Array.isArray(testJob?.before_script)) {
-      expect(testJob.before_script).toEqual([
+      expect(testJob.before_script).toStrictEqual([
         "echo 'load secrets'",
         "echo 'configure auth'",
         "echo 'custom setup'",
       ])
     } else {
-      throw new Error("before_script should be an array")
+      throw new TypeError("before_script should be an array")
     }
 
     if (Array.isArray(testJob.after_script)) {
-      expect(testJob.after_script).toEqual(["echo 'custom cleanup'", "echo 'cleanup started'"])
+      expect(testJob.after_script).toStrictEqual([
+        "echo 'custom cleanup'",
+        "echo 'cleanup started'",
+      ])
     } else {
-      throw new Error("after_script should be an array")
+      throw new TypeError("after_script should be an array")
     }
   })
 })

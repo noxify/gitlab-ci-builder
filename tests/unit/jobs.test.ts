@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -16,21 +17,25 @@ describe("ConfigBuilder - jobs", () => {
         script: ["npm run build"],
       })
       const result = config.getPlainObject()
-      if (!result.jobs) throw new Error("Expected jobs to be present")
-      const jobs = result.jobs
+      if (!result.jobs) {
+        throw new Error("Expected jobs to be present")
+      }
+      const { jobs } = result
 
       expect(jobs.build).toBeDefined()
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       expect(jobs.build!.stage).toBe("build")
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      expect(jobs.build!.script).toEqual(["npm run build"])
+      expect(jobs.build!.script).toStrictEqual(["npm run build"])
     })
 
     it("should add hidden job with dot prefix", () => {
       config.job("template", { script: ["echo template"] }, { hidden: true })
       const result = config.getPlainObject()
-      if (!result.jobs) throw new Error("Expected jobs to be present")
-      const jobs = result.jobs
+      if (!result.jobs) {
+        throw new Error("Expected jobs to be present")
+      }
+      const { jobs } = result
 
       expect(jobs[".template"]).toBeDefined()
       expect(jobs.template).toBeUndefined()
@@ -39,8 +44,10 @@ describe("ConfigBuilder - jobs", () => {
     it("should not add dot prefix if name already starts with dot", () => {
       config.job(".template", { script: ["echo template"] }, { hidden: true })
       const result = config.getPlainObject()
-      if (!result.jobs) throw new Error("Expected jobs to be present")
-      const jobs = result.jobs
+      if (!result.jobs) {
+        throw new Error("Expected jobs to be present")
+      }
+      const { jobs } = result
 
       expect(jobs[".template"]).toBeDefined()
       expect(jobs["..template"]).toBeUndefined()
@@ -50,8 +57,10 @@ describe("ConfigBuilder - jobs", () => {
       config.job("test", { stage: "test", script: ["echo first"] })
       config.job("test", { tags: ["docker"] })
       const result = config.getPlainObject()
-      if (!result.jobs) throw new Error("Expected jobs to be present")
-      const jobs = result.jobs
+      if (!result.jobs) {
+        throw new Error("Expected jobs to be present")
+      }
+      const { jobs } = result
 
       expect(jobs.test).toMatchObject({
         stage: "test",
@@ -64,8 +73,10 @@ describe("ConfigBuilder - jobs", () => {
       config.job("test", { stage: "test", script: ["echo first"] })
       config.job("test", { tags: ["docker"] }, { mergeExisting: false })
       const result = config.getPlainObject()
-      if (!result.jobs) throw new Error("Expected jobs to be present")
-      const jobs = result.jobs
+      if (!result.jobs) {
+        throw new Error("Expected jobs to be present")
+      }
+      const { jobs } = result
 
       // Should have replaced original job
       expect(jobs.test).toMatchObject({
@@ -99,7 +110,7 @@ describe("ConfigBuilder - jobs", () => {
       const job = config.getJob(".template")
 
       expect(job).toBeDefined()
-      expect(job?.script).toEqual(["echo template"])
+      expect(job?.script).toStrictEqual(["echo template"])
     })
   })
 })

@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -51,9 +52,9 @@ describe("Merge Rules", () => {
           ? s === "redis"
           : typeof s === "object" && !Array.isArray(s)
             ? s.name === "redis"
-            : false,
+            : false
       )
-      expect(redis).toEqual({ name: "redis", alias: "redis-cache" })
+      expect(redis).toStrictEqual({ name: "redis", alias: "redis-cache" })
     })
   })
 
@@ -140,9 +141,15 @@ describe("Merge Rules", () => {
       const result = config.getPlainObject()
       const job = result.jobs?.test
 
-      expect(job?.before_script).toEqual(["echo setup", "echo more setup"])
-      expect(job?.script).toEqual(["echo parent", "echo child"])
-      expect(job?.after_script).toEqual(["echo cleanup", "echo more cleanup"])
+      expect(job?.before_script).toStrictEqual([
+        "echo setup",
+        "echo more setup",
+      ])
+      expect(job?.script).toStrictEqual(["echo parent", "echo child"])
+      expect(job?.after_script).toStrictEqual([
+        "echo cleanup",
+        "echo more cleanup",
+      ])
     })
   })
 
@@ -216,7 +223,11 @@ describe("Merge Rules", () => {
 
       expect(job?.tags).toContain("linux")
       expect(job?.tags).toContain("docker")
-      expect(job?.before_script).toEqual(["echo base1", "echo base2", "echo child"])
+      expect(job?.before_script).toStrictEqual([
+        "echo base1",
+        "echo base2",
+        "echo child",
+      ])
     })
   })
 })

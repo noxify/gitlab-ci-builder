@@ -22,7 +22,9 @@ export const WorkflowRuleSchema = z
           compare_to: z.string().optional(),
         }),
       ])
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#ruleschanges" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#ruleschanges",
+      })
       .optional(),
     exists: z
       .union([
@@ -33,19 +35,26 @@ export const WorkflowRuleSchema = z
           ref: z.string().optional(),
         }),
       ])
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#rulesexists" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#rulesexists",
+      })
       .optional(),
     variables: z
       .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#rulesvariables" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#rulesvariables",
+      })
       .optional(),
     auto_cancel: z
       .object({
-        on_new_commit: z.enum(["conservative", "interruptible", "none"]).optional(),
+        on_new_commit: z
+          .enum(["conservative", "interruptible", "none"])
+          .optional(),
         on_job_failure: z.enum(["all", "none"]).optional(),
       })
       .meta({
-        description: "@see https://docs.gitlab.com/ci/yaml/#workflowauto_cancelon_new_commit",
+        description:
+          "@see https://docs.gitlab.com/ci/yaml/#workflowauto_cancelon_new_commit",
       })
       .optional(),
   })
@@ -61,7 +70,9 @@ export const WorkflowSchema = z
   .object({
     name: z
       .string()
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#workflowname" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#workflowname",
+      })
       .optional(),
     rules: WorkflowRulesSchema.optional().default([]),
     auto_cancel: z
@@ -69,17 +80,22 @@ export const WorkflowSchema = z
         on_new_commit: z
           .enum(["conservative", "interruptible", "none"])
           .meta({
-            description: "@see https://docs.gitlab.com/ci/yaml/#workflowauto_cancelon_new_commit",
+            description:
+              "@see https://docs.gitlab.com/ci/yaml/#workflowauto_cancelon_new_commit",
           })
           .optional(),
         on_job_failure: z
           .enum(["all", "none"])
           .meta({
-            description: "@see https://docs.gitlab.com/ci/yaml/#workflowauto_cancelon_job_failure",
+            description:
+              "@see https://docs.gitlab.com/ci/yaml/#workflowauto_cancelon_job_failure",
           })
           .optional(),
       })
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#workflowauto_cancel" })
+      .meta({
+        description:
+          "@see https://docs.gitlab.com/ci/yaml/#workflowauto_cancel",
+      })
       .optional(),
   })
   .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#workflow" })

@@ -1,3 +1,5 @@
+// oxlint-disable eslint/no-template-curly-in-string
+// oxlint-disable vitest/max-expects
 import { describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -51,42 +53,46 @@ describe("ConfigBuilder - Real-world extends scenario", () => {
     })
 
     // Final job extending both deploy service and deployment tags
-    config.extends([".deploy:service", ".deployment:tags"], "deploy_review_app", {
-      stage: "review",
-      variables: {
-        DEPLOY_ENV: "$ENVIRONMENT_REVIEW",
-        SERVICE_NAME: "${APP_PREFIX}-${CI_COMMIT_REF_SLUG}-review",
-        DATABASE_URL: "$DATABASE_URL_REVIEW",
-        APP_PREFIX: "myapp",
-      },
-      rules: [
-        {
-          if: "$CI_PIPELINE_SOURCE =~ /merge_request/",
-          when: "on_success",
+    config.extends(
+      [".deploy:service", ".deployment:tags"],
+      "deploy_review_app",
+      {
+        stage: "review",
+        variables: {
+          DEPLOY_ENV: "$ENVIRONMENT_REVIEW",
+          SERVICE_NAME: "${APP_PREFIX}-${CI_COMMIT_REF_SLUG}-review",
+          DATABASE_URL: "$DATABASE_URL_REVIEW",
+          APP_PREFIX: "myapp",
         },
-        {
-          if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH",
-          when: "never",
-        },
-        {
-          when: "manual",
-        },
-      ],
-      needs: [
-        {
-          job: "build_docker_image",
-          optional: true,
-        },
-        {
-          job: "run_unit_tests",
-          optional: true,
-        },
-        {
-          job: "run_integration_tests",
-          optional: true,
-        },
-      ],
-    })
+        rules: [
+          {
+            if: "$CI_PIPELINE_SOURCE =~ /merge_request/",
+            when: "on_success",
+          },
+          {
+            if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH",
+            when: "never",
+          },
+          {
+            when: "manual",
+          },
+        ],
+        needs: [
+          {
+            job: "build_docker_image",
+            optional: true,
+          },
+          {
+            job: "run_unit_tests",
+            optional: true,
+          },
+          {
+            job: "run_integration_tests",
+            optional: true,
+          },
+        ],
+      }
+    )
 
     const result = config.safeValidate()
     const pipeline = config.getPlainObject({ skipValidation: true })
@@ -100,10 +106,10 @@ describe("ConfigBuilder - Real-world extends scenario", () => {
     // Verify all expected properties are present
 
     // Tags from .deployment:tags
-    expect(job?.tags).toEqual(["kubernetes", "production"])
+    expect(job?.tags).toStrictEqual(["kubernetes", "production"])
 
     // Cache from .base:cache (through .deploy:service)
-    expect(job?.cache).toEqual([
+    expect(job?.cache).toStrictEqual([
       {
         key: "${CACHE_KEY}-${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}",
         paths: ["${PROJECT_DIR}/node_modules", "${PROJECT_DIR}/.cache"],
@@ -112,7 +118,7 @@ describe("ConfigBuilder - Real-world extends scenario", () => {
     ])
 
     // Variables: merged from .base:cache and job definition
-    expect(job?.variables).toEqual({
+    expect(job?.variables).toStrictEqual({
       PROJECT_DIR: ".",
       CACHE_KEY: "default",
       DEPLOY_ENV: "$ENVIRONMENT_REVIEW",
@@ -125,7 +131,7 @@ describe("ConfigBuilder - Real-world extends scenario", () => {
     expect(job?.image).toBe("!reference [.database:setup, image]")
 
     // Script from .deploy:service
-    expect(job?.script).toEqual([
+    expect(job?.script).toStrictEqual([
       "!reference [.install:deps, script]",
       "export DEPLOY_ENV=$DEPLOY_ENV",
       "npm run build",
@@ -137,14 +143,14 @@ describe("ConfigBuilder - Real-world extends scenario", () => {
 
     // Rules from job definition
     expect(job?.rules).toHaveLength(3)
-    expect(job?.rules?.[0]).toEqual({
+    expect(job?.rules?.[0]).toStrictEqual({
       if: "$CI_PIPELINE_SOURCE =~ /merge_request/",
       when: "on_success",
     })
 
     // Needs from job definition
     expect(job?.needs).toHaveLength(3)
-    expect(Array.isArray(job?.needs) ? job.needs[0] : undefined).toEqual({
+    expect(Array.isArray(job?.needs) ? job.needs[0] : undefined).toStrictEqual({
       job: "build_docker_image",
       optional: true,
     })
@@ -185,42 +191,46 @@ describe("ConfigBuilder - Real-world extends scenario", () => {
       ],
     })
 
-    config.extends([".deploy:service", ".deployment:tags"], "deploy_review_app", {
-      stage: "review",
-      variables: {
-        DEPLOY_ENV: "$ENVIRONMENT_REVIEW",
-        SERVICE_NAME: "${APP_PREFIX}-${CI_COMMIT_REF_SLUG}-review",
-        DATABASE_URL: "$DATABASE_URL_REVIEW",
-        APP_PREFIX: "myapp",
-      },
-      rules: [
-        {
-          if: "$CI_PIPELINE_SOURCE =~ /merge_request/",
-          when: "on_success",
+    config.extends(
+      [".deploy:service", ".deployment:tags"],
+      "deploy_review_app",
+      {
+        stage: "review",
+        variables: {
+          DEPLOY_ENV: "$ENVIRONMENT_REVIEW",
+          SERVICE_NAME: "${APP_PREFIX}-${CI_COMMIT_REF_SLUG}-review",
+          DATABASE_URL: "$DATABASE_URL_REVIEW",
+          APP_PREFIX: "myapp",
         },
-        {
-          if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH",
-          when: "never",
-        },
-        {
-          when: "manual",
-        },
-      ],
-      needs: [
-        {
-          job: "build_docker_image",
-          optional: true,
-        },
-        {
-          job: "run_unit_tests",
-          optional: true,
-        },
-        {
-          job: "run_integration_tests",
-          optional: true,
-        },
-      ],
-    })
+        rules: [
+          {
+            if: "$CI_PIPELINE_SOURCE =~ /merge_request/",
+            when: "on_success",
+          },
+          {
+            if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH",
+            when: "never",
+          },
+          {
+            when: "manual",
+          },
+        ],
+        needs: [
+          {
+            job: "build_docker_image",
+            optional: true,
+          },
+          {
+            job: "run_unit_tests",
+            optional: true,
+          },
+          {
+            job: "run_integration_tests",
+            optional: true,
+          },
+        ],
+      }
+    )
 
     const yaml = config.toYaml()
 
@@ -230,7 +240,9 @@ describe("ConfigBuilder - Real-world extends scenario", () => {
     expect(yaml).toContain("- kubernetes")
     expect(yaml).toContain("- production")
     expect(yaml).toContain("cache:")
-    expect(yaml).toContain("key: ${CACHE_KEY}-${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}")
+    expect(yaml).toContain(
+      "key: ${CACHE_KEY}-${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}"
+    )
     expect(yaml).toContain("variables:")
     expect(yaml).toContain("PROJECT_DIR: .")
     expect(yaml).toContain("CACHE_KEY: default")

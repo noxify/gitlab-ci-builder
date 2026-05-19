@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -17,12 +18,14 @@ describe("ConfigBuilder - template", () => {
       })
 
       const result = config.getPlainObject()
-      if (!result.jobs) throw new Error("Expected jobs to be present")
+      if (!result.jobs) {
+        throw new Error("Expected jobs to be present")
+      }
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const template = result.jobs[".base"]!
       expect(template).toBeDefined()
       expect(template.image).toBe("node:22")
-      expect(template.before_script).toEqual(["npm install"])
+      expect(template.before_script).toStrictEqual(["npm install"])
     })
 
     it("should preserve leading dot if already present", () => {
@@ -31,11 +34,13 @@ describe("ConfigBuilder - template", () => {
       })
 
       const result = config.getPlainObject()
-      if (!result.jobs) throw new Error("Expected jobs to be present")
+      if (!result.jobs) {
+        throw new Error("Expected jobs to be present")
+      }
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const template = result.jobs[".docker"]!
       expect(template).toBeDefined()
-      expect(template.tags).toEqual(["docker"])
+      expect(template.tags).toStrictEqual(["docker"])
     })
 
     it("should merge existing template when mergeExisting is true", () => {
@@ -48,12 +53,14 @@ describe("ConfigBuilder - template", () => {
       })
 
       const result = config.getPlainObject()
-      if (!result.jobs) throw new Error("Expected jobs to be present")
+      if (!result.jobs) {
+        throw new Error("Expected jobs to be present")
+      }
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const template = result.jobs[".base"]!
 
       expect(template.image).toBe("node:20")
-      expect(template.before_script).toEqual(["npm ci"])
+      expect(template.before_script).toStrictEqual(["npm ci"])
     })
 
     it("should not merge existing template when mergeExisting is false", () => {
@@ -67,16 +74,18 @@ describe("ConfigBuilder - template", () => {
         {
           tags: ["docker"],
         },
-        { mergeExisting: false },
+        { mergeExisting: false }
       )
 
       const result = config.getPlainObject()
-      if (!result.jobs) throw new Error("Expected jobs to be present")
+      if (!result.jobs) {
+        throw new Error("Expected jobs to be present")
+      }
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const template = result.jobs[".base"]!
 
       // Should have replaced since mergeExisting is false
-      expect(template.tags).toEqual(["docker"])
+      expect(template.tags).toStrictEqual(["docker"])
       expect(template.image).toBeUndefined()
       expect(template.before_script).toBeUndefined()
     })
@@ -100,7 +109,9 @@ describe("ConfigBuilder - template", () => {
       })
 
       const result = config.getPlainObject()
-      if (!result.jobs) throw new Error("Expected jobs to be present")
+      if (!result.jobs) {
+        throw new Error("Expected jobs to be present")
+      }
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const template = result.jobs[".template"]!
       expect(template).toBeDefined()
@@ -114,7 +125,7 @@ describe("ConfigBuilder - template", () => {
         {
           image: "node:22",
         },
-        { hidden: true },
+        { hidden: true }
       )
 
       const result = config.getPlainObject()
@@ -137,7 +148,7 @@ describe("ConfigBuilder - template", () => {
       const template = result.jobs![".template"]!
 
       expect(template.image).toBe("node:20")
-      expect(template.tags).toEqual(["docker"])
+      expect(template.tags).toStrictEqual(["docker"])
     })
   })
 
@@ -157,8 +168,8 @@ describe("ConfigBuilder - template", () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const buildJob = result.jobs!.build!
       expect(buildJob.image).toBe("node:22")
-      expect(buildJob.before_script).toEqual(["npm install"])
-      expect(buildJob.script).toEqual(["npm run build"])
+      expect(buildJob.before_script).toStrictEqual(["npm install"])
+      expect(buildJob.script).toStrictEqual(["npm run build"])
     })
 
     it("should work with both template() and job() for templates", () => {
@@ -174,8 +185,8 @@ describe("ConfigBuilder - template", () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const buildJob = result.jobs!.build!
       expect(buildJob.image).toBe("node:22")
-      expect(buildJob.tags).toEqual(["docker"])
-      expect(buildJob.script).toEqual(["npm run build"])
+      expect(buildJob.tags).toStrictEqual(["docker"])
+      expect(buildJob.script).toStrictEqual(["npm run build"])
     })
 
     it("should merge scripts from template when extending multiple templates", () => {
@@ -191,8 +202,8 @@ describe("ConfigBuilder - template", () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const buildJob = result.jobs!.build!
       expect(buildJob.image).toBe("node:22")
-      expect(buildJob.tags).toEqual(["docker"])
-      expect(buildJob.script).toEqual(["npm i -g pnpm", "npm run build"])
+      expect(buildJob.tags).toStrictEqual(["docker"])
+      expect(buildJob.script).toStrictEqual(["npm i -g pnpm", "npm run build"])
     })
   })
 
@@ -243,7 +254,7 @@ describe("ConfigBuilder - template", () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       expect(result.jobs![".deploy"]!.image).toBe("alpine")
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      expect(result.jobs!.deploy!.script).toEqual(["echo deploying"])
+      expect(result.jobs!.deploy!.script).toStrictEqual(["echo deploying"])
     })
   })
 

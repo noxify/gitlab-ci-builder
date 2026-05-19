@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -11,37 +12,41 @@ describe("ConfigBuilder - edge cases and branches", () => {
   })
 
   it("throws if imported module does not export extendConfig", async () => {
-    const fixtures = new URL("./fixtures", import.meta.url).pathname
+    const fixtures = new URL("fixtures", import.meta.url).pathname
 
-    await expect(cfg.dynamicInclude(fixtures, ["no-export.mjs"])).rejects.toThrow(
-      /Please export a default function or a named "extendConfig" function!/i,
+    await expect(
+      cfg.dynamicInclude(fixtures, ["no-export.mjs"])
+    ).rejects.toThrow(
+      /Please export a default function or a named "extendConfig" function!/iu
     )
   })
 
   it("throws if extendConfig is not a function", async () => {
-    const fixtures = new URL("./fixtures", import.meta.url).pathname
+    const fixtures = new URL("fixtures", import.meta.url).pathname
 
-    await expect(cfg.dynamicInclude(fixtures, ["extend-not-fn.mjs"])).rejects.toThrow(
-      /The exported function is not a function!/i,
-    )
+    await expect(
+      cfg.dynamicInclude(fixtures, ["extend-not-fn.mjs"])
+    ).rejects.toThrow(/The exported function is not a function!/iu)
   })
 
   it("warns when an extends target does not exist (recursivelyExtend warn path)", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+    const warnSpy = vi.spyOn(console, "warn").mockReturnValue()
 
     // Create a job that extends a non-existent target
     cfg.job("build", { extends: ["non-existent"] })
 
     const out = cfg.getPlainObject()
 
-    expect(warnSpy).toHaveBeenCalled()
+    expect(warnSpy).toHaveBeenCalledWith()
     // The external extends entry remains (it's not a local job/template)
-    if (!out.jobs) throw new Error("Expected jobs to be present")
+    if (!out.jobs) {
+      throw new Error("Expected jobs to be present")
+    }
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const job = out.jobs.build!
     expect(job).toBeDefined()
     // Single extends is optimized to string format
-    expect(job.extends).toEqual("non-existent")
+    expect(job.extends).toBe("non-existent")
   })
 
   it("removes local extends entries during clear() but keeps external ones", () => {
@@ -50,13 +55,15 @@ describe("ConfigBuilder - edge cases and branches", () => {
     cfg.job("consumer", { extends: [".local", "external"] })
 
     const out = cfg.getPlainObject()
-    if (!out.jobs) throw new Error("Expected jobs to be present")
+    if (!out.jobs) {
+      throw new Error("Expected jobs to be present")
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const consumer = out.jobs.consumer!
     // Local `.local` template is merged, only external unknown job remains in extends
     // Single extends is optimized to string format
-    expect(consumer.extends).toEqual("external")
+    expect(consumer.extends).toBe("external")
   })
 
   it("template respects mergeExisting=false and does not deep-merge when disabled", () => {
@@ -66,13 +73,15 @@ describe("ConfigBuilder - edge cases and branches", () => {
     c.template(".base", { variables: { BAR: "2" } }, { mergeExisting: false })
 
     const out = c.getPlainObject()
-    if (!out.jobs) throw new Error("Expected jobs to be present")
+    if (!out.jobs) {
+      throw new Error("Expected jobs to be present")
+    }
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const tmpl = out.jobs[".base"]!
     // Since mergeExisting was false on the second call, we expect replacement
     expect(tmpl.image).toBeUndefined()
     // The second call should have replaced FOO with BAR
-    expect(tmpl.variables).toEqual({ BAR: "2" })
+    expect(tmpl.variables).toStrictEqual({ BAR: "2" })
   })
 
   it("invokes patchers registered with patch() before returning plain object", () => {
@@ -87,6 +96,6 @@ describe("ConfigBuilder - edge cases and branches", () => {
 
     const out = cfg.getPlainObject()
     // @ts-expect-error __patched does not exist on type GitLabCi
-    expect(out.__patched).toBe(true)
+    expect(out.__patched).toBeTruthy()
   })
 })

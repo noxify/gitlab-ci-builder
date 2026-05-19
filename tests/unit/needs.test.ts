@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -17,7 +18,7 @@ describe("needs", () => {
 
     const plain = cfg.getPlainObject()
 
-    expect(plain.jobs?.test?.needs).toEqual(["build"])
+    expect(plain.jobs?.test?.needs).toStrictEqual(["build"])
   })
 
   it("should support needs with job objects", () => {
@@ -38,7 +39,7 @@ describe("needs", () => {
 
     const plain = cfg.getPlainObject()
 
-    expect(plain.jobs?.test?.needs).toEqual([{ job: "build" }])
+    expect(plain.jobs?.test?.needs).toStrictEqual([{ job: "build" }])
   })
 
   it("should support needs with artifacts property", () => {
@@ -60,7 +61,9 @@ describe("needs", () => {
 
     const plain = cfg.getPlainObject()
 
-    expect(plain.jobs?.test?.needs).toEqual([{ job: "build", artifacts: false }])
+    expect(plain.jobs?.test?.needs).toStrictEqual([
+      { job: "build", artifacts: false },
+    ])
   })
 
   it("should support needs with optional property", () => {
@@ -89,7 +92,7 @@ describe("needs", () => {
 
     const plain = cfg.getPlainObject()
 
-    expect(plain.jobs?.deploy?.needs).toEqual([
+    expect(plain.jobs?.deploy?.needs).toStrictEqual([
       { job: "generate_version", optional: true },
       { job: "unit_tests" },
     ])
@@ -115,7 +118,9 @@ describe("needs", () => {
 
     const plain = cfg.getPlainObject()
 
-    expect(plain.jobs?.deploy?.needs).toEqual([{ job: "build", artifacts: true, optional: true }])
+    expect(plain.jobs?.deploy?.needs).toStrictEqual([
+      { job: "build", artifacts: true, optional: true },
+    ])
   })
 
   it("should support pipeline needs with optional", () => {
@@ -131,7 +136,7 @@ describe("needs", () => {
 
     const plain = cfg.getPlainObject()
 
-    expect(plain.jobs?.deploy?.needs).toEqual({
+    expect(plain.jobs?.deploy?.needs).toStrictEqual({
       pipeline: "other-project/pipeline",
       optional: true,
     })

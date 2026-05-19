@@ -1,8 +1,8 @@
-import yaml from "js-yaml"
+import { DEFAULT_SCHEMA, loadAll } from "js-yaml"
 
 import { referenceTag } from "./yaml-parser/reference"
 
-const CUSTOM_SCHEMA = yaml.DEFAULT_SCHEMA.extend({ explicit: [referenceTag] })
+const CUSTOM_SCHEMA = DEFAULT_SCHEMA.extend({ explicit: [referenceTag] })
 
 /**
  * Parse YAML content with GitLab CI custom tags.
@@ -32,7 +32,7 @@ const CUSTOM_SCHEMA = yaml.DEFAULT_SCHEMA.extend({ explicit: [referenceTag] })
  */
 export function parseYaml(yamlContent: string): Record<string, unknown> {
   // Try to load all documents
-  const documents = yaml.loadAll(yamlContent, null, { schema: CUSTOM_SCHEMA })
+  const documents = loadAll(yamlContent, null, { schema: CUSTOM_SCHEMA })
 
   // If there's only one document, return it directly
   if (documents.length === 1) {

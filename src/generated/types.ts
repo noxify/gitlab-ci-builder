@@ -220,8 +220,6 @@ export interface Cache {
   unprotect?: boolean
   /**
    * @see https://docs.gitlab.com/ci/yaml/#cachefallback_keys
-   *
-   * @maxItems 5
    */
   fallback_keys?:
     | []
@@ -286,9 +284,6 @@ export type _Schema0 =
   | {
       env?: Record<string, string>
       exec: {
-        /**
-         * @minItems 1
-         */
         command: [string, ...string[]]
         work_dir?: string
       }
@@ -632,8 +627,6 @@ export interface BaseJob {
         unprotect?: boolean
         /**
          * @see https://docs.gitlab.com/ci/yaml/#cachefallback_keys
-         *
-         * @maxItems 5
          */
         fallback_keys?:
           | []
@@ -685,8 +678,6 @@ export interface BaseJob {
         unprotect?: boolean
         /**
          * @see https://docs.gitlab.com/ci/yaml/#cachefallback_keys
-         *
-         * @maxItems 5
          */
         fallback_keys?:
           | []
@@ -1808,8 +1799,6 @@ export interface Defaults {
         unprotect?: boolean
         /**
          * @see https://docs.gitlab.com/ci/yaml/#cachefallback_keys
-         *
-         * @maxItems 5
          */
         fallback_keys?:
           | []
@@ -1861,8 +1850,6 @@ export interface Defaults {
         unprotect?: boolean
         /**
          * @see https://docs.gitlab.com/ci/yaml/#cachefallback_keys
-         *
-         * @maxItems 5
          */
         fallback_keys?:
           | []

@@ -24,7 +24,14 @@ export const RuleSchema = z
       .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#rulesif" })
       .optional(),
     when: z
-      .enum(["on_success", "on_failure", "always", "never", "manual", "delayed"])
+      .enum([
+        "on_success",
+        "on_failure",
+        "always",
+        "never",
+        "manual",
+        "delayed",
+      ])
       .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#ruleswhen" })
       .optional(),
     changes: z
@@ -36,7 +43,9 @@ export const RuleSchema = z
           compare_to: z.string().optional(),
         }),
       ])
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#ruleschanges" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#ruleschanges",
+      })
       .optional(),
     exists: z
       .union([
@@ -47,7 +56,9 @@ export const RuleSchema = z
           ref: z.string().optional(),
         }),
       ])
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#rulesexists" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#rulesexists",
+      })
       .optional(),
     allow_failure: z
       .union([
@@ -56,11 +67,15 @@ export const RuleSchema = z
           exit_codes: z.union([z.number(), z.array(z.number())]),
         }),
       ])
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#rulesallow_failure" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#rulesallow_failure",
+      })
       .optional(),
     variables: z
       .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#rulesvariables" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#rulesvariables",
+      })
       .optional(),
     start_in: z
       .string()
@@ -75,13 +90,15 @@ export const RuleSchema = z
             artifacts: z.boolean().optional(),
             optional: z.boolean().optional(),
           }),
-        ]),
+        ])
       )
       .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#rulesneeds" })
       .optional(),
     interruptible: z
       .boolean()
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#rulesinterruptible" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#rulesinterruptible",
+      })
       .optional(),
   })
   .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#rules" })
@@ -98,34 +115,50 @@ export const ArtifactsSchema = z
   .object({
     name: z
       .string()
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#artifactsname" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#artifactsname",
+      })
       .optional(),
     paths: z
       .array(z.string())
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#artifactspaths" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#artifactspaths",
+      })
       .optional(),
     exclude: z
       .array(z.string())
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#artifactsexclude" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#artifactsexclude",
+      })
       .optional(),
     expose_as: z
       .string()
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#artifactsexpose_as" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#artifactsexpose_as",
+      })
       .optional(),
     untracked: z
       .boolean()
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#artifactsuntracked" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#artifactsuntracked",
+      })
       .optional(),
     when: z
       .enum(["on_success", "on_failure", "always"])
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#artifactswhen" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#artifactswhen",
+      })
       .optional(),
     expire_in: z
       .string()
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#artifactsexpire_in" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#artifactsexpire_in",
+      })
       .optional(),
     access: orInterpolation(z.enum(["none", "developer", "all"]))
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#artifactsaccess" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#artifactsaccess",
+      })
       .optional(),
     reports: z
       .object({
@@ -239,7 +272,9 @@ export const ArtifactsSchema = z
           .optional(),
         repository_xray: z.union([z.string(), z.array(z.string())]).optional(),
       })
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#artifactsreports" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#artifactsreports",
+      })
       .optional(),
   })
   .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#artifacts" })
@@ -257,15 +292,24 @@ export const CacheSchema = z
         z.object({
           files: z
             .array(z.string())
-            .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#cachekeyfiles" })
+            .meta({
+              description:
+                "@see https://docs.gitlab.com/ci/yaml/#cachekeyfiles",
+            })
             .optional(),
           files_commits: z
             .array(z.string())
-            .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#cachekeyfiles_commits" })
+            .meta({
+              description:
+                "@see https://docs.gitlab.com/ci/yaml/#cachekeyfiles_commits",
+            })
             .optional(),
           prefix: z
             .string()
-            .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#cachekeyprefix" })
+            .meta({
+              description:
+                "@see https://docs.gitlab.com/ci/yaml/#cachekeyprefix",
+            })
             .optional(),
         }),
       ])
@@ -277,23 +321,31 @@ export const CacheSchema = z
       .optional(),
     untracked: z
       .boolean()
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#cacheuntracked" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#cacheuntracked",
+      })
       .optional(),
     when: z
       .enum(["on_success", "on_failure", "always"])
       .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#cachewhen" })
       .optional(),
     policy: orInterpolation(z.enum(["pull", "push", "pull-push"]))
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#cachepolicy" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#cachepolicy",
+      })
       .optional(),
     unprotect: z
       .boolean()
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#cacheunprotect" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#cacheunprotect",
+      })
       .optional(),
     fallback_keys: z
       .array(z.string())
       .max(5)
-      .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#cachefallback_keys" })
+      .meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#cachefallback_keys",
+      })
       .optional(),
   })
   .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#cache" })
@@ -349,7 +401,7 @@ export const BaseJobSchema = z.object({
           }),
           // Fallback for complex needs definitions we don't fully support yet
           z.record(z.string(), z.unknown()),
-        ]),
+        ])
       ),
       z.object({
         pipeline: z.string(),
@@ -365,8 +417,13 @@ export const BaseJobSchema = z.object({
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#dependencies" })
     .optional(),
   allow_failure: z
-    .union([z.boolean(), z.object({ exit_codes: z.union([z.number(), z.array(z.number())]) })])
-    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#allow_failure" })
+    .union([
+      z.boolean(),
+      z.object({ exit_codes: z.union([z.number(), z.array(z.number())]) }),
+    ])
+    .meta({
+      description: "@see https://docs.gitlab.com/ci/yaml/#allow_failure",
+    })
     .optional(),
   when: z
     .enum(["on_success", "on_failure", "always", "never", "manual", "delayed"])
@@ -379,7 +436,10 @@ export const BaseJobSchema = z.object({
   retry: z
     .union([
       z.number(),
-      z.object({ max: z.number(), when: z.union([z.string(), z.array(z.string())]).optional() }),
+      z.object({
+        max: z.number(),
+        when: z.union([z.string(), z.array(z.string())]).optional(),
+      }),
     ])
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#retry" })
     .optional(),
@@ -387,43 +447,63 @@ export const BaseJobSchema = z.object({
     z.union([
       z.number(),
       z.object({
-        matrix: z.array(z.record(z.string(), z.union([z.string(), z.number(), z.array(z.any())]))),
+        matrix: z.array(
+          z.record(
+            z.string(),
+            z.union([z.string(), z.number(), z.array(z.any())])
+          )
+        ),
       }),
-    ]),
+    ])
   )
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#parallel" })
     .optional(),
   interruptible: z
     .boolean()
-    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#interruptible" })
+    .meta({
+      description: "@see https://docs.gitlab.com/ci/yaml/#interruptible",
+    })
     .optional(),
   resource_group: z
     .string()
-    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#resource_group" })
+    .meta({
+      description: "@see https://docs.gitlab.com/ci/yaml/#resource_group",
+    })
     .optional(),
   environment: z
     .union([
       z.string(),
       z.object({
-        name: z
-          .string()
-          .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#environmentname" }),
+        name: z.string().meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#environmentname",
+        }),
         url: z
           .string()
-          .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#environmenturl" })
+          .meta({
+            description: "@see https://docs.gitlab.com/ci/yaml/#environmenturl",
+          })
           .optional(),
         on_stop: z
           .string()
-          .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#environmenton_stop" })
+          .meta({
+            description:
+              "@see https://docs.gitlab.com/ci/yaml/#environmenton_stop",
+          })
           .optional(),
         auto_stop_in: z
           .string()
-          .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#environmentauto_stop_in" })
+          .meta({
+            description:
+              "@see https://docs.gitlab.com/ci/yaml/#environmentauto_stop_in",
+          })
           .optional(),
         deployment_tier: z.string().optional(),
         action: z
           .enum(["start", "prepare", "stop", "verify", "access"])
-          .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#environmentaction" })
+          .meta({
+            description:
+              "@see https://docs.gitlab.com/ci/yaml/#environmentaction",
+          })
           .optional(),
         kubernetes: z
           .object({
@@ -442,7 +522,10 @@ export const BaseJobSchema = z.object({
               })
               .optional(),
           })
-          .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#environmentkubernetes" })
+          .meta({
+            description:
+              "@see https://docs.gitlab.com/ci/yaml/#environmentkubernetes",
+          })
           .optional(),
       }),
     ])
@@ -450,32 +533,48 @@ export const BaseJobSchema = z.object({
     .optional(),
   release: z
     .object({
-      tag_name: z
-        .string()
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#releasetag_name" }),
+      tag_name: z.string().meta({
+        description: "@see https://docs.gitlab.com/ci/yaml/#releasetag_name",
+      }),
       tag_message: z
         .string()
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#releasetag_message" })
+        .meta({
+          description:
+            "@see https://docs.gitlab.com/ci/yaml/#releasetag_message",
+        })
         .optional(),
       description: z
         .string()
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#releasedescription" })
+        .meta({
+          description:
+            "@see https://docs.gitlab.com/ci/yaml/#releasedescription",
+        })
         .optional(),
       name: z
         .string()
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#releasename" })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#releasename",
+        })
         .optional(),
       ref: z
         .string()
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#releaseref" })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#releaseref",
+        })
         .optional(),
       milestones: z
         .array(z.string())
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#releasemilestones" })
+        .meta({
+          description:
+            "@see https://docs.gitlab.com/ci/yaml/#releasemilestones",
+        })
         .optional(),
       released_at: z
         .string()
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#releasereleased_at" })
+        .meta({
+          description:
+            "@see https://docs.gitlab.com/ci/yaml/#releasereleased_at",
+        })
         .optional(),
       assets: z
         .object({
@@ -484,11 +583,15 @@ export const BaseJobSchema = z.object({
               name: z.string(),
               url: z.string(),
               filepath: z.string().optional(),
-              link_type: z.enum(["runbook", "package", "image", "other"]).optional(),
-            }),
+              link_type: z
+                .enum(["runbook", "package", "image", "other"])
+                .optional(),
+            })
           ),
         })
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#releaseassets" })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#releaseassets",
+        })
         .optional(),
     })
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#release" })
@@ -497,51 +600,75 @@ export const BaseJobSchema = z.object({
     .union([
       z.string(),
       z.object({
-        project: z
-          .string()
-          .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#triggerproject" }),
+        project: z.string().meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#triggerproject",
+        }),
         branch: z
           .string()
-          .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#triggerbranch" })
+          .meta({
+            description: "@see https://docs.gitlab.com/ci/yaml/#triggerbranch",
+          })
           .optional(),
         strategy: z
           .enum(["depend", "mirror"])
-          .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#triggerstrategy" })
+          .meta({
+            description:
+              "@see https://docs.gitlab.com/ci/yaml/#triggerstrategy",
+          })
           .optional(),
         forward: z
           .object({
             yaml_variables: z
               .boolean()
-              .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#triggerforward" })
+              .meta({
+                description:
+                  "@see https://docs.gitlab.com/ci/yaml/#triggerforward",
+              })
               .optional(),
             pipeline_variables: z
               .boolean()
-              .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#triggerforward" })
+              .meta({
+                description:
+                  "@see https://docs.gitlab.com/ci/yaml/#triggerforward",
+              })
               .optional(),
           })
-          .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#triggerforward" })
+          .meta({
+            description: "@see https://docs.gitlab.com/ci/yaml/#triggerforward",
+          })
           .optional(),
       }),
       z.object({
-        include: z
-          .any()
-          .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#triggerinclude" }),
+        include: z.any().meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#triggerinclude",
+        }),
         strategy: z
           .enum(["depend", "mirror"])
-          .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#triggerstrategy" })
+          .meta({
+            description:
+              "@see https://docs.gitlab.com/ci/yaml/#triggerstrategy",
+          })
           .optional(),
         forward: z
           .object({
             yaml_variables: z
               .boolean()
-              .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#triggerforward" })
+              .meta({
+                description:
+                  "@see https://docs.gitlab.com/ci/yaml/#triggerforward",
+              })
               .optional(),
             pipeline_variables: z
               .boolean()
-              .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#triggerforward" })
+              .meta({
+                description:
+                  "@see https://docs.gitlab.com/ci/yaml/#triggerforward",
+              })
               .optional(),
           })
-          .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#triggerforward" })
+          .meta({
+            description: "@see https://docs.gitlab.com/ci/yaml/#triggerforward",
+          })
           .optional(),
       }),
     ])
@@ -552,7 +679,7 @@ export const BaseJobSchema = z.object({
       z.string(),
       z.object({
         aud: z.union([z.string(), z.array(z.string())]),
-      }),
+      })
     )
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#id_tokens" })
     .optional(),
@@ -572,7 +699,9 @@ export const BaseJobSchema = z.object({
               field: z.string(),
             }),
           ])
-          .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#secretsvault" })
+          .meta({
+            description: "@see https://docs.gitlab.com/ci/yaml/#secretsvault",
+          })
           .optional(),
         gcp_secret_manager: z
           .object({
@@ -602,10 +731,12 @@ export const BaseJobSchema = z.object({
           .optional(),
         file: z
           .boolean()
-          .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#secretsfile" })
+          .meta({
+            description: "@see https://docs.gitlab.com/ci/yaml/#secretsfile",
+          })
           .optional(),
         token: z.string().optional(),
-      }),
+      })
     )
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#secrets" })
     .optional(),
@@ -613,7 +744,10 @@ export const BaseJobSchema = z.object({
     .object({
       pre_get_sources_script: z
         .union([z.string(), z.array(z.string())])
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#hookspre_get_sources_script" })
+        .meta({
+          description:
+            "@see https://docs.gitlab.com/ci/yaml/#hookspre_get_sources_script",
+        })
         .optional(),
     })
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#hooks" })
@@ -622,11 +756,15 @@ export const BaseJobSchema = z.object({
     .object({
       default: z
         .union([z.boolean(), z.array(z.string())])
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#inheritdefault" })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#inheritdefault",
+        })
         .optional(),
       variables: z
         .union([z.boolean(), z.array(z.string())])
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#inheritvariables" })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#inheritvariables",
+        })
         .optional(),
     })
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#inherit" })
@@ -637,7 +775,9 @@ export const BaseJobSchema = z.object({
     .optional(),
   manual_confirmation: z
     .string()
-    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#manual_confirmation" })
+    .meta({
+      description: "@see https://docs.gitlab.com/ci/yaml/#manual_confirmation",
+    })
     .optional(),
   inputs: JobInputsSchema.optional(),
   pages: PagesConfigSchema.optional(),
@@ -690,7 +830,9 @@ export const JobDefinitionNormalizedSchema = BaseJobSchema.extend({
   extends: z.array(z.string()).optional(),
 })
 
-export type JobDefinitionNormalized = z.infer<typeof JobDefinitionNormalizedSchema>
+export type JobDefinitionNormalized = z.infer<
+  typeof JobDefinitionNormalizedSchema
+>
 
 /**
  * Job definition for output (extends can be string or array)
@@ -706,13 +848,19 @@ export type JobDefinitionOutput = z.infer<typeof JobDefinitionOutputSchema>
 export const TemplateDefinitionInputSchema = JobDefinitionInputSchema
 export const TemplateDefinitionNormalizedSchema = JobDefinitionNormalizedSchema
 
-export type TemplateDefinitionInput = z.infer<typeof TemplateDefinitionInputSchema>
-export type TemplateDefinitionNormalized = z.infer<typeof TemplateDefinitionNormalizedSchema>
+export type TemplateDefinitionInput = z.infer<
+  typeof TemplateDefinitionInputSchema
+>
+export type TemplateDefinitionNormalized = z.infer<
+  typeof TemplateDefinitionNormalizedSchema
+>
 
 /**
  * Helper to normalize extends field
  */
-export function normalizeExtends(def: JobDefinitionInput): JobDefinitionNormalized {
+export function normalizeExtends(
+  def: JobDefinitionInput
+): JobDefinitionNormalized {
   if (!def.extends) {
     return def as JobDefinitionNormalized
   }
@@ -727,6 +875,8 @@ export function normalizeExtends(def: JobDefinitionInput): JobDefinitionNormaliz
  * Helper to extract script as array
  */
 export function normalizeScript(script: Script | undefined): string[] {
-  if (!script) return []
+  if (!script) {
+    return []
+  }
   return Array.isArray(script) ? script : [script]
 }

@@ -1,3 +1,5 @@
+// oxlint-disable eslint/no-template-curly-in-string
+// oxlint-disable vitest/max-expects
 import { describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -13,7 +15,7 @@ describe("PipelineState - Additional Coverage", () => {
       config.addStage("build") // duplicate should be ignored
 
       const result = config.getPlainObject()
-      expect(result.stages).toEqual(["build", "test"])
+      expect(result.stages).toStrictEqual(["build", "test"])
     })
   })
 
@@ -31,7 +33,7 @@ describe("PipelineState - Additional Coverage", () => {
 
       const result = config.getPlainObject()
       // mergeExisting should respect job-level option
-      expect(result.jobs?.test1?.script).toEqual(["echo 1", "echo 2"])
+      expect(result.jobs?.test1?.script).toStrictEqual(["echo 1", "echo 2"])
     })
   })
 
@@ -46,7 +48,7 @@ describe("PipelineState - Additional Coverage", () => {
 
       const job = config.getJob("test")
       expect(job).toBeDefined()
-      expect(job?.script).toEqual(["echo test"])
+      expect(job?.script).toStrictEqual(["echo test"])
       expect(job?.stage).toBe("test")
     })
 
@@ -84,7 +86,7 @@ describe("PipelineState - Additional Coverage", () => {
       })
 
       const result = config.getPlainObject()
-      expect(result.variables).toEqual({
+      expect(result.variables).toStrictEqual({
         VAR1: "value1",
         VAR2: 42,
         VAR3: true,
@@ -98,7 +100,7 @@ describe("PipelineState - Additional Coverage", () => {
       config.variables({ VAR2: "value2" })
 
       const result = config.getPlainObject()
-      expect(result.variables).toEqual({
+      expect(result.variables).toStrictEqual({
         VAR1: "value1",
         VAR2: "value2",
       })
@@ -135,8 +137,8 @@ describe("PipelineState - Additional Coverage", () => {
 
       const result = config.getPlainObject()
       expect(result.default?.image).toBe("node:20")
-      expect(result.default?.tags).toEqual(["docker"])
-      expect(result.default?.retry).toEqual({ max: 2 })
+      expect(result.default?.tags).toStrictEqual(["docker"])
+      expect(result.default?.retry).toStrictEqual({ max: 2 })
     })
   })
 
@@ -152,21 +154,21 @@ describe("PipelineState - Additional Coverage", () => {
       const state = new PipelineState()
       state.setDeprecatedServices(["postgres:14", "redis:7"])
 
-      expect(state.deprecatedServices).toEqual(["postgres:14", "redis:7"])
+      expect(state.deprecatedServices).toStrictEqual(["postgres:14", "redis:7"])
     })
 
     it("should set deprecated before_script", () => {
       const state = new PipelineState()
       state.setDeprecatedBeforeScript(["npm ci"])
 
-      expect(state.deprecatedBeforeScript).toEqual(["npm ci"])
+      expect(state.deprecatedBeforeScript).toStrictEqual(["npm ci"])
     })
 
     it("should set deprecated after_script", () => {
       const state = new PipelineState()
       state.setDeprecatedAfterScript(["cleanup.sh"])
 
-      expect(state.deprecatedAfterScript).toEqual(["cleanup.sh"])
+      expect(state.deprecatedAfterScript).toStrictEqual(["cleanup.sh"])
     })
 
     it("should set deprecated cache", () => {
@@ -176,7 +178,7 @@ describe("PipelineState - Additional Coverage", () => {
         paths: ["node_modules/"],
       })
 
-      expect(state.deprecatedCache).toEqual({
+      expect(state.deprecatedCache).toStrictEqual({
         key: "${CI_COMMIT_REF_SLUG}",
         paths: ["node_modules/"],
       })
@@ -193,10 +195,10 @@ describe("PipelineState - Additional Coverage", () => {
 
       const plain = state.toPlainObject()
 
-      expect(plain.stages).toEqual(["build", "test"])
-      expect(plain.variables).toEqual({ NODE_ENV: "production" })
-      expect(plain.include).toEqual([{ local: "template.yml" }])
-      expect(plain.spec).toEqual({ inputs: { env: { type: "string" } } })
+      expect(plain.stages).toStrictEqual(["build", "test"])
+      expect(plain.variables).toStrictEqual({ NODE_ENV: "production" })
+      expect(plain.include).toStrictEqual([{ local: "template.yml" }])
+      expect(plain.spec).toStrictEqual({ inputs: { env: { type: "string" } } })
     })
 
     it("should include deprecated globals when set", () => {
@@ -207,7 +209,7 @@ describe("PipelineState - Additional Coverage", () => {
       const plain = state.toPlainObject()
 
       expect(plain.image).toBe("alpine:latest")
-      expect(plain.services).toEqual(["postgres:14"])
+      expect(plain.services).toStrictEqual(["postgres:14"])
     })
 
     it("should include workflow and default when set", () => {
@@ -217,8 +219,10 @@ describe("PipelineState - Additional Coverage", () => {
 
       const plain = state.toPlainObject()
 
-      expect(plain.workflow).toEqual({ rules: [{ if: "$CI_COMMIT_BRANCH" }] })
-      expect(plain.default).toEqual({ image: "node:20" })
+      expect(plain.workflow).toStrictEqual({
+        rules: [{ if: "$CI_COMMIT_BRANCH" }],
+      })
+      expect(plain.default).toStrictEqual({ image: "node:20" })
     })
   })
 
@@ -231,9 +235,9 @@ describe("PipelineState - Additional Coverage", () => {
 
       const cloned = state.clone()
 
-      expect(cloned.stages).toEqual(state.stages)
-      expect(cloned.variables).toEqual(state.variables)
-      expect(cloned.include).toEqual(state.include)
+      expect(cloned.stages).toStrictEqual(state.stages)
+      expect(cloned.variables).toStrictEqual(state.variables)
+      expect(cloned.include).toStrictEqual(state.include)
 
       // Verify it's a deep copy
       cloned.addStages(["deploy"])
@@ -250,8 +254,11 @@ describe("PipelineState - Additional Coverage", () => {
       const cloned = state.clone()
 
       expect(cloned.deprecatedImage).toBe("alpine:latest")
-      expect(cloned.deprecatedServices).toEqual(["postgres:14"])
-      expect(cloned.deprecatedCache).toEqual({ key: "cache", paths: ["node_modules/"] })
+      expect(cloned.deprecatedServices).toStrictEqual(["postgres:14"])
+      expect(cloned.deprecatedCache).toStrictEqual({
+        key: "cache",
+        paths: ["node_modules/"],
+      })
     })
   })
 })

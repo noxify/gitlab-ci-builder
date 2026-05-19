@@ -1,3 +1,5 @@
+// oxlint-disable eslint/no-template-curly-in-string
+// oxlint-disable vitest/max-expects
 import { describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
@@ -52,7 +54,7 @@ describe("ConfigBuilder - template extends chain resolution", () => {
 
     // Should have cache from .node:cache (through .deploy_job)
     expect(job?.cache).toBeDefined()
-    expect(job?.cache).toEqual([
+    expect(job?.cache).toStrictEqual([
       {
         key: "${CACHE_KEY}-${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}",
         paths: ["${APP_DIR}/node_modules", "${APP_DIR}/.pnpm-store"],
@@ -61,18 +63,18 @@ describe("ConfigBuilder - template extends chain resolution", () => {
     ])
 
     // Should have base variables from .node:cache AND job-specific variables
-    expect(job?.variables).toEqual({
+    expect(job?.variables).toStrictEqual({
       APP_DIR: ".",
       CACHE_KEY: "default",
       DEPLOYMENT_ID: "$ENV_DEPLOYMENT_ID",
     })
 
     // Should have tags from .env_tags
-    expect(job?.tags).toEqual(["docker", "test"])
+    expect(job?.tags).toStrictEqual(["docker", "test"])
 
     // Should have image and script from .deploy_job
     expect(job?.image).toBe("node:20")
-    expect(job?.script).toEqual(["echo 'deploy'"])
+    expect(job?.script).toStrictEqual(["echo 'deploy'"])
 
     // Should have stage from job definition
     expect(job?.stage).toBe("deploy")
@@ -123,7 +125,7 @@ describe("ConfigBuilder - template extends chain resolution", () => {
     const job = pipeline.jobs?.final_job
 
     // Should have all variables merged
-    expect(job?.variables).toEqual({
+    expect(job?.variables).toStrictEqual({
       BASE_VAR: "base",
       MIDDLEWARE_VAR: "middleware",
       TOP_VAR: "top",
@@ -135,7 +137,7 @@ describe("ConfigBuilder - template extends chain resolution", () => {
     expect(job?.tags).toContain("middleware")
 
     // Should have script from .top
-    expect(job?.script).toEqual(["echo 'top'"])
+    expect(job?.script).toStrictEqual(["echo 'top'"])
 
     expect(job?.stage).toBe("test")
   })
@@ -171,7 +173,7 @@ describe("ConfigBuilder - template extends chain resolution", () => {
     // VAR1 should be overridden by job
     // VAR2 should keep base value
     // VAR3 should be added by job
-    expect(job?.variables).toEqual({
+    expect(job?.variables).toStrictEqual({
       VAR1: "job",
       VAR2: "base",
       VAR3: "job",
@@ -199,6 +201,10 @@ describe("ConfigBuilder - template extends chain resolution", () => {
     const job = pipeline.jobs?.job
 
     // Scripts should be concatenated in order: base -> middleware -> job
-    expect(job?.script).toEqual(["echo 'base'", "echo 'middleware'", "echo 'job'"])
+    expect(job?.script).toStrictEqual([
+      "echo 'base'",
+      "echo 'middleware'",
+      "echo 'job'",
+    ])
   })
 })

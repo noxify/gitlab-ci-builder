@@ -68,7 +68,7 @@ export const ValidationMetadataSchema = z.object({
         code: z.string(),
         message: z.string(),
         path: z.array(z.union([z.string(), z.number()])).optional(),
-      }),
+      })
     )
     .optional()
     .default([]),

@@ -22,7 +22,7 @@ import ts from "typescript"
 export function createImportDeclaration(
   moduleSpecifier: string,
   isTypeOnly: boolean,
-  namedImports?: string[],
+  namedImports?: string[]
 ): ts.ImportDeclaration {
   if (namedImports && namedImports.length > 0) {
     return ts.factory.createImportDeclaration(
@@ -32,11 +32,15 @@ export function createImportDeclaration(
         undefined,
         ts.factory.createNamedImports(
           namedImports.map((name) =>
-            ts.factory.createImportSpecifier(false, undefined, ts.factory.createIdentifier(name)),
-          ),
-        ),
+            ts.factory.createImportSpecifier(
+              false,
+              undefined,
+              ts.factory.createIdentifier(name)
+            )
+          )
+        )
       ),
-      ts.factory.createStringLiteral(moduleSpecifier),
+      ts.factory.createStringLiteral(moduleSpecifier)
     )
   }
 
@@ -45,9 +49,10 @@ export function createImportDeclaration(
     ts.factory.createImportClause(
       isTypeOnly,
       ts.factory.createIdentifier("ConfigBuilder"),
-      undefined,
+      // oxlint-disable-next-line unicorn/no-useless-undefined
+      undefined
     ),
-    ts.factory.createStringLiteral(moduleSpecifier),
+    ts.factory.createStringLiteral(moduleSpecifier)
   )
 }
 
@@ -73,15 +78,15 @@ export function createImportDeclaration(
 export function createMethodCall(
   objectName: string,
   methodName: string,
-  args: ts.Expression[],
+  args: ts.Expression[]
 ): ts.CallExpression {
   return ts.factory.createCallExpression(
     ts.factory.createPropertyAccessExpression(
       ts.factory.createIdentifier(objectName),
-      ts.factory.createIdentifier(methodName),
+      ts.factory.createIdentifier(methodName)
     ),
     undefined,
-    args,
+    args
   )
 }
 
@@ -124,21 +129,27 @@ export function valueToExpression(value: unknown): ts.Expression {
   if (Array.isArray(value)) {
     return ts.factory.createArrayLiteralExpression(
       value.map((item) => valueToExpression(item)),
-      false, // Always single-line for simple arrays
+      false // Always single-line for simple arrays
     )
   }
 
   // Objects
   if (typeof value === "object") {
     const properties = Object.entries(value).map(([key, val]) => {
-      const propertyName = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key)
+      const propertyName = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/u.test(key)
         ? ts.factory.createIdentifier(key)
         : ts.factory.createStringLiteral(key)
 
-      return ts.factory.createPropertyAssignment(propertyName, valueToExpression(val))
+      return ts.factory.createPropertyAssignment(
+        propertyName,
+        valueToExpression(val)
+      )
     })
 
-    return ts.factory.createObjectLiteralExpression(properties, properties.length > 1)
+    return ts.factory.createObjectLiteralExpression(
+      properties,
+      properties.length > 1
+    )
   }
 
   // Fallback
@@ -159,7 +170,7 @@ export function createTemplateLiteral(text: string): ts.TemplateLiteral {
 export function createStringArray(values: string[]): ts.ArrayLiteralExpression {
   return ts.factory.createArrayLiteralExpression(
     values.map((v) => ts.factory.createStringLiteral(v)),
-    false,
+    false
   )
 }
 
@@ -168,7 +179,7 @@ export function createStringArray(values: string[]): ts.ArrayLiteralExpression {
  */
 export function createConstDeclaration(
   name: string,
-  initializer: ts.Expression,
+  initializer: ts.Expression
 ): ts.VariableStatement {
   return ts.factory.createVariableStatement(
     undefined,
@@ -178,11 +189,11 @@ export function createConstDeclaration(
           ts.factory.createIdentifier(name),
           undefined,
           undefined,
-          initializer,
+          initializer
         ),
       ],
-      ts.NodeFlags.Const,
-    ),
+      ts.NodeFlags.Const
+    )
   )
 }
 
@@ -193,7 +204,7 @@ export function createFunctionDeclaration(
   name: string,
   parameters: ts.ParameterDeclaration[],
   body: ts.Statement[],
-  isExportDefault = false,
+  isExportDefault = false
 ): ts.FunctionDeclaration {
   const modifiers = isExportDefault
     ? [
@@ -209,33 +220,40 @@ export function createFunctionDeclaration(
     undefined,
     parameters,
     undefined,
-    ts.factory.createBlock(body, true),
+    ts.factory.createBlock(body, true)
   )
 }
 
 /**
  * Create parameter declaration with type annotation
  */
-export function createParameter(name: string, typeName: string): ts.ParameterDeclaration {
+export function createParameter(
+  name: string,
+  typeName: string
+): ts.ParameterDeclaration {
   return ts.factory.createParameterDeclaration(
     undefined,
     undefined,
     ts.factory.createIdentifier(name),
     undefined,
-    ts.factory.createTypeReferenceNode(ts.factory.createIdentifier(typeName)),
+    ts.factory.createTypeReferenceNode(ts.factory.createIdentifier(typeName))
   )
 }
 
 /**
  * Create return statement
  */
-export function createReturnStatement(expression: ts.Expression): ts.ReturnStatement {
+export function createReturnStatement(
+  expression: ts.Expression
+): ts.ReturnStatement {
   return ts.factory.createReturnStatement(expression)
 }
 
 /**
  * Create export default statement
  */
-export function createExportDefault(expression: ts.Expression): ts.ExportAssignment {
+export function createExportDefault(
+  expression: ts.Expression
+): ts.ExportAssignment {
   return ts.factory.createExportAssignment(undefined, undefined, expression)
 }

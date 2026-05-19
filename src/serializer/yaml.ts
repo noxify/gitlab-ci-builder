@@ -1,4 +1,4 @@
-import yaml from "js-yaml"
+import { dump, Type, DEFAULT_SCHEMA } from "js-yaml"
 
 import type { PipelineOutput } from "../model"
 
@@ -16,7 +16,7 @@ class FlowArray<T = unknown> extends Array<T> {
 /**
  * Custom YAML type for !reference tags
  */
-const referenceTag = new yaml.Type("!reference", {
+const referenceTag = new Type("!reference", {
   kind: "sequence",
   construct: (data: unknown) => data,
   predicate: (obj: unknown) => obj instanceof FlowArray,
@@ -24,7 +24,7 @@ const referenceTag = new yaml.Type("!reference", {
   instanceOf: FlowArray,
 })
 
-const CUSTOM_SCHEMA = yaml.DEFAULT_SCHEMA.extend({ explicit: [referenceTag] })
+const CUSTOM_SCHEMA = DEFAULT_SCHEMA.extend({ explicit: [referenceTag] })
 
 /**
  * Process a value to convert !reference strings to proper FlowArray format.
@@ -48,7 +48,7 @@ const CUSTOM_SCHEMA = yaml.DEFAULT_SCHEMA.extend({ explicit: [referenceTag] })
 function processReferences(value: unknown): unknown {
   if (typeof value === "string" && value.startsWith("!reference [")) {
     // Parse "!reference [.template, script]" into FlowArray format
-    const match = /^!reference\s*\[([^\]]+)\]$/.exec(value)
+    const match = /^!reference\s*\[([^\]]+)\]$/u.exec(value)
     if (match?.[1]) {
       const parts = match[1].split(",").map((s) => s.trim())
       if (parts.length === 2) {
@@ -123,10 +123,10 @@ function orderPipelineKeys(pipeline: PipelineOutput): Record<string, unknown> {
   if (jobs) {
     const templates = Object.keys(jobs)
       .filter((k) => k.startsWith("."))
-      .sort()
+      .toSorted()
     const regularJobs = Object.keys(jobs)
       .filter((k) => !k.startsWith("."))
-      .sort()
+      .toSorted()
 
     for (const key of [...templates, ...regularJobs]) {
       ordered[key] = jobs[key]
@@ -186,7 +186,7 @@ function postProcessReferences(yamlString: string): string {
         const elem2 = nextLine2.trim().slice(2)
 
         // Get the indentation from the original "- !reference" line
-        const match = /^(\s*)/.exec(line)
+        const match = /^(\s*)/u.exec(line)
         const indent = match?.[1] ?? ""
 
         // Create inline format
@@ -214,10 +214,9 @@ function postProcessReferences(yamlString: string): string {
         const elem2 = nextLine2.trim().slice(2)
 
         // Get the key part (e.g., "image:")
-        const keyMatch = /^(\s*)(.+):\s*!reference\s*$/.exec(line)
+        const keyMatch = /^(\s*)(.+):\s*!reference\s*$/u.exec(line)
         if (keyMatch) {
-          const indent = keyMatch[1] ?? ""
-          const key = keyMatch[2]
+          const [, indent = "", key] = keyMatch
 
           // Create inline format
           resultLines.push(`${indent}${key}: !reference [${elem1}, ${elem2}]`)
@@ -232,7 +231,7 @@ function postProcessReferences(yamlString: string): string {
     if (line !== undefined) {
       resultLines.push(line)
     }
-    i++
+    i += 1
   }
 
   return resultLines.join("\n")
@@ -348,7 +347,7 @@ export function serializeToYaml(pipeline: PipelineOutput): string {
   const ordered = orderPipelineKeys(processed)
 
   // Dump to YAML
-  let yamlString = yaml.dump(ordered, {
+  let yamlString = dump(ordered, {
     noRefs: true,
     sortKeys: false,
     lineWidth: -1,

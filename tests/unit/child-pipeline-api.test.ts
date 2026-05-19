@@ -1,5 +1,14 @@
+// oxlint-disable vitest/no-conditional-expect
+// oxlint-disable vitest/max-expects
 import { vol } from "memfs"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  expectTypeOf,
+} from "vitest"
 
 import { ConfigBuilder } from "../../src"
 
@@ -31,13 +40,13 @@ describe("ConfigBuilder - childPipeline API", () => {
         },
         {
           strategy: "depend",
-        },
+        }
       )
 
       const pipeline = config.getPlainObject()
 
       expect(pipeline.jobs?.["trigger:deploy"]).toBeDefined()
-      expect(pipeline.jobs?.["trigger:deploy"]?.trigger).toEqual({
+      expect(pipeline.jobs?.["trigger:deploy"]?.trigger).toStrictEqual({
         include: { local: "ci/trigger-deploy-pipeline.yml" },
         strategy: "depend",
       })
@@ -54,12 +63,12 @@ describe("ConfigBuilder - childPipeline API", () => {
         },
         {
           outputPath: "custom/path.yml",
-        },
+        }
       )
 
       const pipeline = config.getPlainObject()
 
-      expect(pipeline.jobs?.["trigger:custom"]?.trigger).toEqual({
+      expect(pipeline.jobs?.["trigger:custom"]?.trigger).toStrictEqual({
         include: { local: "custom/path.yml" },
       })
     })
@@ -78,7 +87,7 @@ describe("ConfigBuilder - childPipeline API", () => {
             yaml_variables: true,
             pipeline_variables: false,
           },
-        },
+        }
       )
 
       const pipeline = config.getPlainObject()
@@ -86,9 +95,9 @@ describe("ConfigBuilder - childPipeline API", () => {
       const trigger = triggerJob?.trigger
 
       expect(trigger).toBeDefined()
-      expect(typeof trigger).toBe("object")
       if (trigger && typeof trigger === "object" && "forward" in trigger) {
-        expect(trigger.forward).toEqual({
+        expectTypeOf(trigger).toBeObject()
+        expect(trigger.forward).toStrictEqual({
           yaml_variables: true,
           pipeline_variables: false,
         })
@@ -113,16 +122,16 @@ describe("ConfigBuilder - childPipeline API", () => {
             needs: ["build"],
             variables: { DEPLOY_ENV: "production" },
           },
-        },
+        }
       )
 
       const pipeline = config.getPlainObject()
       const job = pipeline.jobs?.["trigger:conditional"]
 
       expect(job?.stage).toBe("trigger")
-      expect(job?.rules).toEqual([{ if: '$CI_COMMIT_BRANCH == "main"' }])
-      expect(job?.needs).toEqual(["build"])
-      expect(job?.variables).toEqual({ DEPLOY_ENV: "production" })
+      expect(job?.rules).toStrictEqual([{ if: '$CI_COMMIT_BRANCH == "main"' }])
+      expect(job?.needs).toStrictEqual(["build"])
+      expect(job?.variables).toStrictEqual({ DEPLOY_ENV: "production" })
     })
 
     it("should track child pipeline in state", () => {
@@ -182,7 +191,10 @@ describe("ConfigBuilder - childPipeline API", () => {
       expect(files.children[0]).toBe("/test/ci/trigger-deploy-pipeline.yml")
 
       // Check parent file was written
-      const parentContent = vol.readFileSync("/test/.gitlab-ci.yml", "utf-8") as string
+      const parentContent = vol.readFileSync(
+        "/test/.gitlab-ci.yml",
+        "utf-8"
+      ) as string
       expect(parentContent).toContain("stages:")
       expect(parentContent).toContain("build:")
       expect(parentContent).toContain("trigger:deploy:")
@@ -190,7 +202,7 @@ describe("ConfigBuilder - childPipeline API", () => {
       // Check child file was written
       const childContent = vol.readFileSync(
         "/test/ci/trigger-deploy-pipeline.yml",
-        "utf-8",
+        "utf-8"
       ) as string
       expect(childContent).toContain("stages:")
       expect(childContent).toContain("deploy:prod:")
@@ -205,7 +217,7 @@ describe("ConfigBuilder - childPipeline API", () => {
       })
 
       expect(files.parent).toBe("/test/custom.gitlab-ci.yml")
-      expect(vol.existsSync("/test/custom.gitlab-ci.yml")).toBe(true)
+      expect(vol.existsSync("/test/custom.gitlab-ci.yml")).toBeTruthy()
     })
 
     it("should write multiple child pipelines", async () => {
@@ -227,8 +239,10 @@ describe("ConfigBuilder - childPipeline API", () => {
       expect(files.children).toContain("/test/ci/trigger-test-pipeline.yml")
       expect(files.children).toContain("/test/ci/trigger-deploy-pipeline.yml")
 
-      expect(vol.existsSync("/test/ci/trigger-test-pipeline.yml")).toBe(true)
-      expect(vol.existsSync("/test/ci/trigger-deploy-pipeline.yml")).toBe(true)
+      expect(vol.existsSync("/test/ci/trigger-test-pipeline.yml")).toBeTruthy()
+      expect(
+        vol.existsSync("/test/ci/trigger-deploy-pipeline.yml")
+      ).toBeTruthy()
     })
 
     it("should create directories if they don't exist", async () => {
@@ -242,12 +256,14 @@ describe("ConfigBuilder - childPipeline API", () => {
         },
         {
           outputPath: "deeply/nested/path/pipeline.yml",
-        },
+        }
       )
 
       await config.writeYamlFiles("/test")
 
-      expect(vol.existsSync("/test/deeply/nested/path/pipeline.yml")).toBe(true)
+      expect(
+        vol.existsSync("/test/deeply/nested/path/pipeline.yml")
+      ).toBeTruthy()
     })
 
     it("should skip validation when option is set", async () => {
@@ -262,7 +278,9 @@ describe("ConfigBuilder - childPipeline API", () => {
       })
 
       // Should not throw with skipValidation
-      await expect(config.writeYamlFiles("/test", { skipValidation: true })).resolves.toBeDefined()
+      await expect(
+        config.writeYamlFiles("/test", { skipValidation: true })
+      ).resolves.toBeDefined()
     })
   })
 
@@ -282,7 +300,9 @@ describe("ConfigBuilder - childPipeline API", () => {
         return child
       })
 
-      const mermaid = config.generateMermaidDiagram({ showChildPipelines: true })
+      const mermaid = config.generateMermaidDiagram({
+        showChildPipelines: true,
+      })
 
       expect(mermaid).toContain("graph LR")
       expect(mermaid).toContain("build")
@@ -328,7 +348,7 @@ describe("ConfigBuilder - childPipeline API", () => {
         },
         {
           jobOptions: { stage: "trigger" },
-        },
+        }
       )
 
       const table = config.generateStageTable({ showChildPipelines: true })
@@ -416,7 +436,7 @@ describe("ConfigBuilder - childPipeline API", () => {
       const childPipeline = childConfig?.builder.getPlainObject()
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(childPipeline?.variables).toEqual({
+      expect(childPipeline?.variables).toStrictEqual({
         DEPLOY_ENV: "production",
         VERSION: "1.0.0",
       })
@@ -448,7 +468,7 @@ describe("ConfigBuilder - childPipeline API", () => {
       expect(childPipeline?.workflow?.rules).toBeDefined()
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(childPipeline?.workflow?.rules?.[0]?.if).toBe(
-        '$CI_PIPELINE_SOURCE == "merge_request_event"',
+        '$CI_PIPELINE_SOURCE == "merge_request_event"'
       )
     })
   })

@@ -1,12 +1,24 @@
+// oxlint-disable vitest/expect-expect
+// oxlint-disable vitest/max-expects
 import { describe, it } from "vitest"
 
-import { loadLocalTemplate, setupTemplateTest, testTemplateRoundTrip } from "./test-helper"
+import {
+  loadLocalTemplate,
+  setupTemplateTest,
+  testTemplateRoundTrip,
+} from "./test-helper"
 
-const { generatedDir, testFilesDir } = setupTemplateTest(import.meta.dirname, "infrastructure")
+const { generatedDir, testFilesDir } = setupTemplateTest(
+  import.meta.dirname,
+  "infrastructure"
+)
 
 describe("GitLab Templates: Infrastructure", () => {
   it("should handle OpenTofu.latest template", async () => {
-    const yaml = loadLocalTemplate(testFilesDir, "OpenTofu.latest.gitlab-ci.yml")
+    const yaml = loadLocalTemplate(
+      testFilesDir,
+      "OpenTofu.latest.gitlab-ci.yml"
+    )
     await testTemplateRoundTrip("OpenTofu.latest", yaml, generatedDir)
   })
 
@@ -16,7 +28,10 @@ describe("GitLab Templates: Infrastructure", () => {
   })
 
   it("should handle Getting-Started template", async () => {
-    const yaml = loadLocalTemplate(testFilesDir, "Getting-Started.gitlab-ci.yml")
+    const yaml = loadLocalTemplate(
+      testFilesDir,
+      "Getting-Started.gitlab-ci.yml"
+    )
     await testTemplateRoundTrip("Getting-Started", yaml, generatedDir)
   })
 })

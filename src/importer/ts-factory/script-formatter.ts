@@ -1,6 +1,10 @@
 import ts from "typescript"
 
-import { createStringArray, createTemplateLiteral, valueToExpression } from "./ast-helpers"
+import {
+  createStringArray,
+  createTemplateLiteral,
+  valueToExpression,
+} from "./ast-helpers"
 import { hasControlStructures, hasShellOperators } from "./utils"
 
 /**
@@ -71,7 +75,11 @@ export function flattenScriptArray(items: unknown[]): ts.Expression {
   for (const item of items) {
     if (typeof item === "string") {
       const hasNewline = item.includes("\n")
-      if (hasNewline && !hasShellOperators(item) && !hasControlStructures(item)) {
+      if (
+        hasNewline &&
+        !hasShellOperators(item) &&
+        !hasControlStructures(item)
+      ) {
         const lines = item
           .split("\n")
           .map((l) => l.trim())

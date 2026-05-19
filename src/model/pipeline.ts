@@ -1,18 +1,14 @@
+import type { GlobalVariables, Image, Script, Services } from "../schema/base"
+import type { Defaults } from "../schema/defaults"
+import type { IncludeEntry } from "../schema/include"
 import type {
   Cache,
-  Defaults,
-  GlobalOptions,
-  GlobalVariables,
-  Image,
-  IncludeEntry,
   JobDefinitionNormalized,
   JobDefinitionOutput,
-  JobOptions,
-  Script,
-  Services,
-  Spec,
-  Workflow,
-} from "../schema"
+} from "../schema/job"
+import type { GlobalOptions, JobOptions } from "../schema/policies"
+import type { Spec } from "../schema/spec"
+import type { Workflow } from "../schema/workflow"
 
 /**
  * Child pipeline configuration tracked during build
@@ -168,8 +164,10 @@ export class PipelineState {
    */
   addStages(stages: string[]): void {
     const set = new Set(this.stagesValue)
-    stages.forEach((s) => set.add(s))
-    this.stagesValue = Array.from(set)
+    for (const s of stages) {
+      set.add(s)
+    }
+    this.stagesValue = [...set]
   }
 
   /**
@@ -187,7 +185,11 @@ export class PipelineState {
    *
    * @see https://docs.gitlab.com/ci/jobs/
    */
-  setJob(name: string, definition: JobDefinitionNormalized, options: JobOptions = {}): void {
+  setJob(
+    name: string,
+    definition: JobDefinitionNormalized,
+    options: JobOptions = {}
+  ): void {
     this.jobsValue[name] = definition
     if (Object.keys(options).length > 0) {
       this.jobOptionsMapValue[name] = options
@@ -212,7 +214,11 @@ export class PipelineState {
    *
    * @see https://docs.gitlab.com/ci/jobs/job_control.html#hide-jobs
    */
-  setTemplate(name: string, definition: JobDefinitionNormalized, options: JobOptions = {}): void {
+  setTemplate(
+    name: string,
+    definition: JobDefinitionNormalized,
+    options: JobOptions = {}
+  ): void {
     this.templatesValue[name] = definition
     if (Object.keys(options).length > 0) {
       this.jobOptionsMapValue[name] = options
@@ -322,13 +328,18 @@ export class PipelineState {
    * state.getVariable('build', 'GLOBAL_VAR') // Returns: 'global'
    * ```
    */
-  getVariable(jobName: string, key: string): string | number | boolean | undefined {
+  getVariable(
+    jobName: string,
+    key: string
+  ): string | number | boolean | undefined {
     const jobVariable = this.jobsValue[jobName]?.variables?.[key]
     const globalVariable = this.variablesValue[key]
 
     // Extract value from job variable (could be primitive or object)
     const jobValue =
-      jobVariable !== undefined && typeof jobVariable === "object" && "value" in jobVariable
+      jobVariable !== undefined &&
+      typeof jobVariable === "object" &&
+      "value" in jobVariable
         ? jobVariable.value
         : jobVariable
 
@@ -506,8 +517,11 @@ export class PipelineState {
       workflow: this.workflowValue,
       default: this.defaultValue,
       variables:
-        Object.keys(this.variablesValue).length > 0 ? { ...this.variablesValue } : undefined,
-      include: this.includeValue.length > 0 ? [...this.includeValue] : undefined,
+        Object.keys(this.variablesValue).length > 0
+          ? { ...this.variablesValue }
+          : undefined,
+      include:
+        this.includeValue.length > 0 ? [...this.includeValue] : undefined,
       jobs: { ...this.templatesValue, ...this.jobsValue },
       // Deprecated globals
       image: this.deprecatedImageValue,
@@ -526,8 +540,12 @@ export class PipelineState {
     cloned.stagesValue = [...this.stagesValue]
     cloned.jobsValue = { ...this.jobsValue }
     cloned.templatesValue = { ...this.templatesValue }
-    cloned.workflowValue = this.workflowValue ? { ...this.workflowValue } : undefined
-    cloned.defaultValue = this.defaultValue ? { ...this.defaultValue } : undefined
+    cloned.workflowValue = this.workflowValue
+      ? { ...this.workflowValue }
+      : undefined
+    cloned.defaultValue = this.defaultValue
+      ? { ...this.defaultValue }
+      : undefined
     cloned.variablesValue = { ...this.variablesValue }
     cloned.includeValue = [...this.includeValue]
     cloned.jobOptionsMapValue = { ...this.jobOptionsMapValue }

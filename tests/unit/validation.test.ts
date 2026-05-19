@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { describe, expect, it } from "vitest"
 import { ZodError } from "zod"
 
@@ -10,7 +11,7 @@ describe("ConfigBuilder - Zod Validation", () => {
       expect(() =>
         builder.workflow({
           rules: [{ if: "$CI_COMMIT_BRANCH == 'main'" }],
-        }),
+        })
       ).not.toThrow()
     })
 
@@ -20,7 +21,7 @@ describe("ConfigBuilder - Zod Validation", () => {
         builder.workflow({
           // @ts-expect-error - Testing runtime validation
           rules: "invalid",
-        }),
+        })
       ).toThrow(ZodError)
     })
   })
@@ -32,7 +33,7 @@ describe("ConfigBuilder - Zod Validation", () => {
         builder.defaults({
           image: "node:18",
           before_script: ["npm install"],
-        }),
+        })
       ).not.toThrow()
     })
 
@@ -42,7 +43,7 @@ describe("ConfigBuilder - Zod Validation", () => {
         builder.defaults({
           // @ts-expect-error - Testing runtime validation
           image: 123,
-        }),
+        })
       ).toThrow(ZodError)
     })
   })
@@ -53,7 +54,7 @@ describe("ConfigBuilder - Zod Validation", () => {
       expect(() =>
         builder.include({
           local: "templates/build.yml",
-        }),
+        })
       ).not.toThrow()
     })
 
@@ -63,7 +64,7 @@ describe("ConfigBuilder - Zod Validation", () => {
         builder.include({
           // @ts-expect-error - Testing runtime validation
           invalid: "field",
-        }),
+        })
       ).toThrow(ZodError)
     })
 
@@ -74,7 +75,7 @@ describe("ConfigBuilder - Zod Validation", () => {
           { local: "templates/build.yml" },
           // @ts-expect-error - Testing runtime validation
           { invalid: "field" },
-        ]),
+        ])
       ).toThrow(ZodError)
     })
   })
@@ -85,7 +86,7 @@ describe("ConfigBuilder - Zod Validation", () => {
       expect(() =>
         builder.template("build", {
           script: ["npm run build"],
-        }),
+        })
       ).not.toThrow()
     })
 
@@ -97,7 +98,7 @@ describe("ConfigBuilder - Zod Validation", () => {
       expect(() =>
         builder.template("build", {
           script: 123 as never,
-        }),
+        })
       ).not.toThrow()
     })
   })
@@ -108,7 +109,7 @@ describe("ConfigBuilder - Zod Validation", () => {
       expect(() =>
         builder.job("test", {
           script: ["npm test"],
-        }),
+        })
       ).not.toThrow()
     })
 
@@ -118,7 +119,7 @@ describe("ConfigBuilder - Zod Validation", () => {
         builder.job("test", {
           // @ts-expect-error - Testing runtime validation
           script: 123,
-        }),
+        })
       ).toThrow(ZodError)
     })
 
@@ -128,7 +129,7 @@ describe("ConfigBuilder - Zod Validation", () => {
         builder.job("test", {
           script: ["npm test"],
           artifacts: { paths: "invalid" as never },
-        }),
+        })
       ).toThrow(ZodError)
     })
   })

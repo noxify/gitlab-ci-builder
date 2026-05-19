@@ -1,7 +1,10 @@
-import { mkdir, rm, writeFile } from "fs/promises"
-import { join } from "path"
-import type { Session } from "tuistory"
+// oxlint-disable vitest/no-conditional-expect
+// oxlint-disable vitest/max-expects
+import { mkdir, rm, writeFile } from "node:fs/promises"
+import { join } from "node:path"
+
 import dedent from "dedent"
+import type { Session } from "tuistory"
 import { launchTerminal } from "tuistory"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
@@ -10,7 +13,7 @@ const TEST_DIR = join(process.cwd(), ".test-tmp")
 
 // Helper to clean up terminal output by removing excessive trailing newlines
 function cleanOutput(text: string): string {
-  return text.trimEnd() + "\n"
+  return `${text.trimEnd()}\n`
 }
 
 describe("CLI simulate command - E2E Tests", () => {
@@ -41,7 +44,9 @@ describe("CLI simulate command - E2E Tests", () => {
         rows: 30,
       })
 
-      await session.waitForText("Simulate GitLab CI pipeline execution", { timeout: 5000 })
+      await session.waitForText("Simulate GitLab CI pipeline execution", {
+        timeout: 5000,
+      })
 
       const output = cleanOutput(await session.text())
 
@@ -160,9 +165,9 @@ describe("CLI simulate command - E2E Tests", () => {
 
         🔧 Jobs:
         ────────────────────────────────────────────────────────────
-          ▶ build-job (build)
-          ▶ test-job (test)
-          ▶ deploy-job (deploy)
+          ▶️ build-job (build)
+          ▶️ test-job (test)
+          ▶️ deploy-job (deploy)
         "
       `)
     })
@@ -199,10 +204,9 @@ describe("CLI simulate command - E2E Tests", () => {
       expect(output).toContain('"jobsSkipped"')
 
       // Try to parse as JSON (should not throw)
-      const jsonMatch = /\{[\s\S]*\}/.exec(output)
+      const jsonMatch = /\{[\s\S]*\}/u.exec(output)
       expect(jsonMatch).toBeTruthy()
       if (jsonMatch) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const parsed = JSON.parse(jsonMatch[0])
         expect(parsed).toHaveProperty("jobs")
         expect(parsed).toHaveProperty("totalJobs")
@@ -315,8 +319,8 @@ describe("CLI simulate command - E2E Tests", () => {
 
         🔧 Jobs:
         ────────────────────────────────────────────────────────────
-          ▶ build-main (build)
-          ▶ deploy (deploy)
+          ▶️ build-main (build)
+          ▶️ deploy (deploy)
         "
       `)
 
@@ -353,7 +357,7 @@ describe("CLI simulate command - E2E Tests", () => {
 
         🔧 Jobs:
         ────────────────────────────────────────────────────────────
-          ▶ build-develop (build)
+          ▶️ build-develop (build)
         "
       `)
     })
@@ -410,7 +414,7 @@ describe("CLI simulate command - E2E Tests", () => {
 
         🔧 Jobs:
         ────────────────────────────────────────────────────────────
-          ▶ build-enabled (build)
+          ▶️ build-enabled (build)
         "
       `)
     })
@@ -460,7 +464,7 @@ describe("CLI simulate command - E2E Tests", () => {
 
         🔧 Jobs:
         ────────────────────────────────────────────────────────────
-          ▶ mr-only-job (test)
+          ▶️ mr-only-job (test)
         "
       `)
     })
@@ -519,9 +523,9 @@ describe("CLI simulate command - E2E Tests", () => {
 
         🔧 Jobs:
         ────────────────────────────────────────────────────────────
-          ▶ build-main (build)
+          ▶️ build-main (build)
 
-        ⏭  Skipped Jobs:
+        ⏭️  Skipped Jobs:
           ⊘ build-other (build)
         "
       `)
@@ -573,7 +577,7 @@ describe("CLI simulate command - E2E Tests", () => {
 
         🔧 Jobs:
         ────────────────────────────────────────────────────────────
-          ▶ build-job (build)
+          ▶️ build-job (build)
         "
       `)
     })
@@ -626,7 +630,7 @@ describe("CLI simulate command - E2E Tests", () => {
 
         🔧 Jobs:
         ────────────────────────────────────────────────────────────
-          ⏸ deploy-prod [MANUAL] (deploy)
+          ⏸️ deploy-prod [MANUAL] (deploy)
         "
       `)
     })
@@ -676,7 +680,7 @@ describe("CLI simulate command - E2E Tests", () => {
 
         🔧 Jobs:
         ────────────────────────────────────────────────────────────
-          ▶ feature-build (build)
+          ▶️ feature-build (build)
         "
       `)
     })
@@ -726,7 +730,7 @@ describe("CLI simulate command - E2E Tests", () => {
 
         🔧 Jobs:
         ────────────────────────────────────────────────────────────
-          ▶ release-job (release)
+          ▶️ release-job (release)
         "
       `)
     })

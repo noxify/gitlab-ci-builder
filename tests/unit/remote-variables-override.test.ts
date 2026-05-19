@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { describe, expect, it } from "vitest"
 
 import { convertYamlToConfig } from "../../src/resolver/cli"
@@ -32,7 +33,10 @@ child_job:
     expect(plain.jobs?.child_job?.variables?.CHILD_ONLY).toBe("child")
 
     // Scripts should be concatenated (parent first, child appended)
-    expect(plain.jobs?.child_job?.script).toEqual(['echo "parent script"', 'echo "child script"'])
+    expect(plain.jobs?.child_job?.script).toStrictEqual([
+      'echo "parent script"',
+      'echo "child script"',
+    ])
   })
 
   it("should handle multi-level extends with proper override order", () => {
@@ -61,7 +65,7 @@ final_job:
 
     // Most specific definition should win for variables
     expect(plain.jobs?.final_job?.variables?.VAR).toBe("top")
-    expect(plain.jobs?.final_job?.script).toEqual(['echo "final"'])
+    expect(plain.jobs?.final_job?.script).toStrictEqual(['echo "final"'])
   })
 
   it("should handle array extends with proper merge order", () => {
@@ -117,7 +121,7 @@ job_without_override:
     const plain = config.getPlainObject({ skipValidation: true })
 
     // Job with rules should completely replace parent rules
-    expect(plain.jobs?.job_with_override?.rules).toEqual([
+    expect(plain.jobs?.job_with_override?.rules).toStrictEqual([
       {
         if: '$CI_COMMIT_BRANCH == "main"',
         when: "on_success",
@@ -125,7 +129,7 @@ job_without_override:
     ])
 
     // Job without rules should inherit parent rules
-    expect(plain.jobs?.job_without_override?.rules).toEqual([
+    expect(plain.jobs?.job_without_override?.rules).toStrictEqual([
       {
         if: '$CI_COMMIT_BRANCH == "develop"',
         when: "always",
@@ -153,9 +157,12 @@ job:
     const plain = config.getPlainObject({ skipValidation: true })
 
     // Scripts concatenated
-    expect(plain.jobs?.job?.script).toEqual(['echo "setup"', 'echo "main"'])
+    expect(plain.jobs?.job?.script).toStrictEqual([
+      'echo "setup"',
+      'echo "main"',
+    ])
 
     // Rules replaced
-    expect(plain.jobs?.job?.rules).toEqual([{ when: "always" }])
+    expect(plain.jobs?.job?.rules).toStrictEqual([{ when: "always" }])
   })
 })

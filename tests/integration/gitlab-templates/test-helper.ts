@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
+
 import { afterAll, beforeAll, expect } from "vitest"
 
 import type { ConfigBuilder } from "../../../src"
@@ -11,7 +12,10 @@ export interface TemplateTestContext {
   testFilesDir: string
 }
 
-export function setupTemplateTest(testDirname: string, subdirectory?: string): TemplateTestContext {
+export function setupTemplateTest(
+  testDirname: string,
+  subdirectory?: string
+): TemplateTestContext {
   const generatedDir = subdirectory
     ? join(testDirname, ".generated", subdirectory)
     : join(testDirname, ".generated")
@@ -36,9 +40,10 @@ export async function testTemplateRoundTrip(
   options?: {
     allowMissingExtends?: boolean
     allowIncludeWarnings?: boolean
-  },
+  }
 ) {
-  const { allowMissingExtends = true, allowIncludeWarnings = true } = options ?? {}
+  const { allowMissingExtends = true, allowIncludeWarnings = true } =
+    options ?? {}
 
   // Ensure generated directory exists
   mkdirSync(generatedDir, { recursive: true })
@@ -49,7 +54,7 @@ export async function testTemplateRoundTrip(
   expect(tsCode).toContain("ConfigBuilder")
 
   // Write TypeScript file
-  const fileName = templateName.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()
+  const fileName = templateName.replaceAll(/[^a-zA-Z0-9]/gu, "-").toLowerCase()
   const tsFilePath = join(generatedDir, `${fileName}.ts`)
   writeFileSync(tsFilePath, tsCode, "utf-8")
 
@@ -57,7 +62,8 @@ export async function testTemplateRoundTrip(
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const module = await import(tsFilePath)
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  const config: ConfigBuilder = (module.default ?? module.config) as ConfigBuilder
+  const config: ConfigBuilder = (module.default ??
+    module.config) as ConfigBuilder
 
   // Validate configuration
   const result = config.safeValidate()
@@ -65,16 +71,20 @@ export async function testTemplateRoundTrip(
   // Filter errors based on options
   let criticalErrors = result.errors
   if (allowMissingExtends) {
-    criticalErrors = criticalErrors.filter((err) => !err.message.includes("extends from missing"))
+    criticalErrors = criticalErrors.filter(
+      (err) => !err.message.includes("extends from missing")
+    )
   }
   if (allowIncludeWarnings) {
-    criticalErrors = criticalErrors.filter((err) => !err.message.includes("include"))
+    criticalErrors = criticalErrors.filter(
+      (err) => !err.message.includes("include")
+    )
   }
 
   // Expect no critical errors
   if (criticalErrors.length > 0) {
     throw new Error(
-      `Critical errors found:\n${criticalErrors.map((e) => `  - ${e.message}`).join("\n")}`,
+      `Critical errors found:\n${criticalErrors.map((e) => `  - ${e.message}`).join("\n")}`
     )
   }
 
@@ -98,24 +108,26 @@ export async function testTemplateRoundTrip(
     reimportedModule.config) as ConfigBuilder
 
   const reimportedResult = reimportedConfig.safeValidate()
-  const reimportedPipeline = reimportedConfig.getPlainObject({ skipValidation: true })
+  const reimportedPipeline = reimportedConfig.getPlainObject({
+    skipValidation: true,
+  })
 
   // Filter reimported errors
   let reimportedCriticalErrors = reimportedResult.errors
   if (allowMissingExtends) {
     reimportedCriticalErrors = reimportedCriticalErrors.filter(
-      (err) => !err.message.includes("extends from missing"),
+      (err) => !err.message.includes("extends from missing")
     )
   }
   if (allowIncludeWarnings) {
     reimportedCriticalErrors = reimportedCriticalErrors.filter(
-      (err) => !err.message.includes("include"),
+      (err) => !err.message.includes("include")
     )
   }
 
   if (reimportedCriticalErrors.length > 0) {
     throw new Error(
-      `Critical errors in reimported config:\n${reimportedCriticalErrors.map((e) => `  - ${e.message}`).join("\n")}`,
+      `Critical errors in reimported config:\n${reimportedCriticalErrors.map((e) => `  - ${e.message}`).join("\n")}`
     )
   }
 
@@ -139,7 +151,10 @@ export async function fetchTemplate(url: string): Promise<string> {
   return response.text()
 }
 
-export function loadLocalTemplate(testFilesDir: string, filename: string): string {
+export function loadLocalTemplate(
+  testFilesDir: string,
+  filename: string
+): string {
   const filePath = join(testFilesDir, filename)
   return readFileSync(filePath, "utf-8")
 }

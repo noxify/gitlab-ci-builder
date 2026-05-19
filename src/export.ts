@@ -1,4 +1,4 @@
-import fs from "fs/promises"
+import fs from "node:fs/promises"
 
 import type { ConfigBuilder } from "."
 import type { PipelineOutput } from "./model"
@@ -40,7 +40,11 @@ import { serializeToYaml } from "./serializer"
  */
 export function toYaml(config: ConfigBuilder | PipelineOutput): string {
   // Check if it's a ConfigBuilder instance
-  if (typeof config === "object" && "toYaml" in config && typeof config.toYaml === "function") {
+  if (
+    typeof config === "object" &&
+    "toYaml" in config &&
+    typeof config.toYaml === "function"
+  ) {
     return config.toYaml()
   }
 
@@ -86,7 +90,7 @@ export function toYaml(config: ConfigBuilder | PipelineOutput): string {
 export async function writeYamlFile(
   filePath: string,
   config: ConfigBuilder | PipelineOutput,
-  options?: { encoding?: BufferEncoding },
+  options?: { encoding?: BufferEncoding }
 ) {
   // Check if it's a ConfigBuilder instance
   if (
@@ -99,7 +103,9 @@ export async function writeYamlFile(
 
   // Otherwise use toYaml
   const content = toYaml(config as PipelineOutput)
-  await fs.writeFile(filePath, content, { encoding: options?.encoding ?? "utf8" })
+  await fs.writeFile(filePath, content, {
+    encoding: options?.encoding ?? "utf-8",
+  })
 }
 
 export default { toYaml, writeYamlFile }

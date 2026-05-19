@@ -1,3 +1,4 @@
+// oxlint-disable vitest/max-expects
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"

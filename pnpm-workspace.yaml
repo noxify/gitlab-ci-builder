@@ -1,2 +1,6 @@
+allowBuilds:
+  esbuild: false
+  msw: false
+  node-pty: false
 onlyBuiltDependencies:
   - node-pty

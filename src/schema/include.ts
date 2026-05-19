@@ -13,7 +13,9 @@ export const InputsSchema = z
  * Local include
  */
 export const LocalIncludeSchema = z.object({
-  local: z.string().meta({ description: "@see https://docs.gitlab.com/ci/yaml/#includelocal" }),
+  local: z.string().meta({
+    description: "@see https://docs.gitlab.com/ci/yaml/#includelocal",
+  }),
   rules: RulesSchema.optional(),
   inputs: InputsSchema.optional(),
 })
@@ -28,7 +30,7 @@ export const RemoteIncludeSchema = z
     inputs: InputsSchema.optional(),
     integrity: z
       .string()
-      .regex(/^sha256-[A-Za-z0-9+/]{43}=$/)
+      .regex(/^sha256-[A-Za-z0-9+/]{43}=$/u)
       .optional(),
   })
   .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#includeremote" })
@@ -37,7 +39,9 @@ export const RemoteIncludeSchema = z
  * Project include
  */
 export const ProjectIncludeSchema = z.object({
-  project: z.string().meta({ description: "@see https://docs.gitlab.com/ci/yaml/#includeproject" }),
+  project: z.string().meta({
+    description: "@see https://docs.gitlab.com/ci/yaml/#includeproject",
+  }),
   file: z
     .union([z.string(), z.array(z.string())])
     .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#includefile" }),
@@ -53,9 +57,9 @@ export const ProjectIncludeSchema = z.object({
  * Template include
  */
 export const TemplateIncludeSchema = z.object({
-  template: z
-    .string()
-    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#includetemplate" }),
+  template: z.string().meta({
+    description: "@see https://docs.gitlab.com/ci/yaml/#includetemplate",
+  }),
   rules: RulesSchema.optional(),
   inputs: InputsSchema.optional(),
 })
@@ -64,9 +68,9 @@ export const TemplateIncludeSchema = z.object({
  * Component include
  */
 export const ComponentIncludeSchema = z.object({
-  component: z
-    .string()
-    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#includecomponent" }),
+  component: z.string().meta({
+    description: "@see https://docs.gitlab.com/ci/yaml/#includecomponent",
+  }),
   inputs: InputsSchema.optional(),
   rules: RulesSchema.optional(),
 })
@@ -97,16 +101,18 @@ export type IncludeInput = z.infer<typeof IncludeInputSchema>
 /**
  * Include schema with normalization - converts strings to local/remote objects
  */
-export const IncludeSchema = IncludeInputSchema.transform((input): IncludeEntry => {
-  if (typeof input === "string") {
-    // Check if it's a URL
-    if (/^https?:\/\//i.test(input)) {
-      return { remote: input } satisfies IncludeEntry
+export const IncludeSchema = IncludeInputSchema.transform(
+  (input): IncludeEntry => {
+    if (typeof input === "string") {
+      // Check if it's a URL
+      if (/^https?:\/\//iu.test(input)) {
+        return { remote: input } satisfies IncludeEntry
+      }
+      return { local: input } satisfies IncludeEntry
     }
-    return { local: input } satisfies IncludeEntry
+    return input
   }
-  return input
-})
+)
 
 /**
  * Helper to normalize include input to IncludeEntry
@@ -114,7 +120,7 @@ export const IncludeSchema = IncludeInputSchema.transform((input): IncludeEntry 
 export function normalizeInclude(input: IncludeInput): IncludeEntry {
   if (typeof input === "string") {
     // Check if it's a URL
-    if (/^https?:\/\//i.test(input)) {
+    if (/^https?:\/\//iu.test(input)) {
       return { remote: input }
     }
     return { local: input }

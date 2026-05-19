@@ -8,13 +8,19 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      exclude: ["node_modules/", "dist/", "**/*.config.*", "**/*.test.*", "tests/**"],
+      exclude: [
+        "node_modules/",
+        "dist/",
+        "**/*.config.*",
+        "**/*.test.*",
+        "tests/**",
+      ],
     },
     projects: [
       {
         test: {
           name: "unit",
-          include: ["tests/unit/**/*.test.ts"],
+          include: ["tests/nit/**/*.test.ts"],
           setupFiles: ["./tests/setup.ts"],
         },
       },
@@ -29,7 +35,7 @@ export default defineConfig({
         test: {
           name: "e2e",
           include: ["tests/e2e/**/*.test.ts"],
-          testTimeout: 30000, // E2E tests may take longer
+          testTimeout: 30_000, // E2E tests may take longer
         },
       },
     ],

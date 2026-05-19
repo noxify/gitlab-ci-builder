@@ -1,14 +1,17 @@
 import { readFileSync } from "node:fs"
 import { isAbsolute, resolve } from "node:path"
-import yaml from "js-yaml"
 
-import type { ConfigBuilder } from "../builder"
-import type { IncludeEntry } from "../schema"
-import { ConfigBuilder as Builder } from "../builder"
+import { DEFAULT_SCHEMA, loadAll } from "js-yaml"
+
+import type { ConfigBuilder } from "../builder/config-builder"
+import { ConfigBuilder as Builder } from "../builder/config-builder"
 import { referenceTagResolvable } from "../importer/yaml-parser/reference"
+import type { IncludeEntry } from "../schema/include"
 import { resolveReferences } from "./reference-resolver"
 
-const RESOLVABLE_SCHEMA = yaml.DEFAULT_SCHEMA.extend({ explicit: [referenceTagResolvable] })
+const RESOLVABLE_SCHEMA = DEFAULT_SCHEMA.extend({
+  explicit: [referenceTagResolvable],
+})
 
 /**
  * Parse YAML with resolvable !reference tags (for resolution, not import).
@@ -31,7 +34,9 @@ const RESOLVABLE_SCHEMA = yaml.DEFAULT_SCHEMA.extend({ explicit: [referenceTagRe
  * ```
  */
 function parseYamlResolvable(yamlContent: string): Record<string, unknown> {
-  const documents = yaml.loadAll(yamlContent, null, { schema: RESOLVABLE_SCHEMA })
+  const documents = loadAll(yamlContent, null, {
+    schema: RESOLVABLE_SCHEMA,
+  })
 
   if (documents.length === 1) {
     return documents[0] as Record<string, unknown>
@@ -100,7 +105,7 @@ interface ResolutionContext {
  */
 export async function resolveIncludes(
   config: ConfigBuilder,
-  options: ResolverOptions = {},
+  options: ResolverOptions = {}
 ): Promise<{ failedIncludes: string[] }> {
   const maxDepth = options.maxDepth ?? 10
   const visited = new Set<string>()
@@ -108,29 +113,41 @@ export async function resolveIncludes(
   const context: ResolutionContext = { remoteItems: new Set() }
   const failedIncludes: string[] = []
 
-  async function resolveRecursive(currentConfig: ConfigBuilder, depth = 0): Promise<void> {
+  async function resolveRecursive(
+    currentConfig: ConfigBuilder,
+    depth = 0
+  ): Promise<void> {
     if (depth >= maxDepth) {
       throw new Error(`Maximum include depth of ${maxDepth} exceeded`)
     }
 
     // Get includes from the current config
     const plain = currentConfig.getPlainObject({ skipValidation: true })
-    if (!plain.include) return
+    if (!plain.include) {
+      return
+    }
 
-    const includes = Array.isArray(plain.include) ? plain.include : [plain.include]
+    const includes = Array.isArray(plain.include)
+      ? plain.include
+      : [plain.include]
 
     for (const include of includes) {
       const result = await resolveInclude(include, basePath, options, visited)
 
       // Track failed includes
       const identifier = getIncludeIdentifier(include)
-      if (result === null && identifier && !visited.has(identifier)) {
-        if (!failedIncludes.includes(identifier)) {
-          failedIncludes.push(identifier)
-        }
+      if (
+        result === null &&
+        identifier &&
+        !visited.has(identifier) &&
+        !failedIncludes.includes(identifier)
+      ) {
+        failedIncludes.push(identifier)
       }
 
-      if (!result) continue
+      if (!result) {
+        continue
+      }
 
       // Parse the included YAML
       const includedConfig = convertYamlToConfig(result, {
@@ -158,13 +175,24 @@ export async function resolveIncludes(
  * Get a unique identifier for an include entry
  */
 function getIncludeIdentifier(include: IncludeEntry): string | null {
-  if ("local" in include && include.local) return include.local
-  if ("remote" in include && include.remote) return include.remote
-  if ("project" in include && include.project && "file" in include && include.file) {
+  if ("local" in include && include.local) {
+    return include.local
+  }
+  if ("remote" in include && include.remote) {
+    return include.remote
+  }
+  if (
+    "project" in include &&
+    include.project &&
+    "file" in include &&
+    include.file
+  ) {
     const file = Array.isArray(include.file) ? include.file[0] : include.file
     return `${include.project}/${file}`
   }
-  if ("template" in include && include.template) return include.template
+  if ("template" in include && include.template) {
+    return include.template
+  }
   return null
 }
 
@@ -211,114 +239,155 @@ async function resolveInclude(
   include: IncludeEntry,
   basePath: string,
   options: ResolverOptions,
-  visited: Set<string>,
+  visited: Set<string>
 ): Promise<string | null> {
-  // Local file
   if ("local" in include && include.local) {
-    const localPath = isAbsolute(include.local) ? include.local : resolve(basePath, include.local)
-
-    if (visited.has(localPath)) {
-      return null // Avoid circular includes
-    }
-    visited.add(localPath)
-
-    try {
-      return readFileSync(localPath, "utf-8")
-    } catch {
-      throw new Error(`Failed to read local include: ${localPath}`)
-    }
+    return resolveLocalInclude(include.local, basePath, visited)
   }
 
-  // Remote file
   if ("remote" in include && include.remote) {
-    if (visited.has(include.remote)) {
-      return null
-    }
-    visited.add(include.remote)
-
-    try {
-      const headers: Record<string, string> = {}
-      if (options.gitlabToken) {
-        headers.Authorization = `Bearer ${options.gitlabToken}`
-      }
-
-      const response = await fetch(include.remote, { headers })
-      if (!response.ok) {
-        // Always warn about failed remote includes
-        // eslint-disable-next-line no-console
-        console.warn(
-          `⚠️  Could not fetch remote include: ${include.remote} (${response.status} ${response.statusText})`,
-        )
-        return null
-      }
-      return await response.text()
-    } catch (error) {
-      // Always warn about failed remote includes
-      // eslint-disable-next-line no-console
-      console.warn(
-        `⚠️  Could not fetch remote include: ${include.remote} - ${error instanceof Error ? error.message : "Unknown error"}`,
-      )
-      return null
-    }
+    return resolveRemoteInclude(include.remote, options, visited)
   }
 
-  // Project include
-  if ("project" in include && include.project && "file" in include && include.file) {
-    const file = Array.isArray(include.file) ? include.file[0] : include.file
-    const ref = include.ref ?? "main"
-    const projectPath = `${options.gitlabUrl ?? "https://gitlab.com"}/${include.project}/-/raw/${ref}/${file}`
-
-    if (visited.has(projectPath)) {
-      return null
-    }
-    visited.add(projectPath)
-
-    try {
-      const headers: Record<string, string> = {}
-      if (options.gitlabToken) {
-        headers["PRIVATE-TOKEN"] = options.gitlabToken
-      }
-
-      const response = await fetch(projectPath, { headers })
-      if (!response.ok) {
-        throw new Error(`Failed to fetch project include: ${projectPath}`)
-      }
-      return await response.text()
-    } catch (error) {
-      throw new Error(
-        `Failed to fetch project include: ${projectPath} - ${error instanceof Error ? error.message : String(error)}`,
-      )
-    }
+  if (
+    "project" in include &&
+    include.project &&
+    "file" in include &&
+    include.file
+  ) {
+    return resolveProjectInclude(
+      include.project,
+      include.file,
+      include.ref,
+      options,
+      visited
+    )
   }
 
-  // Template include (GitLab CI/CD templates)
   if ("template" in include && include.template) {
-    const templatePath = `https://gitlab.com/gitlab-org/gitlab/-/raw/master/lib/gitlab/ci/templates/${include.template}`
-
-    if (visited.has(templatePath)) {
-      return null
-    }
-    visited.add(templatePath)
-
-    try {
-      const response = await fetch(templatePath)
-      if (!response.ok) {
-        throw new Error(`Failed to fetch template: ${include.template}`)
-      }
-      return await response.text()
-    } catch (error) {
-      throw new Error(
-        `Failed to fetch template: ${include.template} - ${error instanceof Error ? error.message : String(error)}`,
-      )
-    }
+    return resolveTemplateInclude(include.template, visited)
   }
 
-  // Component include
   if ("component" in include && include.component) {
     throw new Error("Component includes are not yet supported")
   }
 
   return null
+}
+
+function resolveLocalInclude(
+  local: string,
+  basePath: string,
+  visited: Set<string>
+): string | null {
+  const localPath = isAbsolute(local) ? local : resolve(basePath, local)
+
+  if (visited.has(localPath)) {
+    return null
+  }
+  visited.add(localPath)
+
+  try {
+    return readFileSync(localPath, "utf-8")
+  } catch {
+    throw new Error(`Failed to read local include: ${localPath}`)
+  }
+}
+
+async function resolveRemoteInclude(
+  remote: string,
+  options: ResolverOptions,
+  visited: Set<string>
+): Promise<string | null> {
+  if (visited.has(remote)) {
+    return null
+  }
+  visited.add(remote)
+
+  try {
+    const headers: Record<string, string> = {}
+    if (options.gitlabToken) {
+      headers.Authorization = `Bearer ${options.gitlabToken}`
+    }
+
+    const response = await fetch(remote, { headers })
+    if (!response.ok) {
+      // Always warn about failed remote includes
+      // eslint-disable-next-line no-console
+      console.warn(
+        `⚠️  Could not fetch remote include: ${remote} (${response.status} ${response.statusText})`
+      )
+      return null
+    }
+    return await response.text()
+  } catch (error) {
+    // Always warn about failed remote includes
+    // eslint-disable-next-line no-console
+    console.warn(
+      `⚠️  Could not fetch remote include: ${remote} - ${error instanceof Error ? error.message : "Unknown error"}`
+    )
+    return null
+  }
+}
+
+async function resolveProjectInclude(
+  project: string,
+  file: string | readonly string[],
+  ref: string | undefined,
+  options: ResolverOptions,
+  visited: Set<string>
+): Promise<string | null> {
+  const filePath = Array.isArray(file) ? file[0] : file
+  const projectRef = ref ?? "main"
+  const projectPath = `${options.gitlabUrl ?? "https://gitlab.com"}/${project}/-/raw/${projectRef}/${filePath}`
+
+  if (visited.has(projectPath)) {
+    return null
+  }
+  visited.add(projectPath)
+
+  try {
+    const headers: Record<string, string> = {}
+    if (options.gitlabToken) {
+      headers["PRIVATE-TOKEN"] = options.gitlabToken
+    }
+
+    const response = await fetch(projectPath, { headers })
+    if (!response.ok) {
+      throw new Error(`Failed to fetch project include: ${projectPath}`)
+    }
+    return await response.text()
+  } catch (error) {
+    throw new Error(
+      `Failed to fetch project include: ${projectPath} - ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error }
+    )
+  }
+}
+
+async function resolveTemplateInclude(
+  template: string,
+  visited: Set<string>
+): Promise<string | null> {
+  const templatePath = `https://gitlab.com/gitlab-org/gitlab/-/raw/master/lib/gitlab/ci/templates/${template}`
+
+  if (visited.has(templatePath)) {
+    return null
+  }
+  visited.add(templatePath)
+
+  try {
+    const response = await fetch(templatePath)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch template: ${template}`)
+    }
+    return await response.text()
+  } catch (error) {
+    throw new Error(
+      `Failed to fetch template: ${template} - ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error }
+    )
+  }
 }
 
 /**
@@ -352,24 +421,30 @@ async function resolveInclude(
  */
 export function convertYamlToConfig(
   yamlContent: string,
-  options?: { resolveReferences?: boolean; verbose?: boolean },
+  options?: { resolveReferences?: boolean; verbose?: boolean }
 ): ConfigBuilder {
   const parsed = parseYamlResolvable(yamlContent)
 
   // Optionally resolve !reference tags before validation (needed for visualization)
-  const resolved = options?.resolveReferences ? resolveReferences(parsed) : parsed
+  const resolved = options?.resolveReferences
+    ? resolveReferences(parsed)
+    : parsed
 
   const config = new Builder()
 
   // Add stages if present
   if (resolved.stages) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    config.stages(...(Array.isArray(resolved.stages) ? resolved.stages : [resolved.stages]))
+    config.stages(
+      ...(Array.isArray(resolved.stages) ? resolved.stages : [resolved.stages])
+    )
   }
 
   // Add variables if present
   if (resolved.variables && typeof resolved.variables === "object") {
-    config.variables(resolved.variables as Record<string, string | number | boolean>)
+    config.variables(
+      resolved.variables as Record<string, string | number | boolean>
+    )
   }
 
   // Add workflow if present
@@ -396,7 +471,14 @@ export function convertYamlToConfig(
     if (
       typeof definition === "object" &&
       definition !== null &&
-      !["stages", "variables", "workflow", "include", "default", "spec"].includes(name)
+      ![
+        "stages",
+        "variables",
+        "workflow",
+        "include",
+        "default",
+        "spec",
+      ].includes(name)
     ) {
       try {
         if (name.startsWith(".")) {
@@ -434,7 +516,10 @@ export function convertYamlToConfig(
  * // Jobs 'build-job' and '.template' are now marked as remote
  * ```
  */
-function markRemoteItems(config: ConfigBuilder, remoteItems: Set<string>): void {
+function markRemoteItems(
+  config: ConfigBuilder,
+  remoteItems: Set<string>
+): void {
   const plain = config.getPlainObject({ skipValidation: true })
 
   // Re-add jobs and templates with remote flag for visualization
@@ -479,7 +564,7 @@ function markRemoteItems(config: ConfigBuilder, remoteItems: Set<string>): void 
 function mergeConfigs(
   target: ConfigBuilder,
   source: ConfigBuilder,
-  context: ResolutionContext,
+  context: ResolutionContext
 ): void {
   const sourcePlain = source.getPlainObject({ skipValidation: true })
 

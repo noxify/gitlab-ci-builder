@@ -6,23 +6,40 @@ import { z } from "zod"
 export const BaseInputSchema = z.object({
   type: z
     .enum(["string", "number", "boolean", "array"])
-    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputstype" })
+    .meta({
+      description: "@see https://docs.gitlab.com/ci/yaml/#specinputstype",
+    })
     .optional(),
   description: z
     .string()
-    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsdescription" })
+    .meta({
+      description:
+        "@see https://docs.gitlab.com/ci/yaml/#specinputsdescription",
+    })
     .optional(),
   options: z
     .array(z.union([z.string(), z.number(), z.boolean()]))
-    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsoptions" })
+    .meta({
+      description: "@see https://docs.gitlab.com/ci/yaml/#specinputsoptions",
+    })
     .optional(),
   regex: z
     .string()
-    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsregex" })
+    .meta({
+      description: "@see https://docs.gitlab.com/ci/yaml/#specinputsregex",
+    })
     .optional(),
   default: z
-    .union([z.string(), z.number(), z.boolean(), z.array(z.any()), z.record(z.string(), z.any())])
-    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsdefault" })
+    .union([
+      z.string(),
+      z.number(),
+      z.boolean(),
+      z.array(z.any()),
+      z.record(z.string(), z.any()),
+    ])
+    .meta({
+      description: "@see https://docs.gitlab.com/ci/yaml/#specinputsdefault",
+    })
     .optional(),
 })
 
@@ -38,7 +55,9 @@ export type SpecInput = BaseInput
  */
 export const SpecSchema = z
   .object({
-    inputs: z.record(z.string(), z.union([BaseInputSchema, z.null()])).optional(),
+    inputs: z
+      .record(z.string(), z.union([BaseInputSchema, z.null()]))
+      .optional(),
   })
   .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#spec" })
 
@@ -50,19 +69,28 @@ export type Spec = z.infer<typeof SpecSchema>
 export const JobInputSchema = z.object({
   type: z
     .enum(["string", "number", "boolean", "array"])
-    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputstype" })
+    .meta({
+      description: "@see https://docs.gitlab.com/ci/yaml/#specinputstype",
+    })
     .optional(),
   description: z
     .string()
-    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsdescription" })
+    .meta({
+      description:
+        "@see https://docs.gitlab.com/ci/yaml/#specinputsdescription",
+    })
     .optional(),
   options: z
     .array(z.union([z.string(), z.number(), z.boolean()]))
-    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsoptions" })
+    .meta({
+      description: "@see https://docs.gitlab.com/ci/yaml/#specinputsoptions",
+    })
     .optional(),
   regex: z
     .string()
-    .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#specinputsregex" })
+    .meta({
+      description: "@see https://docs.gitlab.com/ci/yaml/#specinputsregex",
+    })
     .optional(),
   default: z.union([
     z.string(),
@@ -89,15 +117,21 @@ export const PagesConfigSchema = z
     z.object({
       path_prefix: z
         .string()
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#pagespath_prefix" })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#pagespath_prefix",
+        })
         .optional(),
       expire_in: z
         .string()
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#pagesexpire_in" })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#pagesexpire_in",
+        })
         .optional(),
       publish: z
         .string()
-        .meta({ description: "@see https://docs.gitlab.com/ci/yaml/#pagespublish" })
+        .meta({
+          description: "@see https://docs.gitlab.com/ci/yaml/#pagespublish",
+        })
         .optional(),
     }),
   ])
