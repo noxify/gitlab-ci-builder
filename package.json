@@ -85,7 +85,7 @@
     "commander": "14.0.3",
     "deepmerge": "4.3.1",
     "js-yaml": "4.1.1",
-    "oo-ascii-tree": "1.130.0",
+    "oo-ascii-tree": "1.131.0",
     "read-pkg": "10.1.0",
     "tinyglobby": "0.2.16",
     "typescript": "6.0.3",
@@ -102,10 +102,10 @@
     "memfs": "4.57.2",
     "msw": "2.14.6",
     "node-pty": "1.1.0",
-    "oxfmt": "0.50.0",
-    "oxlint": "1.65.0",
+    "oxfmt": "0.51.0",
+    "oxlint": "1.66.0",
     "tsdown": "0.22.0",
-    "tsx": "4.22.1",
+    "tsx": "4.22.3",
     "tuistory": "0.7.0",
     "ultracite": "7.7.0",
     "vitest": "4.1.6"
@@ -113,5 +113,5 @@
   "engines": {
     "node": ">=22"
   },
-  "packageManager": "pnpm@11.1.2"
+  "packageManager": "pnpm@11.1.3"
 }
