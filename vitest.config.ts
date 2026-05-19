@@ -34,6 +34,7 @@ export default defineConfig({
       {
         test: {
           name: "e2e",
+          pool: "threads",
           include: ["tests/e2e/**/*.test.ts"],
           testTimeout: 60_000, // Increased timeout for E2E tests in CI
         },
