@@ -79,17 +79,17 @@
   config.childPipeline(
     "trigger:deploy",
     (child) => {
-      child.stages("deploy");
-      child.job("deploy:prod", { script: ["./deploy.sh"] });
-      return child;
+      child.stages("deploy")
+      child.job("deploy:prod", { script: ["./deploy.sh"] })
+      return child
     },
     {
       strategy: "depend",
       outputPath: "ci/deploy-pipeline.yml",
-    },
-  );
+    }
+  )
 
-  await config.writeYamlFiles(".");
+  await config.writeYamlFiles(".")
   // Writes: .gitlab-ci.yml + ci/deploy-pipeline.yml
   ```
 
@@ -156,66 +156,66 @@
   ### Using YAML
 
   ```typescript
-  import { visualizeYaml } from "@noxify/gitlab-ci-builder";
+  import { visualizeYaml } from "@noxify/gitlab-ci-builder"
 
   const yamlContent = `
   stages: [build, test]
   build:
     stage: build
     script: npm run build
-  `;
+  `
 
-  const result = await visualizeYaml(yamlContent, { format: "all" });
-  console.log(result.mermaid); // Mermaid diagram
-  console.log(result.ascii); // ASCII tree
-  console.log(result.table); // Stage table
+  const result = await visualizeYaml(yamlContent, { format: "all" })
+  console.log(result.mermaid) // Mermaid diagram
+  console.log(result.ascii) // ASCII tree
+  console.log(result.table) // Stage table
   ```
 
   ### Using ConfigBuilder - Show only local jobs
 
   ```typescript
-  import { ConfigBuilder } from "@noxify/gitlab-ci-builder";
+  import { ConfigBuilder } from "@noxify/gitlab-ci-builder"
 
   const config = new ConfigBuilder()
     .stages("build", "test", "deploy")
     .template(".base", { image: "node:22" })
     .extends(".base", "build", { stage: "build", script: ["npm run build"] })
-    .extends(".base", "test", { stage: "test", script: ["npm test"] });
+    .extends(".base", "test", { stage: "test", script: ["npm test"] })
 
   // Generate visualizations directly from ConfigBuilder
-  const mermaid = config.generateMermaidDiagram({ showStages: true });
-  const ascii = config.generateAsciiTree({ showRemotes: true });
-  const table = config.generateStageTable();
+  const mermaid = config.generateMermaidDiagram({ showStages: true })
+  const ascii = config.generateAsciiTree({ showRemotes: true })
+  const table = config.generateStageTable()
 
-  console.log(mermaid);
-  console.log(ascii);
-  console.log(table);
+  console.log(mermaid)
+  console.log(ascii)
+  console.log(table)
   ```
 
   ### Using ConfigBuilder - Resolve also configured `includes`
 
   ```typescript
-  import { ConfigBuilder, visualizeYaml } from "@noxify/gitlab-ci-builder";
+  import { ConfigBuilder, visualizeYaml } from "@noxify/gitlab-ci-builder"
 
   const config = new ConfigBuilder()
     .include({ remote: "https://custom-gitlab-host.com/org/branch/spec.yml" })
     .stages("build", "test", "deploy")
     .template(".base", { image: "node:22" })
     .extends(".base", "build", { stage: "build", script: ["npm run build"] })
-    .extends(".base", "test", { stage: "test", script: ["npm test"] });
+    .extends(".base", "test", { stage: "test", script: ["npm test"] })
 
-  const yaml = config.toYaml();
+  const yaml = config.toYaml()
   const result = await visualizeYaml(yaml, {
     format: "all",
     // Optional: Authentication for private repositories
     gitlabToken: process.env.GITLAB_TOKEN,
     // Optional: GitLab host URL for project/template includes (default: https://gitlab.com)
     gitlabUrl: "https://custom-gitlab-host.com",
-  });
+  })
 
-  console.log(result.mermaid);
-  console.log(result.ascii);
-  console.log(result.table);
+  console.log(result.mermaid)
+  console.log(result.ascii)
+  console.log(result.table)
   ```
 
 ## 1.2.0
@@ -273,7 +273,7 @@
   When you call `addJob()` or `addTemplate()` from a JobBuilder, the previous job is automatically saved and a new builder is returned:
 
   ```typescript
-  const config = new ConfigBuilder();
+  const config = new ConfigBuilder()
 
   // Fluent API with auto-return
   config
@@ -294,7 +294,7 @@
     .extends("build")
     .script(["kubectl apply -f k8s/"])
     .when("manual")
-    .done();
+    .done()
 
   // Or use done() to explicitly return to ConfigBuilder
   config
@@ -305,7 +305,7 @@
     .addJob("format")
     .stage("test")
     .script(["npm run format:check"])
-    .done();
+    .done()
 
   // Bulk property updates with set()
   config
@@ -317,7 +317,7 @@
       cache: { paths: ["node_modules/"] },
       artifacts: { paths: ["coverage/"] },
     })
-    .done();
+    .done()
   ```
 
   **Benefits:**
@@ -349,17 +349,17 @@
   **Example Usage:**
 
   ```javascript
-  const config = new ConfigBuilder();
+  const config = new ConfigBuilder()
   // ... configure your pipeline ...
 
   // Generate individual visualizations
-  const mermaid = config.generateMermaidDiagram({ showStages: true });
-  const ascii = config.generateAsciiTree({ showRemote: true });
-  const table = config.generateStageTable();
+  const mermaid = config.generateMermaidDiagram({ showStages: true })
+  const ascii = config.generateAsciiTree({ showRemote: true })
+  const table = config.generateStageTable()
 
-  console.log(mermaid); // Mermaid diagram
-  console.log(ascii); // ASCII tree
-  console.log(table); // Stage table
+  console.log(mermaid) // Mermaid diagram
+  console.log(ascii) // ASCII tree
+  console.log(table) // Stage table
   ```
 
   This feature is especially useful for:
@@ -390,22 +390,22 @@
 
   ```typescript
   // Standard validation (throws on error)
-  config.validate();
-  const pipeline = config.getPlainObject({ skipValidation: true });
+  config.validate()
+  const pipeline = config.getPlainObject({ skipValidation: true })
 
   // Safe validation (no throw)
-  const result = config.safeValidate();
+  const result = config.safeValidate()
   if (!result.valid) {
-    console.error("Validation errors:", result.errors);
-    return;
+    console.error("Validation errors:", result.errors)
+    return
   }
   if (result.warnings.length > 0) {
-    console.warn("Warnings:", result.warnings);
+    console.warn("Warnings:", result.warnings)
   }
-  const pipeline = config.getPlainObject({ skipValidation: true });
+  const pipeline = config.getPlainObject({ skipValidation: true })
 
   // Quick validation (default behavior)
-  const pipeline = config.getPlainObject(); // validates automatically
+  const pipeline = config.getPlainObject() // validates automatically
   ```
 
   **Benefits:**
@@ -488,7 +488,7 @@
           echo "\${CI_API_V4_URL#https?}/projects/\${CI_PROJECT_ID}/packages/npm/:_authToken=\${CI_JOB_TOKEN}"
         } | tee -a .npmrc`,
       ],
-    });
+    })
     ```
 
   - **Array Syntax Normalization**: Single-element arrays in `extends` are now properly normalized to strings, matching GitLab CI's behavior
@@ -513,7 +513,7 @@
           { BROWSERS: ["chrome", "firefox"] }, // Array values ✓
         ],
       },
-    });
+    })
     ```
 
   ### Import/Export Improvements
@@ -581,17 +581,17 @@
   **Example output with `asExtendedConfig: true`:**
 
   ```typescript
-  import type { Config } from "@noxify/gitlab-ci-builder";
+  import type { Config } from "@noxify/gitlab-ci-builder"
 
   export default function (config: Config) {
-    config.stages("build", "test");
+    config.stages("build", "test")
 
     config.job("build", {
       stage: "build",
       script: ["npm run build"],
-    });
+    })
 
-    return config;
+    return config
   }
   ```
 
@@ -615,22 +615,22 @@
   **Example:**
 
   ```ts
-  const config = new Config();
+  const config = new Config()
 
   // Global: disable extends resolution for all jobs
-  config.globalOptions({ resolveExtends: false });
+  config.globalOptions({ resolveExtends: false })
 
-  config.template(".base", { script: ["base command"] });
+  config.template(".base", { script: ["base command"] })
 
   // This job keeps extends reference (global setting)
-  config.job("job1", { extends: ".base" });
+  config.job("job1", { extends: ".base" })
 
   // This job resolves extends (local override)
-  config.job("job2", { extends: ".base" }, { resolveExtends: true });
+  config.job("job2", { extends: ".base" }, { resolveExtends: true })
 
   // Replace instead of merge
-  config.job("test", { stage: "test" });
-  config.job("test", { script: ["override"] }, { mergeExisting: false });
+  config.job("test", { stage: "test" })
+  config.job("test", { script: ["override"] }, { mergeExisting: false })
   ```
 
 - 0f6fffc: Add support for `rules.exists` property with `string | string[]` type to match GitLab CI specification.
@@ -658,8 +658,8 @@
 
   ```ts
   export default function (config: Config) {
-    config.stages("build");
-    return config;
+    config.stages("build")
+    return config
   }
   ```
 
@@ -701,7 +701,7 @@
     "else",
     'echo "no"',
     "fi",
-  ];
+  ]
   ```
 
   Now they are preserved as cohesive blocks:
@@ -715,7 +715,7 @@
     echo "no"
   fi
   `,
-  ];
+  ]
   ```
 
   This ensures shell scripts with control flow are generated correctly and maintain their intended structure.
