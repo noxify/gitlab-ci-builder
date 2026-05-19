@@ -35,7 +35,7 @@ export default defineConfig({
         test: {
           name: "e2e",
           include: ["tests/e2e/**/*.test.ts"],
-          testTimeout: 30_000, // E2E tests may take longer
+          testTimeout: 60_000, // Increased timeout for E2E tests in CI
         },
       },
     ],

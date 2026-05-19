@@ -22,9 +22,13 @@ describe("CLI simulate command - E2E Tests", () => {
   beforeEach(async () => {
     // Create temp directory for test files
     await mkdir(TEST_DIR, { recursive: true })
+    // oxlint-disable-next-line no-console
+    console.log("beforeEach: Test directory created")
   })
 
   afterEach(async () => {
+    // oxlint-disable-next-line no-console
+    console.log("afterEach: Cleaning up session and test directory")
     // Clean up session
     if (session) {
       session.close()
@@ -43,6 +47,8 @@ describe("CLI simulate command - E2E Tests", () => {
         cols: 120,
         rows: 30,
       })
+      // oxlint-disable-next-line no-console
+      console.log("launchTerminal: Session started successfully")
 
       await session.waitForText("Simulate GitLab CI pipeline execution", {
         timeout: 5000,
