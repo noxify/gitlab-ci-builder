@@ -419,7 +419,13 @@ export interface BaseJob {
         /**
          * @see https://docs.gitlab.com/ci/yaml/#ruleswhen
          */
-        when?: "on_success" | "on_failure" | "always" | "never" | "manual" | "delayed"
+        when?:
+          | "on_success"
+          | "on_failure"
+          | "always"
+          | "never"
+          | "manual"
+          | "delayed"
         /**
          * @see https://docs.gitlab.com/ci/yaml/#ruleschanges
          */
@@ -1076,7 +1082,13 @@ export type IncludeInput =
             /**
              * @see https://docs.gitlab.com/ci/yaml/#ruleswhen
              */
-            when?: "on_success" | "on_failure" | "always" | "never" | "manual" | "delayed"
+            when?:
+              | "on_success"
+              | "on_failure"
+              | "always"
+              | "never"
+              | "manual"
+              | "delayed"
             /**
              * @see https://docs.gitlab.com/ci/yaml/#ruleschanges
              */
@@ -1144,7 +1156,13 @@ export type IncludeInput =
             /**
              * @see https://docs.gitlab.com/ci/yaml/#ruleswhen
              */
-            when?: "on_success" | "on_failure" | "always" | "never" | "manual" | "delayed"
+            when?:
+              | "on_success"
+              | "on_failure"
+              | "always"
+              | "never"
+              | "manual"
+              | "delayed"
             /**
              * @see https://docs.gitlab.com/ci/yaml/#ruleschanges
              */
@@ -1224,7 +1242,13 @@ export type IncludeInput =
             /**
              * @see https://docs.gitlab.com/ci/yaml/#ruleswhen
              */
-            when?: "on_success" | "on_failure" | "always" | "never" | "manual" | "delayed"
+            when?:
+              | "on_success"
+              | "on_failure"
+              | "always"
+              | "never"
+              | "manual"
+              | "delayed"
             /**
              * @see https://docs.gitlab.com/ci/yaml/#ruleschanges
              */
@@ -1295,7 +1319,13 @@ export type IncludeInput =
             /**
              * @see https://docs.gitlab.com/ci/yaml/#ruleswhen
              */
-            when?: "on_success" | "on_failure" | "always" | "never" | "manual" | "delayed"
+            when?:
+              | "on_success"
+              | "on_failure"
+              | "always"
+              | "never"
+              | "manual"
+              | "delayed"
             /**
              * @see https://docs.gitlab.com/ci/yaml/#ruleschanges
              */
@@ -1370,7 +1400,13 @@ export type IncludeInput =
             /**
              * @see https://docs.gitlab.com/ci/yaml/#ruleswhen
              */
-            when?: "on_success" | "on_failure" | "always" | "never" | "manual" | "delayed"
+            when?:
+              | "on_success"
+              | "on_failure"
+              | "always"
+              | "never"
+              | "manual"
+              | "delayed"
             /**
              * @see https://docs.gitlab.com/ci/yaml/#ruleschanges
              */
