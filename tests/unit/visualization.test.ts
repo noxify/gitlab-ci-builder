@@ -1157,6 +1157,7 @@ describe("Graph Visualization", () => {
 
     beforeAll(() => server.listen({ onUnhandledRequest: "error" }))
     afterEach(() => server.resetHandlers())
+
     afterAll(() => server.close())
 
     it("should visualize pipeline with remote includes in Mermaid format", async () => {

@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises"
-import { dirname, resolve } from "node:path"
+import path from "node:path"
 
 import { Command } from "@commander-js/extra-typings"
 import { ClimtTable } from "climt"
@@ -168,7 +168,7 @@ async function getInputContext(input: string, options: SimulateOptions) {
     yamlContent = await response.text()
   } else {
     yamlContent = await readFile(input, "utf-8")
-    basePath = dirname(resolve(process.cwd(), input))
+    basePath = path.dirname(path.resolve(process.cwd(), input))
   }
   return { yamlContent, basePath, token, host, gitlabUrl }
 }

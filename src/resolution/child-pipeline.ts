@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs"
-import { resolve } from "node:path"
+import path from "node:path"
 
 import type { ConfigBuilder } from "../builder/config-builder"
 import { parseYaml } from "../importer/parser"
@@ -33,7 +33,7 @@ export interface TrackedChildPipeline {
     jobs: Record<string, JobDefinitionNormalized>
     templates: Record<string, JobDefinitionNormalized>
     jobOptionsMap: Record<string, Record<string, unknown>>
-    getStages(): string[]
+    getStages: () => string[]
   }
   outputPath: string
 }
@@ -44,7 +44,7 @@ async function handleLocalInclude(
 ): Promise<{ config: ConfigBuilder; source: string } | null> {
   try {
     const filePath = basePath
-      ? resolve(basePath, include.local as string)
+      ? path.resolve(basePath, include.local as string)
       : (include.local as string)
     const yamlContent = readFileSync(filePath, "utf-8")
     const parsed = parseYaml(yamlContent)
@@ -115,6 +115,7 @@ async function handleArrayInclude(
   basePath?: string
 ): Promise<{ config: ConfigBuilder; source: string } | null> {
   for (const item of include) {
+    // eslint-disable-next-line no-await-in-loop -- early return on first match avoids unnecessary work
     const result = await loadChildPipelineConfig(item, basePath)
     if (result) {
       return result
@@ -169,6 +170,7 @@ export async function extractChildPipelines(
   trackedChildPipelines?: ReadonlyMap<string, TrackedChildPipeline>
 ): Promise<ChildPipelineInfo[]> {
   const childPipelines: ChildPipelineInfo[] = []
+  const pendingLoads: { name: string; include: unknown }[] = []
 
   for (const [name, node] of graph.entries()) {
     // Skip if no trigger or if it's a downstream pipeline (project trigger)
@@ -208,14 +210,28 @@ export async function extractChildPipelines(
       }
     }
 
-    // Fallback: Try to load from file system
-    const childConfig = await loadChildPipelineConfig(
-      node.trigger.include,
-      basePath
+    // Collect items that need async loading
+    pendingLoads.push({ name, include: node.trigger.include })
+  }
+
+  // Load all child pipeline configs in parallel
+  const loadResults = await Promise.all(
+    pendingLoads.map(({ include }) =>
+      loadChildPipelineConfig(include, basePath)
     )
+  )
+
+  for (let i = 0; i < pendingLoads.length; i += 1) {
+    const childConfig = loadResults[i]
     if (!childConfig) {
       continue
     }
+
+    const pending = pendingLoads[i]
+    if (!pending) {
+      continue
+    }
+    const { name } = pending
 
     // Build graph for child pipeline
     const jobs = childConfig.config.jobs as Record<

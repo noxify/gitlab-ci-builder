@@ -1,8 +1,8 @@
-import { DEFAULT_SCHEMA, loadAll } from "js-yaml"
+import { CORE_SCHEMA, loadAll } from "js-yaml"
 
 import { referenceTag } from "./yaml-parser/reference"
 
-const CUSTOM_SCHEMA = DEFAULT_SCHEMA.extend({ explicit: [referenceTag] })
+const CUSTOM_SCHEMA = CORE_SCHEMA.withTags(referenceTag)
 
 /**
  * Parse YAML content with GitLab CI custom tags.

@@ -2,9 +2,7 @@
 
 A TypeScript utility for programmatically building GitLab CI YAML configurations.
 
-This project provides a fluent `ConfigBuilder` API to compose GitLab pipelines in code
-and output a YAML-serializable JavaScript object. It focuses on strong TypeScript
-types, proper extends resolution, and a simple builder surface.
+This project provides a fluent `ConfigBuilder` API to compose GitLab pipelines in code and output a YAML-serializable JavaScript object. It focuses on strong TypeScript types, proper extends resolution, and a simple builder surface.
 
 ## Features
 
@@ -200,17 +198,17 @@ gitlab-ci-builder simulate .gitlab-ci.yml -b develop --show-skipped --verbose
 
 The simulator automatically sets GitLab CI predefined variables based on the provided options. These can be overridden using the `-v` flag:
 
-| Variable                  | Set by                    | Default Value                       | Description                   |
-| ------------------------- | ------------------------- | ----------------------------------- | ----------------------------- |
-| `CI_COMMIT_BRANCH`        | `-b, --branch`            | `undefined`                         | Branch name being built       |
-| `CI_COMMIT_REF_NAME`      | `-b, --branch` or `--tag` | `undefined`                         | Branch or tag name            |
-| `CI_COMMIT_REF_SLUG`      | `-b, --branch` or `--tag` | Slugified ref name                  | URL-safe version of ref name  |
-| `CI_COMMIT_TAG`           | `--tag`                   | `undefined`                         | Tag name if building a tag    |
-| `CI_MERGE_REQUEST_ID`     | `--mr`                    | `"1"`                               | Merge request ID              |
-| `CI_MERGE_REQUEST_IID`    | `--mr`                    | `"1"`                               | Project-level MR ID           |
-| `CI_MERGE_REQUEST_LABELS` | `--mr-labels`             | `""`                                | Comma-separated MR labels     |
-| `CI_PIPELINE_SOURCE`      | `--mr`                    | `"merge_request_event"` or `"push"` | What triggered the pipeline   |
-| `CI_DEFAULT_BRANCH`       | Always set                | `"main"`                            | Default branch of the project |
+| Variable | Set by | Default Value | Description |
+| --- | --- | --- | --- |
+| `CI_COMMIT_BRANCH` | `-b, --branch` | `undefined` | Branch name being built |
+| `CI_COMMIT_REF_NAME` | `-b, --branch` or `--tag` | `undefined` | Branch or tag name |
+| `CI_COMMIT_REF_SLUG` | `-b, --branch` or `--tag` | Slugified ref name | URL-safe version of ref name |
+| `CI_COMMIT_TAG` | `--tag` | `undefined` | Tag name if building a tag |
+| `CI_MERGE_REQUEST_ID` | `--mr` | `"1"` | Merge request ID |
+| `CI_MERGE_REQUEST_IID` | `--mr` | `"1"` | Project-level MR ID |
+| `CI_MERGE_REQUEST_LABELS` | `--mr-labels` | `""` | Comma-separated MR labels |
+| `CI_PIPELINE_SOURCE` | `--mr` | `"merge_request_event"` or `"push"` | What triggered the pipeline |
+| `CI_DEFAULT_BRANCH` | Always set | `"main"` | Default branch of the project |
 
 **Examples:**
 
@@ -1306,8 +1304,7 @@ const config = new ConfigBuilder()
 
 ## API Reference
 
-This reference summarizes the primary `ConfigBuilder` API surface. Method signatures reflect
-the runtime builder and are derived from the JSDoc on the source `ConfigBuilder` class.
+This reference summarizes the primary `ConfigBuilder` API surface. Method signatures reflect the runtime builder and are derived from the JSDoc on the source `ConfigBuilder` class.
 
 - `new ConfigBuilder()`
   - Create a new builder instance.
@@ -1350,8 +1347,7 @@ the runtime builder and are derived from the JSDoc on the source `ConfigBuilder`
   - Add include entries. Accepts objects or arrays of include definitions.
 
 - `job(name: string, definition: JobDefinitionInput, options?: JobOptions): ConfigBuilder`
-  - Create or merge a job. If `name` starts with `.` or `options.hidden` is true, the call delegates
-    to `template()` and ensures a single leading `.` on the stored template name.
+  - Create or merge a job. If `name` starts with `.` or `options.hidden` is true, the call delegates to `template()` and ensures a single leading `.` on the stored template name.
   - Options: `{ hidden?: boolean, mergeExisting?: boolean, mergeExtends?: boolean, resolveTemplatesOnly?: boolean, remote?: boolean }`
 
 - `macro<T extends MacroArgs>(key: string, callback: (config: ConfigBuilder, args: T) => void): void`
@@ -1407,8 +1403,7 @@ the runtime builder and are derived from the JSDoc on the source `ConfigBuilder`
 ### Export Functions
 
 - `toYaml(config: PipelineOutput): string`
-  - Convert a pipeline configuration to a formatted YAML string. Features logical key ordering,
-    blank lines between sections, and proper formatting for readability.
+  - Convert a pipeline configuration to a formatted YAML string. Features logical key ordering, blank lines between sections, and proper formatting for readability.
 
 - `writeYamlFile(filePath: string, config: PipelineOutput): Promise<void>`
   - Write a pipeline configuration to a YAML file.
@@ -1416,12 +1411,10 @@ the runtime builder and are derived from the JSDoc on the source `ConfigBuilder`
 ### Import Functions
 
 - `fromYaml(yamlContent: string): string`
-  - Convert a GitLab CI YAML string to TypeScript code using the `Config` builder API.
-    Parses the YAML and generates corresponding TypeScript statements.
+  - Convert a GitLab CI YAML string to TypeScript code using the `Config` builder API. Parses the YAML and generates corresponding TypeScript statements.
 
 - `importYamlFile(yamlPath: string, outputPath?: string): Promise<string>`
-  - Read a GitLab CI YAML file and convert it to TypeScript code. If `outputPath` is provided,
-    the generated code is written to that file. Returns the generated TypeScript code.
+  - Read a GitLab CI YAML file and convert it to TypeScript code. If `outputPath` is provided, the generated code is written to that file. Returns the generated TypeScript code.
 
 ### Visualization Functions
 
@@ -1447,8 +1440,7 @@ pnpm test
 
 ## Contributing & License
 
-Contributions welcome — open issues or PRs. This repository is published under
-the same license included in the project root (`LICENSE`).
+Contributions welcome — open issues or PRs. This repository is published under the same license included in the project root (`LICENSE`).
 
 ## Credits
 
@@ -1457,14 +1449,10 @@ This project is based on and inspired by the following repositories:
 - `node-gitlab-ci` by devowlio: https://github.com/devowlio/node-gitlab-ci
 - `gitlab-yml` by netinsight: https://github.com/netinsight/gitlab-yml
 
-Parts of the API and types were adapted from those projects; this repository
-intentionally focuses on a minimal, typed builder rather than reproducing all
-runtime behaviors.
+Parts of the API and types were adapted from those projects; this repository intentionally focuses on a minimal, typed builder rather than reproducing all runtime behaviors.
 
 ## Development Notes
 
-Significant portions of this codebase, including the import/export functionality,
-test coverage improvements, and documentation enhancements, were developed with the assistance of AI (GitHub Copilot / Claude).
+Significant portions of this codebase, including the import/export functionality, test coverage improvements, and documentation enhancements, were developed with the assistance of AI (GitHub Copilot / Claude).
 
-While the core architecture and original implementation come from the credited repositories above,
-many recent additions and refactorings were created through AI-assisted pair programming.
+While the core architecture and original implementation come from the credited repositories above, many recent additions and refactorings were created through AI-assisted pair programming.

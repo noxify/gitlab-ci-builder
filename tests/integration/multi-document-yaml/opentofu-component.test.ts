@@ -7,7 +7,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs"
-import { join } from "node:path"
+import path from "node:path"
 
 import { describe, expect, it, expectTypeOf } from "vitest"
 
@@ -16,8 +16,8 @@ import { toYaml } from "../../../src/export"
 import { fromYaml } from "../../../src/import"
 
 const TEST_DIR = import.meta.dirname
-const TEST_FILES_DIR = join(TEST_DIR, "test_files")
-const GENERATED_DIR = join(TEST_DIR, ".generated")
+const TEST_FILES_DIR = path.join(TEST_DIR, "test_files")
+const GENERATED_DIR = path.join(TEST_DIR, ".generated")
 
 describe("Integration: OpenTofu Component with spec.inputs", () => {
   it("should handle GitLab component with spec.inputs in round-trip", async () => {
@@ -28,7 +28,7 @@ describe("Integration: OpenTofu Component with spec.inputs", () => {
     mkdirSync(GENERATED_DIR, { recursive: true })
 
     // Read the OpenTofu component YAML file
-    const yamlFilePath = join(TEST_FILES_DIR, "opentofu-apply.yml")
+    const yamlFilePath = path.join(TEST_FILES_DIR, "opentofu-apply.yml")
     const originalYaml = readFileSync(yamlFilePath, "utf-8")
 
     // Verify original YAML has content and spec.inputs
@@ -48,7 +48,7 @@ describe("Integration: OpenTofu Component with spec.inputs", () => {
     expect(tsCode).toContain(".spec(")
 
     // Write TypeScript code to .generated directory
-    const tsFilePath = join(GENERATED_DIR, "opentofu-component.ts")
+    const tsFilePath = path.join(GENERATED_DIR, "opentofu-component.ts")
     writeFileSync(tsFilePath, tsCode, "utf-8")
 
     // Verify file was written
@@ -107,7 +107,7 @@ describe("Integration: OpenTofu Component with spec.inputs", () => {
     expect(exportedYaml).toContain("inputs:")
 
     // Write exported YAML to .generated directory
-    const exportedYamlPath = join(
+    const exportedYamlPath = path.join(
       GENERATED_DIR,
       "opentofu-component-exported.yml"
     )
@@ -125,7 +125,7 @@ describe("Integration: OpenTofu Component with spec.inputs", () => {
     expect(reimportedTsCode).toContain(".spec(")
 
     // Step 6: Re-execute reimported code to verify it works
-    const reimportedTsPath = join(
+    const reimportedTsPath = path.join(
       GENERATED_DIR,
       "opentofu-component-reimported.ts"
     )
@@ -195,7 +195,7 @@ test-job:
     expect(tsCode).toContain("env_vars")
 
     // Write and execute
-    const tsFilePath = join(GENERATED_DIR, "custom-inputs.ts")
+    const tsFilePath = path.join(GENERATED_DIR, "custom-inputs.ts")
     writeFileSync(tsFilePath, tsCode, "utf-8")
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -270,7 +270,7 @@ deploy-job:
     expect(tsCode).toContain("regex:")
 
     // Write and execute
-    const tsFilePath = join(GENERATED_DIR, "spec-with-options.ts")
+    const tsFilePath = path.join(GENERATED_DIR, "spec-with-options.ts")
     writeFileSync(tsFilePath, tsCode, "utf-8")
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -331,7 +331,7 @@ spec:
     expect(tsCode).toContain('job("$[[ inputs.as ]]"')
 
     // Write and execute
-    const tsFilePath = join(GENERATED_DIR, "dynamic-job-name.ts")
+    const tsFilePath = path.join(GENERATED_DIR, "dynamic-job-name.ts")
     writeFileSync(tsFilePath, tsCode, "utf-8")
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

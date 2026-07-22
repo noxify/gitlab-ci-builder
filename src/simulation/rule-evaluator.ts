@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs"
-import { resolve } from "node:path"
+import path from "node:path"
 
 import type { Rule } from "../schema/job"
 
@@ -65,7 +65,7 @@ export class RuleEvaluator {
           context.variables
         )
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const absolutePath = resolve(context.basePath!, interpolatedPath)
+        const absolutePath = path.resolve(context.basePath!, interpolatedPath)
         return existsSync(absolutePath)
       })
 
@@ -126,7 +126,7 @@ export class RuleEvaluator {
   ): string {
     // Replace ${VAR_NAME} and $VAR_NAME with actual values
     return str.replaceAll(
-      /\$\{?(\w+)\}?/gu,
+      /\$\{?(?<varName>\w+)\}?/gu,
       (_match, varName) => variables[varName as string] ?? ""
     )
   }
@@ -209,21 +209,25 @@ export class RuleEvaluator {
     condition: string,
     context: RuleContext
   ): boolean | null {
-    const varToVarMatch = /\$(\w+)\s*==\s*\$(\w+)/u.exec(condition)
+    const varToVarMatch = /\$(?<var1>\w+)\s*==\s*\$(?<var2>\w+)/u.exec(
+      condition
+    )
     if (varToVarMatch) {
-      const [, var1, var2] = varToVarMatch
+      const { var1, var2 } = varToVarMatch.groups ?? {}
       if (!var1 || !var2) {
         return false
       }
       return context.variables[var1] === context.variables[var2]
     }
 
-    const varToVarNotMatch = /\$(\w+)\s*!=\s*\$(\w+)/u.exec(condition)
+    const varToVarNotMatch = /\$(?<var1>\w+)\s*!=\s*\$(?<var2>\w+)/u.exec(
+      condition
+    )
     if (!varToVarNotMatch) {
       return null
     }
 
-    const [, var1, var2] = varToVarNotMatch
+    const { var1, var2 } = varToVarNotMatch.groups ?? {}
     if (!var1 || !var2) {
       return false
     }
@@ -234,21 +238,25 @@ export class RuleEvaluator {
     condition: string,
     context: RuleContext
   ): boolean | null {
-    const exactMatch = /\$(\w+)\s*==\s*["'](.+?)["']/u.exec(condition)
+    const exactMatch = /\$(?<varName>\w+)\s*==\s*["'](?<value>.+?)["']/u.exec(
+      condition
+    )
     if (exactMatch) {
-      const [, varName, value] = exactMatch
+      const { varName, value } = exactMatch.groups ?? {}
       if (!varName || !value) {
         return false
       }
       return context.variables[varName] === value
     }
 
-    const notMatch = /\$(\w+)\s*!=\s*["'](.+?)["']/u.exec(condition)
+    const notMatch = /\$(?<varName>\w+)\s*!=\s*["'](?<value>.+?)["']/u.exec(
+      condition
+    )
     if (!notMatch) {
       return null
     }
 
-    const [, varName, value] = notMatch
+    const { varName, value } = notMatch.groups ?? {}
     if (!varName || !value) {
       return false
     }
@@ -259,9 +267,12 @@ export class RuleEvaluator {
     condition: string,
     context: RuleContext
   ): boolean | null {
-    const regexMatch = /\$(\w+)\s*=~\s*\/(.+?)\/([i]?)/u.exec(condition)
+    const regexMatch =
+      /\$(?<varName>\w+)\s*=~\s*\/(?<pattern>.+?)\/(?<flags>[i]?)/u.exec(
+        condition
+      )
     if (regexMatch) {
-      const [, varName, pattern, flags] = regexMatch
+      const { varName, pattern, flags } = regexMatch.groups ?? {}
       if (!varName || !pattern) {
         return false
       }
@@ -270,12 +281,15 @@ export class RuleEvaluator {
       return regex.test(value)
     }
 
-    const regexNotMatch = /\$(\w+)\s*!~\s*\/(.+?)\/([i]?)/u.exec(condition)
+    const regexNotMatch =
+      /\$(?<varName>\w+)\s*!~\s*\/(?<pattern>.+?)\/(?<flags>[i]?)/u.exec(
+        condition
+      )
     if (!regexNotMatch) {
       return null
     }
 
-    const [, varName, pattern, flags] = regexNotMatch
+    const { varName, pattern, flags } = regexNotMatch.groups ?? {}
     if (!varName || !pattern) {
       return false
     }
@@ -288,12 +302,12 @@ export class RuleEvaluator {
     condition: string,
     context: RuleContext
   ): boolean | null {
-    const varExists = /^\$(\w+)$/u.exec(condition)
+    const varExists = /^\$(?<varName>\w+)$/u.exec(condition)
     if (!varExists) {
       return null
     }
 
-    const [, varName] = varExists
+    const { varName } = varExists.groups ?? {}
     if (!varName) {
       return false
     }
@@ -327,14 +341,13 @@ export class RuleEvaluator {
     condition: string,
     context: RuleContext
   ): boolean | null {
-    const pipelineSource = /\$CI_PIPELINE_SOURCE\s*==\s*["'](.+?)["']/u.exec(
-      condition
-    )
+    const pipelineSource =
+      /\$CI_PIPELINE_SOURCE\s*==\s*["'](?<source>.+?)["']/u.exec(condition)
     if (!pipelineSource) {
       return null
     }
 
-    const [, source] = pipelineSource
+    const { source } = pipelineSource.groups ?? {}
     if (source === "merge_request_event") {
       return !!context.mergeRequestLabels
     }

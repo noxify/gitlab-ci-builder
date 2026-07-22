@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
-import { isAbsolute, resolve } from "node:path"
+import path from "node:path"
 
-import { DEFAULT_SCHEMA, loadAll } from "js-yaml"
+import { CORE_SCHEMA, loadAll } from "js-yaml"
 
 import type { ConfigBuilder } from "../builder/config-builder"
 import { ConfigBuilder as Builder } from "../builder/config-builder"
@@ -9,9 +9,7 @@ import { referenceTagResolvable } from "../importer/yaml-parser/reference"
 import type { IncludeEntry } from "../schema/include"
 import { resolveReferences } from "./reference-resolver"
 
-const RESOLVABLE_SCHEMA = DEFAULT_SCHEMA.extend({
-  explicit: [referenceTagResolvable],
-})
+const RESOLVABLE_SCHEMA = CORE_SCHEMA.withTags(referenceTagResolvable)
 
 /**
  * Parse YAML with resolvable !reference tags (for resolution, not import).
@@ -132,6 +130,7 @@ export async function resolveIncludes(
       : [plain.include]
 
     for (const include of includes) {
+      // eslint-disable-next-line no-await-in-loop -- sequential resolution required: includes may depend on visited state
       const result = await resolveInclude(include, basePath, options, visited)
 
       // Track failed includes
@@ -145,21 +144,20 @@ export async function resolveIncludes(
         failedIncludes.push(identifier)
       }
 
-      if (!result) {
-        continue
+      if (result) {
+        // Parse the included YAML
+        const includedConfig = convertYamlToConfig(result, {
+          resolveReferences: options.resolveReferences,
+          verbose: options.verbose,
+        })
+
+        // Recursively resolve nested includes first
+        // eslint-disable-next-line no-await-in-loop -- must resolve nested includes before merging
+        await resolveRecursive(includedConfig, depth + 1)
+
+        // Then merge the fully resolved config into current config
+        mergeConfigs(currentConfig, includedConfig, context)
       }
-
-      // Parse the included YAML
-      const includedConfig = convertYamlToConfig(result, {
-        resolveReferences: options.resolveReferences,
-        verbose: options.verbose,
-      })
-
-      // Recursively resolve nested includes first
-      await resolveRecursive(includedConfig, depth + 1)
-
-      // Then merge the fully resolved config into current config
-      mergeConfigs(currentConfig, includedConfig, context)
     }
   }
 
@@ -280,7 +278,9 @@ function resolveLocalInclude(
   basePath: string,
   visited: Set<string>
 ): string | null {
-  const localPath = isAbsolute(local) ? local : resolve(basePath, local)
+  const localPath = path.isAbsolute(local)
+    ? local
+    : path.resolve(basePath, local)
 
   if (visited.has(localPath)) {
     return null

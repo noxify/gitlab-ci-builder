@@ -1,6 +1,6 @@
 // oxlint-disable vitest/max-expects
 import { writeFileSync } from "node:fs"
-import { join } from "node:path"
+import path from "node:path"
 
 import dedent from "dedent"
 import { describe, expect, it } from "vitest"
@@ -51,7 +51,7 @@ describe("Integration: GitLab Browser Performance Template", () => {
     expect(tsCode).toContain("browser_performance:")
 
     // Write and execute
-    const tsFilePath = join(generatedDir, "browser-performance.ts")
+    const tsFilePath = path.join(generatedDir, "browser-performance.ts")
     writeFileSync(tsFilePath, tsCode, "utf-8")
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -92,14 +92,14 @@ describe("Integration: GitLab Browser Performance Template", () => {
     // Re-import to verify full round-trip
     const reimportedTsCode = fromYaml(exportedYaml)
     writeFileSync(
-      join(generatedDir, "browser-performance-reimport.ts"),
+      path.join(generatedDir, "browser-performance-reimport.ts"),
       reimportedTsCode,
       "utf-8"
     )
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const reimportedModule = await import(
-      join(generatedDir, "browser-performance-reimport.ts")
+      path.join(generatedDir, "browser-performance-reimport.ts")
     )
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const reimportedConfig: ConfigBuilder = (reimportedModule.default ??
@@ -149,7 +149,7 @@ describe("Integration: GitLab Browser Performance Template", () => {
     expect(tsCode).toContain("artifacts:")
 
     // Write and execute
-    const tsFilePath = join(generatedDir, "all-reports.ts")
+    const tsFilePath = path.join(generatedDir, "all-reports.ts")
     writeFileSync(tsFilePath, tsCode, "utf-8")
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

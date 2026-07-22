@@ -155,6 +155,7 @@ const server = setupServer(...restHandlers)
 describe("visualizeYaml with remote includes", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "error" }))
   afterEach(() => server.resetHandlers())
+
   afterAll(() => server.close())
 
   it("should resolve and visualize YAML with remote include via HTTP", async () => {

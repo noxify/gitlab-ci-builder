@@ -5,7 +5,7 @@ import type { ConfigBuilder } from "../builder/config-builder"
 import { parseYaml } from "../importer/parser"
 import type { Stage } from "../schema/base"
 import type { IncludeInput } from "../schema/include"
-import type { BaseJob } from "../schema/job"
+import type { BaseJob, JobDefinitionInput } from "../schema/job"
 import type { Workflow } from "../schema/workflow"
 import type { ChildPipelineInfo, TrackedChildPipeline } from "./child-pipeline"
 import { extractChildPipelines } from "./child-pipeline"
@@ -37,14 +37,16 @@ export interface VisualizeOptions {
 }
 
 interface VisualizationConfigBuilder {
-  include(include: IncludeInput | IncludeInput[]): this
-  stages(...stages: Stage[]): this
-  variables(variables: Record<string, string | number | boolean>): this
-  workflow(workflow: Workflow): this
-  template(name: string, definition: unknown): this
-  job(name: string, definition: unknown): this
-  getExtendsGraph(): Map<string, ExtendsGraphNode>
-  getPlainObject(options?: { skipValidation?: boolean }): ResolvedPipelineConfig
+  include: (include: IncludeInput | IncludeInput[]) => this
+  stages: (...stages: Stage[]) => this
+  variables: (variables: Record<string, string | number | boolean>) => this
+  workflow: (workflow: Workflow) => this
+  template: (name: string, definition: JobDefinitionInput) => this
+  job: (name: string, definition: JobDefinitionInput) => this
+  getExtendsGraph: () => Map<string, ExtendsGraphNode>
+  getPlainObject: (options?: {
+    skipValidation?: boolean
+  }) => ResolvedPipelineConfig
 }
 
 /**
@@ -488,8 +490,10 @@ function addMermaidEdges(
         nodeIds.set(targetName, targetId)
 
         const label = targetName.replaceAll('"', '\\"')
-        lines.push(`  ${targetId}["${label} ⚠️"]:::template`)
-        lines.push(`  style ${targetId} stroke-dasharray: 5 5,stroke:#fb8500`)
+        lines.push(
+          `  ${targetId}["${label} ⚠️"]:::template`,
+          `  style ${targetId} stroke-dasharray: 5 5,stroke:#fb8500`
+        )
       }
 
       if (targetId) {
@@ -879,15 +883,16 @@ async function addChildPipelinesToTable(
   )
 
   for (const child of childPipelines) {
-    tableData.push({
-      stage: "─".repeat(15),
-      job: "─".repeat(50),
-    })
-
-    tableData.push({
-      stage: "CHILD PIPELINE",
-      job: `🔀 ${child.source} (triggered by ${child.parentJob})`,
-    })
+    tableData.push(
+      {
+        stage: "─".repeat(15),
+        job: "─".repeat(50),
+      },
+      {
+        stage: "CHILD PIPELINE",
+        job: `🔀 ${child.source} (triggered by ${child.parentJob})`,
+      }
+    )
 
     const childStagesSet = new Set<string>()
     for (const job of Object.values(child.resolvedConfig.jobs ?? {})) {
