@@ -26,12 +26,7 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Version
-        run: pnpm tegami ci version
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
-      - name: Publish
-        run: pnpm tegami ci publish
+      - name: Release
+        run: pnpm tegami ci
         env:
           GITHUB_TOKEN: ${{ github.token }}
