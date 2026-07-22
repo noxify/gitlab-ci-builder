@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: ["*"]
   push:
-    branches: ["main", "changeset-release/main"]
+    branches: ["main", "tegami/version-packages"]
   merge_group:
   workflow_dispatch:
     inputs:

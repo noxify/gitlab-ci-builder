@@ -1,8 +1,9 @@
 ---
-"@noxify/gitlab-ci-builder": patch
+packages:
+  "@noxify/gitlab-ci-builder": patch
 ---
 
-Improved internal code quality and security:
+## Improved internal code quality and security
 
 - Eliminated lint suppressions through code refactoring (expression-complexity, no-unnecessary-condition)
 - Unified import style to `node:path` default import
