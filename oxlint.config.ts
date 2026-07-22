@@ -4,6 +4,7 @@ import vitest from "ultracite/oxlint/vitest"
 
 export default defineConfig({
   extends: [core, vitest],
+  ignorePatterns: [".tegami/publish-lock.yaml"],
   overrides: [
     {
       files: ["tests/**/*.ts", "**/*.test.ts"],
