@@ -1,6 +1,6 @@
-import { tegami } from "tegami";
-import { runCli } from "tegami/cli";
-import { github } from "tegami/plugins/github";
+import { tegami } from "tegami"
+import { runCli } from "tegami/cli"
+import { github } from "tegami/plugins/github"
 
 const paper = tegami({
   plugins: [
@@ -11,6 +11,6 @@ const paper = tegami({
       },
     }),
   ],
-});
+})
 
-await runCli(paper);
+await runCli(paper)
