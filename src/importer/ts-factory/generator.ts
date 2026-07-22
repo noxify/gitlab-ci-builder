@@ -101,14 +101,8 @@ export class CodeGenerator {
             undefined,
             []
           )
-        )
-      )
-
-      // Add body statements
-      statements.push(...bodyStatements)
-
-      // Add export: export default config
-      statements.push(
+        ),
+        ...bodyStatements,
         createExportDefault(ts.factory.createIdentifier("config"))
       )
     }

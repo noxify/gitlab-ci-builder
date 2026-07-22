@@ -227,12 +227,7 @@ build:
 
 ## Benefits vs Legacy
 
-✅ **Modular**: Clean separation of concerns
-✅ **Testable**: Each module can be tested independently
-✅ **Maintainable**: Easy to add new features
-✅ **Type-safe**: Full TypeScript support
-✅ **Flexible**: Supports both Config and ConfigBuilder
-✅ **Backward compatible**: Legacy code still works
+✅ **Modular**: Clean separation of concerns ✅ **Testable**: Each module can be tested independently ✅ **Maintainable**: Easy to add new features ✅ **Type-safe**: Full TypeScript support ✅ **Flexible**: Supports both Config and ConfigBuilder ✅ **Backward compatible**: Legacy code still works
 
 ## Migration Path
 

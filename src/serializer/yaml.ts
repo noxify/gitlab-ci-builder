@@ -1,4 +1,4 @@
-import { dump, Type, DEFAULT_SCHEMA } from "js-yaml"
+import { CORE_SCHEMA, defineSequenceTag, dump } from "js-yaml"
 
 import type { PipelineOutput } from "../model"
 
@@ -16,15 +16,16 @@ class FlowArray<T = unknown> extends Array<T> {
 /**
  * Custom YAML type for !reference tags
  */
-const referenceTag = new Type("!reference", {
-  kind: "sequence",
-  construct: (data: unknown) => data,
-  predicate: (obj: unknown) => obj instanceof FlowArray,
-  represent: (obj: unknown) => obj,
-  instanceOf: FlowArray,
+const referenceTag = defineSequenceTag<unknown[], unknown[]>("!reference", {
+  create: () => [],
+  addItem: (carrier, item) => {
+    carrier.push(item)
+  },
+  identify: (obj: unknown) => obj instanceof FlowArray,
+  represent: (obj: unknown) => obj as ArrayLike<unknown>,
 })
 
-const CUSTOM_SCHEMA = DEFAULT_SCHEMA.extend({ explicit: [referenceTag] })
+const CUSTOM_SCHEMA = CORE_SCHEMA.withTags(referenceTag)
 
 /**
  * Process a value to convert !reference strings to proper FlowArray format.
@@ -48,9 +49,9 @@ const CUSTOM_SCHEMA = DEFAULT_SCHEMA.extend({ explicit: [referenceTag] })
 function processReferences(value: unknown): unknown {
   if (typeof value === "string" && value.startsWith("!reference [")) {
     // Parse "!reference [.template, script]" into FlowArray format
-    const match = /^!reference\s*\[([^\]]+)\]$/u.exec(value)
-    if (match?.[1]) {
-      const parts = match[1].split(",").map((s) => s.trim())
+    const match = /^!reference\s*\[(?<content>[^\]]+)\]$/u.exec(value)
+    if (match?.groups?.content) {
+      const parts = match.groups.content.split(",").map((s) => s.trim())
       if (parts.length === 2) {
         return new FlowArray(...parts)
       }
@@ -171,61 +172,19 @@ function postProcessReferences(yamlString: string): string {
     const line = lines[i]
 
     // Case 1: Check if this line contains a multiline !reference tag in an array
-    if (line?.trim() === "- !reference") {
-      // Next two lines should contain the array elements
-      const nextLine1 = lines[i + 1]
-      const nextLine2 = lines[i + 2]
-
-      if (
-        nextLine1 &&
-        nextLine2 &&
-        nextLine1.trim().startsWith("- ") &&
-        nextLine2.trim().startsWith("- ")
-      ) {
-        const elem1 = nextLine1.trim().slice(2)
-        const elem2 = nextLine2.trim().slice(2)
-
-        // Get the indentation from the original "- !reference" line
-        const match = /^(\s*)/u.exec(line)
-        const indent = match?.[1] ?? ""
-
-        // Create inline format
-        resultLines.push(`${indent}- !reference [${elem1}, ${elem2}]`)
-
-        // Skip the next two lines
-        i += 3
-        continue
-      }
+    const arrayRefResult = tryProcessArrayReference(lines, i, line)
+    if (arrayRefResult) {
+      resultLines.push(arrayRefResult.output)
+      i += arrayRefResult.skip
+      continue
     }
 
     // Case 2: Check if this line contains a scalar !reference (e.g., "image: !reference")
-    if (line?.includes(": !reference")) {
-      // Next two lines should contain the array elements
-      const nextLine1 = lines[i + 1]
-      const nextLine2 = lines[i + 2]
-
-      if (
-        nextLine1 &&
-        nextLine2 &&
-        nextLine1.trim().startsWith("- ") &&
-        nextLine2.trim().startsWith("- ")
-      ) {
-        const elem1 = nextLine1.trim().slice(2)
-        const elem2 = nextLine2.trim().slice(2)
-
-        // Get the key part (e.g., "image:")
-        const keyMatch = /^(\s*)(.+):\s*!reference\s*$/u.exec(line)
-        if (keyMatch) {
-          const [, indent = "", key] = keyMatch
-
-          // Create inline format
-          resultLines.push(`${indent}${key}: !reference [${elem1}, ${elem2}]`)
-
-          // Skip the next two lines
-          i += 3
-          continue
-        }
-      }
+    const scalarRefResult = tryProcessScalarReference(lines, i, line)
+    if (scalarRefResult) {
+      resultLines.push(scalarRefResult.output)
+      i += scalarRefResult.skip
+      continue
     }
 
     if (line !== undefined) {
@@ -235,6 +194,69 @@ function postProcessReferences(yamlString: string): string {
   }
 
   return resultLines.join("\n")
+}
+
+function tryProcessArrayReference(
+  lines: string[],
+  i: number,
+  line: string | undefined
+): { output: string; skip: number } | null {
+  if (line?.trim() !== "- !reference") {
+    return null
+  }
+
+  const nextLine1 = lines[i + 1]
+  const nextLine2 = lines[i + 2]
+
+  if (
+    !nextLine1 ||
+    !nextLine2 ||
+    !nextLine1.trim().startsWith("- ") ||
+    !nextLine2.trim().startsWith("- ")
+  ) {
+    return null
+  }
+
+  const elem1 = nextLine1.trim().slice(2)
+  const elem2 = nextLine2.trim().slice(2)
+
+  const indentMatch = /^(?<indent>\s*)/u.exec(line)
+  const indent = indentMatch?.groups?.indent ?? ""
+
+  return { output: `${indent}- !reference [${elem1}, ${elem2}]`, skip: 3 }
+}
+
+function tryProcessScalarReference(
+  lines: string[],
+  i: number,
+  line: string | undefined
+): { output: string; skip: number } | null {
+  if (!line?.includes(": !reference")) {
+    return null
+  }
+
+  const nextLine1 = lines[i + 1]
+  const nextLine2 = lines[i + 2]
+
+  if (
+    !nextLine1 ||
+    !nextLine2 ||
+    !nextLine1.trim().startsWith("- ") ||
+    !nextLine2.trim().startsWith("- ")
+  ) {
+    return null
+  }
+
+  const elem1 = nextLine1.trim().slice(2)
+  const elem2 = nextLine2.trim().slice(2)
+
+  const keyMatch = /^(?<indent>\s*)(?<key>.+):\s*!reference\s*$/u.exec(line)
+  if (!keyMatch) {
+    return null
+  }
+
+  const { indent = "", key } = keyMatch.groups ?? {}
+  return { output: `${indent}${key}: !reference [${elem1}, ${elem2}]`, skip: 3 }
 }
 
 /**

@@ -1,15 +1,15 @@
 // oxlint-disable vitest/no-conditional-expect
 // oxlint-disable vitest/max-expects
 import { mkdir, rm, writeFile } from "node:fs/promises"
-import { join } from "node:path"
+import path from "node:path"
 
 import dedent from "dedent"
 import type { Session } from "tuistory"
 import { launchTerminal } from "tuistory"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
-const CLI_PATH = join(process.cwd(), "dist", "cli", "index.mjs")
-const TEST_DIR = join(process.cwd(), ".test-tmp")
+const CLI_PATH = path.join(process.cwd(), "dist", "cli", "index.mjs")
+const TEST_DIR = path.join(process.cwd(), ".test-tmp")
 
 // Helper to clean up terminal output by removing excessive trailing newlines
 function cleanOutput(text: string): string {
@@ -131,7 +131,7 @@ describe("CLI simulate command - E2E Tests", () => {
             - echo "Deploying..."
       `
 
-      const yamlPath = join(TEST_DIR, "simple-pipeline.yml")
+      const yamlPath = path.join(TEST_DIR, "simple-pipeline.yml")
       await writeFile(yamlPath, yamlContent, "utf-8")
 
       session = await launchTerminal({
@@ -183,7 +183,7 @@ describe("CLI simulate command - E2E Tests", () => {
             - echo "Building..."
       `
 
-      const yamlPath = join(TEST_DIR, "json-format.yml")
+      const yamlPath = path.join(TEST_DIR, "json-format.yml")
       await writeFile(yamlPath, yamlContent, "utf-8")
 
       session = await launchTerminal({
@@ -230,7 +230,7 @@ describe("CLI simulate command - E2E Tests", () => {
             - echo "Testing..."
       `
 
-      const yamlPath = join(TEST_DIR, "table-format.yml")
+      const yamlPath = path.join(TEST_DIR, "table-format.yml")
       await writeFile(yamlPath, yamlContent, "utf-8")
 
       session = await launchTerminal({
@@ -285,7 +285,7 @@ describe("CLI simulate command - E2E Tests", () => {
             - if: $CI_COMMIT_BRANCH == "main"
       `
 
-      const yamlPath = join(TEST_DIR, "branch-rules.yml")
+      const yamlPath = path.join(TEST_DIR, "branch-rules.yml")
       await writeFile(yamlPath, yamlContent, "utf-8")
 
       // Simulate on main branch
@@ -382,7 +382,7 @@ describe("CLI simulate command - E2E Tests", () => {
             - if: $BUILD_ENABLED == "false"
       `
 
-      const yamlPath = join(TEST_DIR, "custom-vars.yml")
+      const yamlPath = path.join(TEST_DIR, "custom-vars.yml")
       await writeFile(yamlPath, yamlContent, "utf-8")
 
       session = await launchTerminal({
@@ -432,7 +432,7 @@ describe("CLI simulate command - E2E Tests", () => {
             - if: $CI_MERGE_REQUEST_ID
       `
 
-      const yamlPath = join(TEST_DIR, "mr-pipeline.yml")
+      const yamlPath = path.join(TEST_DIR, "mr-pipeline.yml")
       await writeFile(yamlPath, yamlContent, "utf-8")
 
       session = await launchTerminal({
@@ -491,7 +491,7 @@ describe("CLI simulate command - E2E Tests", () => {
             - if: $CI_COMMIT_BRANCH == "other"
       `
 
-      const yamlPath = join(TEST_DIR, "show-skipped.yml")
+      const yamlPath = path.join(TEST_DIR, "show-skipped.yml")
       await writeFile(yamlPath, yamlContent, "utf-8")
 
       session = await launchTerminal({
@@ -545,7 +545,7 @@ describe("CLI simulate command - E2E Tests", () => {
               when: always
       `
 
-      const yamlPath = join(TEST_DIR, "verbose.yml")
+      const yamlPath = path.join(TEST_DIR, "verbose.yml")
       await writeFile(yamlPath, yamlContent, "utf-8")
 
       session = await launchTerminal({
@@ -598,7 +598,7 @@ describe("CLI simulate command - E2E Tests", () => {
               when: manual
       `
 
-      const yamlPath = join(TEST_DIR, "manual-job.yml")
+      const yamlPath = path.join(TEST_DIR, "manual-job.yml")
       await writeFile(yamlPath, yamlContent, "utf-8")
 
       session = await launchTerminal({
@@ -648,7 +648,7 @@ describe("CLI simulate command - E2E Tests", () => {
             - if: $CI_COMMIT_BRANCH =~ /^feature-.+/
       `
 
-      const yamlPath = join(TEST_DIR, "regex-rules.yml")
+      const yamlPath = path.join(TEST_DIR, "regex-rules.yml")
       await writeFile(yamlPath, yamlContent, "utf-8")
 
       session = await launchTerminal({
@@ -698,7 +698,7 @@ describe("CLI simulate command - E2E Tests", () => {
             - if: $CI_COMMIT_TAG
       `
 
-      const yamlPath = join(TEST_DIR, "tag-pipeline.yml")
+      const yamlPath = path.join(TEST_DIR, "tag-pipeline.yml")
       await writeFile(yamlPath, yamlContent, "utf-8")
 
       session = await launchTerminal({
@@ -744,7 +744,7 @@ describe("CLI simulate command - E2E Tests", () => {
         invalid yaml content [[[
       `
 
-      const yamlPath = join(TEST_DIR, "invalid.yml")
+      const yamlPath = path.join(TEST_DIR, "invalid.yml")
       await writeFile(yamlPath, invalidYaml, "utf-8")
 
       session = await launchTerminal({
@@ -771,7 +771,7 @@ describe("CLI simulate command - E2E Tests", () => {
             - echo "Building..."
       `
 
-      const yamlPath = join(TEST_DIR, "invalid-format.yml")
+      const yamlPath = path.join(TEST_DIR, "invalid-format.yml")
       await writeFile(yamlPath, yamlContent, "utf-8")
 
       session = await launchTerminal({

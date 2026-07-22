@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
+import path from "node:path"
 
 import { afterAll, beforeAll, expect } from "vitest"
 
@@ -17,9 +17,9 @@ export function setupTemplateTest(
   subdirectory?: string
 ): TemplateTestContext {
   const generatedDir = subdirectory
-    ? join(testDirname, ".generated", subdirectory)
-    : join(testDirname, ".generated")
-  const testFilesDir = join(testDirname, "test_files")
+    ? path.join(testDirname, ".generated", subdirectory)
+    : path.join(testDirname, ".generated")
+  const testFilesDir = path.join(testDirname, "test_files")
 
   beforeAll(() => {
     rmSync(generatedDir, { recursive: true, force: true })
@@ -55,7 +55,7 @@ export async function testTemplateRoundTrip(
 
   // Write TypeScript file
   const fileName = templateName.replaceAll(/[^a-zA-Z0-9]/gu, "-").toLowerCase()
-  const tsFilePath = join(generatedDir, `${fileName}.ts`)
+  const tsFilePath = path.join(generatedDir, `${fileName}.ts`)
   writeFileSync(tsFilePath, tsCode, "utf-8")
 
   // Execute TypeScript to get ConfigBuilder instance
@@ -97,7 +97,7 @@ export async function testTemplateRoundTrip(
   expect(reimportedTsCode).toBeTruthy()
 
   // Write and execute reimported code
-  const reimportFilePath = join(generatedDir, `${fileName}-reimport.ts`)
+  const reimportFilePath = path.join(generatedDir, `${fileName}-reimport.ts`)
   writeFileSync(reimportFilePath, reimportedTsCode, "utf-8")
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -155,6 +155,6 @@ export function loadLocalTemplate(
   testFilesDir: string,
   filename: string
 ): string {
-  const filePath = join(testFilesDir, filename)
+  const filePath = path.join(testFilesDir, filename)
   return readFileSync(filePath, "utf-8")
 }

@@ -16,10 +16,7 @@
 variables:
   # `showDateTime` will show the passed time in milliseconds. You need to specify `--batch-mode` to make this work.
   MAVEN_OPTS: >-
-    -Dhttps.protocols=TLSv1.2
-    -Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository
-    -Dorg.slf4j.simpleLogger.showDateTime=true
-    -Djava.awt.headless=true
+    -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true
 
   # As of Maven 3.3.0 instead of this you MAY define these options in `.mvn/maven.config` so the same config is used
   # when running from the command line.
@@ -27,13 +24,7 @@ variables:
   # of the `Slf4jMavenTransferListener` is no longer necessary.
   # `installAtEnd` and `deployAtEnd` are only effective with recent version of the corresponding plugins.
   MAVEN_CLI_OPTS: >-
-    --batch-mode
-    --errors
-    --fail-at-end
-    --show-version
-    --no-transfer-progress
-    -DinstallAtEnd=true
-    -DdeployAtEnd=true
+    --batch-mode --errors --fail-at-end --show-version --no-transfer-progress -DinstallAtEnd=true -DdeployAtEnd=true
 
 # This template uses the latest Maven 3 release, e.g., 3.8.6, and OpenJDK 8 (LTS)
 # for verifying and deploying images
@@ -71,9 +62,7 @@ verify:jdk8:
 deploy:jdk8:
   stage: deploy
   script:
-    - if [ ! -f ci_settings.xml ]; then
-      echo "CI settings missing\! If deploying to GitLab Maven Repository, please see https://docs.gitlab.com/ee/ser/packages/maven_repository/#create-maven-packages-with-gitlab-cicd for instructions.";
-      fi
+    - if [ ! -f ci_settings.xml ]; then echo "CI settings missing\! If deploying to GitLab Maven Repository, please see https://docs.gitlab.com/ee/ser/packages/maven_repository/#create-maven-packages-with-gitlab-cicd for instructions."; fi
     - "mvn $MAVEN_CLI_OPTS deploy --settings ci_settings.xml"
   only:
     variables:

@@ -907,37 +907,47 @@ export class ConfigBuilder {
    * ```
    */
   public async dynamicInclude(cwd: string, globs: string[]): Promise<this> {
-    for (const glob of globs) {
-      const files = globSync(glob, {
+    const allFiles = globs.flatMap((glob) =>
+      globSync(glob, {
         absolute: true,
         cwd,
         dot: true,
       })
+    )
 
-      for (const file of files) {
-        const exported = (await import(file)) as
-          | {
-              default?: ExtendConfigFunction
-              extendConfig?: ExtendConfigFunction
-            }
-          | undefined
+    const modules = await Promise.all(
+      allFiles.map(
+        (file) =>
+          import(file) as Promise<
+            | {
+                default?: ExtendConfigFunction
+                extendConfig?: ExtendConfigFunction
+              }
+            | undefined
+          >
+      )
+    )
 
-        // Prefer default export, fallback to named extendConfig
-        const extendFn = exported?.default ?? exported?.extendConfig
+    const extendFns = modules.map((exported) => {
+      // Prefer default export, fallback to named extendConfig
+      const extendFn = exported?.default ?? exported?.extendConfig
 
-        if (!extendFn) {
-          throw new Error(
-            `Please export a default function or a named "extendConfig" function!`
-          )
-        }
-
-        if (!(typeof extendFn === "function")) {
-          throw new Error(`The exported function is not a function!`)
-        }
-
-        // Call the function and await the result
-        await extendFn(this)
+      if (!extendFn) {
+        throw new Error(
+          `Please export a default function or a named "extendConfig" function!`
+        )
       }
+
+      if (!(typeof extendFn === "function")) {
+        throw new Error(`The exported function is not a function!`)
+      }
+
+      return extendFn
+    })
+
+    for (const fn of extendFns) {
+      // eslint-disable-next-line no-await-in-loop -- sequential execution required: each extendFn mutates the builder
+      await fn(this)
     }
 
     return this
@@ -948,10 +958,10 @@ export class ConfigBuilder {
    *
    * Child pipelines run in the same project as the parent pipeline and can
    * share variables, artifacts, and configuration. The child pipeline is
-   * built using a callback function that receives a new ConfigBuilder instance.
+   * built using a configure function that receives a new ConfigBuilder instance.
    *
    * @param jobName - Name of the trigger job
-   * @param callback - Function that builds the child pipeline configuration
+   * @param configure - Function that builds the child pipeline configuration
    * @param options - Optional configuration for the child pipeline
    * @param options.outputPath - Output file path for child pipeline YAML (default: auto-generated from job name)
    * @param options.strategy - Trigger strategy: 'depend' waits for completion, 'mirror' mirrors status
@@ -984,7 +994,7 @@ export class ConfigBuilder {
    */
   public childPipeline(
     jobName: string,
-    callback: (child: ConfigBuilder) => ConfigBuilder,
+    configure: (child: ConfigBuilder) => ConfigBuilder,
     options?: {
       outputPath?: string
       strategy?: "depend" | "mirror"
@@ -997,7 +1007,7 @@ export class ConfigBuilder {
   ): this {
     // Create child config builder
     // oxlint-disable-next-line promise/prefer-await-to-callbacks
-    const childConfig = callback(new ConfigBuilder(this.state.globalOptions))
+    const childConfig = configure(new ConfigBuilder(this.state.globalOptions))
 
     // Generate output path if not provided
     const outputPath =
@@ -1273,18 +1283,21 @@ export class ConfigBuilder {
     writtenFiles.parent = parentPath
 
     // Write child pipelines
-    for (const childConfig of this.state.childPipelines.values()) {
-      const childPath = path.join(outputDir, childConfig.outputPath)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      const childYaml = childConfig.builder.toYaml({
-        skipValidation: options?.skipValidation,
-      })
+    const childWritePromises = [...this.state.childPipelines.values()].map(
+      async (childConfig) => {
+        const childPath = path.join(outputDir, childConfig.outputPath)
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        const childYaml = childConfig.builder.toYaml({
+          skipValidation: options?.skipValidation,
+        })
 
-      await fs.mkdir(path.dirname(childPath), { recursive: true })
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      await fs.writeFile(childPath, childYaml, "utf-8")
-      writtenFiles.children.push(childPath)
-    }
+        await fs.mkdir(path.dirname(childPath), { recursive: true })
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        await fs.writeFile(childPath, childYaml, "utf-8")
+        return childPath
+      }
+    )
+    writtenFiles.children.push(...(await Promise.all(childWritePromises)))
 
     return writtenFiles
   }

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { exec } from "node:child_process"
 import { writeFile } from "node:fs/promises"
-import { resolve } from "node:path"
+import path from "node:path"
 import { promisify } from "node:util"
 
 import { compile } from "json-schema-to-typescript"
@@ -56,40 +56,44 @@ async function generateTypes(): Promise<void> {
     "",
   ]
 
-  for (const { name, schema } of schemas) {
-    try {
-      // Convert Zod schema to JSON Schema with inline expansion
-      const jsonSchema = toJSONSchema(schema, {
-        reused: "inline",
-        unrepresentable: "any",
-      })
+  const compiledTypes = await Promise.all(
+    schemas.map(async ({ name, schema }) => {
+      try {
+        // Convert Zod schema to JSON Schema with inline expansion
+        const jsonSchema = toJSONSchema(schema, {
+          reused: "inline",
+          unrepresentable: "any",
+        })
 
-      // Convert JSON Schema to TypeScript
-      let tsType = await compile(jsonSchema as typeof JSONSchema, name, {
-        bannerComment: "",
-        style: {
-          printWidth: 100,
-          semi: false,
-          singleQuote: false,
-          tabWidth: 2,
-        },
-      })
+        // Convert JSON Schema to TypeScript
+        let tsType = await compile(jsonSchema as typeof JSONSchema, name, {
+          bannerComment: "",
+          style: {
+            printWidth: 100,
+            semi: false,
+            singleQuote: false,
+            tabWidth: 2,
+          },
+        })
 
-      // Post-process: Only replace empty object types
-      // Let ESLint fix the index signatures automatically
-      tsType = tsType.replaceAll("| {}", "| Record<string, unknown>")
-      tsType = tsType.replaceAll("{}[]", "Record<string, unknown>[]")
+        // Post-process: Only replace empty object types
+        // Let ESLint fix the index signatures automatically
+        tsType = tsType.replaceAll("| {}", "| Record<string, unknown>")
+        tsType = tsType.replaceAll("{}[]", "Record<string, unknown>[]")
 
-      generatedTypes.push(tsType)
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(`❌ Failed to generate type for ${name}:`, error)
-      throw error
-    }
-  }
+        return tsType
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error(`❌ Failed to generate type for ${name}:`, error)
+        throw error
+      }
+    })
+  )
+
+  generatedTypes.push(...compiledTypes)
 
   // Write to file
-  const outputPath = resolve(process.cwd(), "src/generated/types.ts")
+  const outputPath = path.resolve(process.cwd(), "src/generated/types.ts")
   await writeFile(outputPath, generatedTypes.join("\n"), "utf-8")
 
   // Run ESLint fix on the generated file

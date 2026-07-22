@@ -28,10 +28,7 @@
     # want coverage results.
     - julia -e 'using Pkg; Pkg.clone(pwd()); Pkg.build("MyPackage"); Pkg.test("MyPackage"; coverage = true)'
     # Comment out below if you do not want coverage results.
-    - julia -e 'using Pkg; Pkg.add("Coverage");
-      import MyPackage; cd(joinpath(dirname(pathof(MyPackage)), ".."));
-      using Coverage; cl, tl = get_summary(process_folder());
-      println("(", cl/tl*100, "%) covered")'
+    - julia -e 'using Pkg; Pkg.add("Coverage"); import MyPackage; cd(joinpath(dirname(pathof(MyPackage)), "..")); using Coverage; cl, tl = get_summary(process_folder()); println("(", cl/tl*100, "%) covered")'
 
 # Name a test and select an appropriate image.
 # images comes from Docker hub

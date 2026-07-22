@@ -6,7 +6,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs"
-import { join } from "node:path"
+import path from "node:path"
 
 import { describe, expect, it, expectTypeOf } from "vitest"
 
@@ -15,8 +15,8 @@ import { toYaml } from "../../../src/export"
 import { fromYaml } from "../../../src/import"
 
 const TEST_DIR = import.meta.dirname
-const TEST_FILES_DIR = join(TEST_DIR, "test_files")
-const GENERATED_DIR = join(TEST_DIR, ".generated")
+const TEST_FILES_DIR = path.join(TEST_DIR, "test_files")
+const GENERATED_DIR = path.join(TEST_DIR, ".generated")
 
 describe("Integration: Multi-Document YAML", () => {
   it("should complete full round-trip: YAML → TS → ConfigBuilder → YAML", async () => {
@@ -27,7 +27,7 @@ describe("Integration: Multi-Document YAML", () => {
     mkdirSync(GENERATED_DIR, { recursive: true })
 
     // Read the multi-document YAML file
-    const yamlFilePath = join(TEST_FILES_DIR, "simple-multi-doc.yml")
+    const yamlFilePath = path.join(TEST_FILES_DIR, "simple-multi-doc.yml")
     const originalYaml = readFileSync(yamlFilePath, "utf-8")
 
     // Verify original YAML has content
@@ -43,7 +43,7 @@ describe("Integration: Multi-Document YAML", () => {
     expect(tsCode.length).toBeGreaterThan(100)
 
     // Write TypeScript code to .generated directory
-    const tsFilePath = join(GENERATED_DIR, "simple-multi-doc.ts")
+    const tsFilePath = path.join(GENERATED_DIR, "simple-multi-doc.ts")
     writeFileSync(tsFilePath, tsCode, "utf-8")
 
     // Verify file was written
@@ -82,7 +82,7 @@ describe("Integration: Multi-Document YAML", () => {
     expect(exportedYaml.length).toBeGreaterThan(100)
 
     // Write exported YAML to .generated directory
-    const exportedYamlPath = join(
+    const exportedYamlPath = path.join(
       GENERATED_DIR,
       "simple-multi-doc-exported.yml"
     )
@@ -110,7 +110,7 @@ describe("Integration: Multi-Document YAML", () => {
     expect(existsSync(GENERATED_DIR)).toBeTruthy()
 
     // Should be able to read/write without errors
-    const testFile = join(GENERATED_DIR, "test-cleanup.txt")
+    const testFile = path.join(GENERATED_DIR, "test-cleanup.txt")
     writeFileSync(testFile, "cleanup test", "utf-8")
     expect(existsSync(testFile)).toBeTruthy()
 
