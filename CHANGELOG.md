@@ -1,3 +1,10 @@
+## @noxify/gitlab-ci-builder@1.6.4
+
+### Dependency updates
+
+- Updated all dependencies to their latest version.
+- Fixed open `pnpm audit` findings
+
 ## @noxify/gitlab-ci-builder@1.6.3
 
 ### Improved internal code quality and security

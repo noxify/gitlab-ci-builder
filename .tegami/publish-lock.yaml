@@ -1,10 +1,10 @@
 core:changelogs:
-  - content: "---\npackages:\n  \"@noxify/gitlab-ci-builder\":\n    type: patch\n---\n\n## Improved internal code quality and security\n\n- Eliminated lint suppressions through code refactoring (expression-complexity, no-unnecessary-condition)\n- Unified import style to `node:path` default import\n- Added named capture groups to regex patterns\n- Reduced cyclomatic complexity in YAML serializer\n- Updated security overrides for transitive dependencies (shell-quote, ws, vite, brace-expansion, js-yaml, hono, esbuild)\n"
-    filename: improved-code-quality.md
+  - content: "---\npackages:\n  npm:@noxify/gitlab-ci-builder:\n    type: patch\n---\n\n## Dependency updates\n\n- Updated all dependencies to their latest version.\n- Fixed open `pnpm audit` findings\n"
+    filename: 2026-08-12-msprws2r.md
     v: 0.0.0
 core:packages:
   - changelogIds:
-      - improved-code-quality.md
+      - 2026-08-12-msprws2r.md
     id: npm:@noxify/gitlab-ci-builder
     updated: true
 npm:packages:
