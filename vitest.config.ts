@@ -20,7 +20,7 @@ export default defineConfig({
       {
         test: {
           name: "unit",
-          include: ["tests/nit/**/*.test.ts"],
+          include: ["tests/unit/**/*.test.ts"],
           setupFiles: ["./tests/setup.ts"],
         },
       },

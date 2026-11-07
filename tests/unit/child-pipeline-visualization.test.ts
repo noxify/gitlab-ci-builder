@@ -367,7 +367,7 @@ describe("Child Pipeline Visualization", () => {
   })
 
   describe("Edge Cases", () => {
-    it("should handle missing child pipeline file gracefully", () => {
+    it("should handle missing child pipeline file gracefully", async () => {
       const jobs: Record<string, JobDefinitionNormalized> = {
         "trigger:child": {
           trigger: {
@@ -377,7 +377,7 @@ describe("Child Pipeline Visualization", () => {
       }
 
       const graph = buildExtendsGraph(jobs, {})
-      const childPipelines = extractChildPipelines(graph, testDir)
+      const childPipelines = await extractChildPipelines(graph, testDir)
 
       expect(childPipelines).toHaveLength(0)
     })

@@ -58,7 +58,10 @@ describe("ConfigBuilder - JSON Serialization", () => {
       config.variable("TEST", "value")
       config.job("build", { script: ["npm run build"] })
 
-      const serialized = structuredClone(config) as unknown as PipelineOutput
+      // Intentionally use JSON.stringify (not structuredClone) to verify the
+      // toJSON() hook is invoked during JSON serialization.
+      // oxlint-disable-next-line prefer-structured-clone
+      const serialized = JSON.parse(JSON.stringify(config)) as PipelineOutput
 
       expect(serialized.variables?.TEST).toBe("value")
       expect(serialized.jobs?.build).toBeDefined()

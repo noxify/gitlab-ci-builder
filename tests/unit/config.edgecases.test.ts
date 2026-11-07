@@ -37,7 +37,9 @@ describe("ConfigBuilder - edge cases and branches", () => {
 
     const out = cfg.getPlainObject()
 
-    expect(warnSpy).toHaveBeenCalledWith()
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("non-existent")
+    )
     // The external extends entry remains (it's not a local job/template)
     if (!out.jobs) {
       throw new Error("Expected jobs to be present")

@@ -939,7 +939,7 @@ export class ConfigBuilder {
       }
 
       if (!(typeof extendFn === "function")) {
-        throw new Error(`The exported function is not a function!`)
+        throw new TypeError(`The exported function is not a function!`)
       }
 
       return extendFn
@@ -1027,8 +1027,10 @@ export class ConfigBuilder {
     const triggerJob: JobDefinitionNormalized = {
       trigger: {
         include: { local: outputPath },
-        strategy: options?.strategy,
-        forward: options?.forward,
+        ...(options?.strategy === undefined
+          ? {}
+          : { strategy: options.strategy }),
+        ...(options?.forward === undefined ? {} : { forward: options.forward }),
       },
       ...options?.jobOptions,
     }

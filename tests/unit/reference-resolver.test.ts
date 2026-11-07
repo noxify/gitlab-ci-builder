@@ -1,5 +1,5 @@
 // oxlint-disable vitest/max-expects
-import { describe, expect, test } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import { convertYamlToConfig } from "../../src"
 import { PipelineSimulator } from "../../src/simulation/pipeline-simulator"
@@ -7,7 +7,7 @@ import type { RuleContext } from "../../src/simulation/rule-evaluator"
 
 describe("Reference Resolver - Edge Cases", () => {
   describe("Invalid reference paths", () => {
-    test("should handle reference to non-existent path", () => {
+    it("should handle reference to non-existent path", () => {
       const yaml = `
 .template:
   script:
@@ -26,7 +26,7 @@ job:
       expect(result.totalJobs).toBeGreaterThanOrEqual(0)
     })
 
-    test("should handle reference to null value", () => {
+    it("should handle reference to null value", () => {
       const yaml = `
 .template:
   value: null
@@ -42,7 +42,7 @@ job:
       expect(result.totalJobs).toBeGreaterThanOrEqual(0)
     })
 
-    test("should handle reference with valid path", () => {
+    it("should handle reference with valid path", () => {
       const yaml = `
 .template:
   script:
@@ -62,7 +62,7 @@ job:
       expect(result.totalJobs).toBeGreaterThanOrEqual(1)
     })
 
-    test("should handle reference to primitive when object expected", () => {
+    it("should handle reference to primitive when object expected", () => {
       const yaml = `
 .template:
   value: "string"
@@ -81,7 +81,7 @@ job:
   })
 
   describe("Circular references", () => {
-    test("should detect circular reference between two jobs", () => {
+    it("should detect circular reference between two jobs", () => {
       const yaml = `
 .job-a:
   script: !reference [.job-b, script]
@@ -101,7 +101,7 @@ test:
       expect(result.totalJobs).toBeGreaterThanOrEqual(0)
     })
 
-    test("should detect self-referencing job", () => {
+    it("should detect self-referencing job", () => {
       const yaml = `
 .job:
   script: !reference [.job, script]
@@ -118,7 +118,7 @@ test:
       expect(result.totalJobs).toBeGreaterThanOrEqual(0)
     })
 
-    test("should detect circular reference chain of three", () => {
+    it("should detect circular reference chain of three", () => {
       const yaml = `
 .job-a:
   script: !reference [.job-b, script]
@@ -141,7 +141,7 @@ test:
       expect(result.totalJobs).toBeGreaterThanOrEqual(0)
     })
 
-    test("should handle circular reference in nested structures", () => {
+    it("should handle circular reference in nested structures", () => {
       const yaml = `
 .template:
   before_script:
@@ -161,7 +161,7 @@ job:
   })
 
   describe("Complex nested references", () => {
-    test("should resolve reference to deeply nested value", () => {
+    it("should resolve reference to deeply nested value", () => {
       const yaml = `
 .template:
   config:
@@ -184,7 +184,7 @@ job:
       expect(job).toBeDefined()
     })
 
-    test("should resolve multiple references in array", () => {
+    it("should resolve multiple references in array", () => {
       const yaml = `
 .base-before:
   before_script:
@@ -213,7 +213,7 @@ job:
       expect(result.totalJobs).toBeGreaterThanOrEqual(1)
     })
 
-    test("should resolve reference that itself contains references", () => {
+    it("should resolve reference that itself contains references", () => {
       const yaml = `
 .base:
   script:
@@ -238,7 +238,7 @@ job:
   })
 
   describe("Edge cases with null and undefined", () => {
-    test("should handle reference path through null object", () => {
+    it("should handle reference path through null object", () => {
       const yaml = `
 .template:
   config: null
@@ -256,7 +256,7 @@ job:
       expect(result.totalJobs).toBeGreaterThanOrEqual(0)
     })
 
-    test("should handle reference to array containing nulls", () => {
+    it("should handle reference to array containing nulls", () => {
       const yaml = `
 .template:
   items:

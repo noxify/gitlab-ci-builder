@@ -1,4 +1,9 @@
 // oxlint-disable vitest/max-expects
+// These tests mock virtual (non-existent) module paths via vi.doMock. The paths
+// must stay string literals: an `import("/fake/...")` form would make tsc try to
+// resolve the module and fail (TS2307). Hence the vitest/prefer-import-in-mock rule
+// is disabled for this file.
+// oxlint-disable vitest/prefer-import-in-mock
 import { globSync } from "tinyglobby"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -12,8 +17,6 @@ type GlobSyncFn = (
 const mocks = vi.hoisted(() => ({
   globSync: vi.fn<GlobSyncFn>(),
 }))
-
-const mockModuleImport = (path: string): Promise<unknown> => import(path)
 
 vi.mock(import("tinyglobby"), async (importOriginal) => {
   const actual = await importOriginal()
@@ -36,7 +39,7 @@ describe("ConfigBuilder - include", () => {
     vi.mocked(globSync).mockReturnValue(["/fake/file.ts"])
 
     // Mock the import to return an object without default or extendConfig
-    vi.doMock(mockModuleImport("/fake/file.ts"), () => ({
+    vi.doMock("/fake/file.ts", () => ({
       default: undefined,
       extendConfig: undefined,
       someOtherExport: "value",
@@ -55,7 +58,7 @@ describe("ConfigBuilder - include", () => {
     vi.mocked(globSync).mockReturnValue(["/fake/file.ts"])
 
     // Mock dynamic import with extendConfig as non-function
-    vi.doMock(mockModuleImport("/fake/file.ts"), () => ({
+    vi.doMock("/fake/file.ts", () => ({
       default: undefined,
       extendConfig: "not-a-function",
     }))
@@ -78,12 +81,12 @@ describe("ConfigBuilder - include", () => {
     vi.mocked(globSync).mockReturnValue(["/fake/file1.ts", "/fake/file2.ts"])
 
     // Mock dynamic imports
-    vi.doMock(mockModuleImport("/fake/file1.ts"), () => ({
+    vi.doMock("/fake/file1.ts", () => ({
       default: undefined,
       extendConfig: mockExtendConfig,
     }))
 
-    vi.doMock(mockModuleImport("/fake/file2.ts"), () => ({
+    vi.doMock("/fake/file2.ts", () => ({
       default: undefined,
       extendConfig: mockExtendConfig,
     }))
@@ -126,12 +129,12 @@ describe("ConfigBuilder - include", () => {
       .mockReturnValueOnce(["/fake/config1.ts"])
       .mockReturnValueOnce(["/fake/config2.ts"])
 
-    vi.doMock(mockModuleImport("/fake/config1.ts"), () => ({
+    vi.doMock("/fake/config1.ts", () => ({
       default: undefined,
       extendConfig: mockExtendConfig,
     }))
 
-    vi.doMock(mockModuleImport("/fake/config2.ts"), () => ({
+    vi.doMock("/fake/config2.ts", () => ({
       default: undefined,
       extendConfig: mockExtendConfig,
     }))
@@ -158,7 +161,7 @@ describe("ConfigBuilder - include", () => {
 
     vi.mocked(globSync).mockReturnValue(["/fake/default.ts"])
 
-    vi.doMock(mockModuleImport("/fake/default.ts"), () => ({
+    vi.doMock("/fake/default.ts", () => ({
       default: mockExtendConfig,
     }))
 
@@ -175,7 +178,7 @@ describe("ConfigBuilder - include", () => {
 
     vi.mocked(globSync).mockReturnValue(["/fake/both.ts"])
 
-    vi.doMock(mockModuleImport("/fake/both.ts"), () => ({
+    vi.doMock("/fake/both.ts", () => ({
       default: mockDefault,
       extendConfig: mockNamed,
     }))

@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs"
 import path from "node:path"
 
-import type { ConfigBuilder } from "../builder/config-builder"
 import { parseYaml } from "../importer/parser"
 import type { JobDefinitionNormalized } from "../schema/job"
+import type { JobOptions } from "../schema/policies"
 import type { ExtendsGraphNode } from "./graph"
 import { buildExtendsGraph } from "./graph"
 
@@ -30,18 +30,99 @@ export interface ChildPipelineInfo {
 export interface TrackedChildPipeline {
   jobName: string
   builder: {
-    jobs: Record<string, JobDefinitionNormalized>
-    templates: Record<string, JobDefinitionNormalized>
-    jobOptionsMap: Record<string, Record<string, unknown>>
-    getStages: () => string[]
+    jobs: Readonly<Record<string, JobDefinitionNormalized>>
+    templates: Readonly<Record<string, JobDefinitionNormalized>>
+    jobOptionsMap: Readonly<Record<string, JobOptions>>
+    getStages: () => readonly string[]
   }
   outputPath: string
 }
 
-async function handleLocalInclude(
+/**
+ * Lightweight parsed child pipeline config.
+ *
+ * Built directly from parsed YAML (no ConfigBuilder) to keep child pipeline
+ * extraction synchronous and free of a cyclic dependency on the builder.
+ */
+interface ParsedChildConfig {
+  jobs: Record<string, JobDefinitionNormalized>
+  templates: Record<string, JobDefinitionNormalized>
+  jobOptionsMap: Record<string, JobOptions>
+  stages: string[]
+}
+
+const RESERVED_KEYS = new Set([
+  "stages",
+  "variables",
+  "workflow",
+  "include",
+  "default",
+  "spec",
+])
+
+/**
+ * Normalize a raw parsed job/template definition to the shape the extends graph
+ * expects. Mirrors ConfigBuilder's handling: a scalar `extends` becomes a
+ * single-element array.
+ */
+function normalizeChildDefinition(
+  definition: Record<string, unknown>
+): JobDefinitionNormalized {
+  const normalized = { ...definition } as Record<string, unknown>
+
+  if (typeof normalized.extends === "string") {
+    normalized.extends = [normalized.extends]
+  }
+
+  return normalized as JobDefinitionNormalized
+}
+
+function parseChildPipelineYaml(parsed: unknown): ParsedChildConfig {
+  const config: ParsedChildConfig = {
+    jobs: {},
+    templates: {},
+    jobOptionsMap: {},
+    stages: [],
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    return config
+  }
+
+  const parsedRecord = parsed as Record<string, unknown>
+
+  if (parsedRecord.stages) {
+    config.stages = (
+      Array.isArray(parsedRecord.stages)
+        ? parsedRecord.stages
+        : [parsedRecord.stages]
+    ) as string[]
+  }
+
+  for (const [name, definition] of Object.entries(parsedRecord)) {
+    if (
+      typeof definition === "object" &&
+      definition !== null &&
+      !RESERVED_KEYS.has(name)
+    ) {
+      const normalized = normalizeChildDefinition(
+        definition as Record<string, unknown>
+      )
+      if (name.startsWith(".")) {
+        config.templates[name] = normalized
+      } else {
+        config.jobs[name] = normalized
+      }
+    }
+  }
+
+  return config
+}
+
+function handleLocalInclude(
   include: Record<string, unknown>,
   basePath?: string
-): Promise<{ config: ConfigBuilder; source: string } | null> {
+): { config: ParsedChildConfig; source: string } | null {
   try {
     const filePath = basePath
       ? path.resolve(basePath, include.local as string)
@@ -49,74 +130,31 @@ async function handleLocalInclude(
     const yamlContent = readFileSync(filePath, "utf-8")
     const parsed = parseYaml(yamlContent)
 
-    const { ConfigBuilder } = await import("../builder/config-builder")
-    const config = new ConfigBuilder()
-
-    // Handle empty or null parsed result
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (!parsed || typeof parsed !== "object") {
-      return { config, source: include.local as string }
+    return {
+      config: parseChildPipelineYaml(parsed),
+      source: include.local as string,
     }
-
-    // Add stages
-    if ((parsed as Record<string, unknown>).stages) {
-      config.stages(
-        ...((Array.isArray((parsed as Record<string, unknown>).stages)
-          ? (parsed as Record<string, unknown>).stages
-          : [(parsed as Record<string, unknown>).stages]) as string[])
-      )
-    }
-
-    // Add jobs and templates
-    const RESERVED_KEYS = new Set([
-      "stages",
-      "variables",
-      "workflow",
-      "include",
-      "default",
-      "spec",
-    ])
-    for (const [name, definition] of Object.entries(parsed)) {
-      if (
-        typeof definition === "object" &&
-        definition !== null &&
-        !RESERVED_KEYS.has(name)
-      ) {
-        try {
-          if (name.startsWith(".")) {
-            config.template(name, definition)
-          } else {
-            config.job(name, definition)
-          }
-        } catch {
-          // Skip invalid jobs
-        }
-      }
-    }
-
-    return { config, source: include.local as string }
   } catch {
     return null
   }
 }
 
-async function handleArtifactInclude(
-  include: Record<string, unknown>
-): Promise<{ config: ConfigBuilder; source: string }> {
-  const { ConfigBuilder } = await import("../builder/config-builder")
+function handleArtifactInclude(include: Record<string, unknown>): {
+  config: ParsedChildConfig
+  source: string
+} {
   return {
-    config: new ConfigBuilder(),
+    config: { jobs: {}, templates: {}, jobOptionsMap: {}, stages: [] },
     source: `artifact:${include.artifact as string}`,
   }
 }
 
-async function handleArrayInclude(
+function handleArrayInclude(
   include: unknown[],
   basePath?: string
-): Promise<{ config: ConfigBuilder; source: string } | null> {
+): { config: ParsedChildConfig; source: string } | null {
   for (const item of include) {
-    // eslint-disable-next-line no-await-in-loop -- early return on first match avoids unnecessary work
-    const result = await loadChildPipelineConfig(item, basePath)
+    const result = loadChildPipelineConfig(item, basePath)
     if (result) {
       return result
     }
@@ -131,10 +169,10 @@ async function handleArrayInclude(
  * @param basePath - Base path for resolving local files
  * @returns Parsed child pipeline config or null if cannot be loaded
  */
-async function loadChildPipelineConfig(
+function loadChildPipelineConfig(
   triggerInclude: unknown,
   basePath?: string
-): Promise<{ config: ConfigBuilder; source: string } | null> {
+): { config: ParsedChildConfig; source: string } | null {
   if (!triggerInclude || typeof triggerInclude !== "object") {
     return null
   }
@@ -162,13 +200,36 @@ async function loadChildPipelineConfig(
  * @param graph - The extends graph containing jobs and templates
  * @param basePath - Base path for resolving local child pipeline files
  * @param trackedChildPipelines - Optional map of child pipelines from ConfigBuilder state
- * @returns Array of child pipeline information
+ * @returns Promise resolving to an array of child pipeline information
  */
-export async function extractChildPipelines(
+export function extractChildPipelines(
   graph: Map<string, ExtendsGraphNode>,
   basePath?: string,
   trackedChildPipelines?: ReadonlyMap<string, TrackedChildPipeline>
 ): Promise<ChildPipelineInfo[]> {
+  return Promise.resolve(
+    extractChildPipelinesSync(graph, basePath, trackedChildPipelines)
+  )
+}
+
+/**
+ * Synchronous variant of {@link extractChildPipelines}.
+ *
+ * Child pipeline extraction is fully synchronous (local includes are read with
+ * readFileSync and parsed in-process). This variant is used internally by the
+ * synchronous visualization generators; the public async wrapper is retained for
+ * backwards compatibility.
+ *
+ * @param graph - The extends graph containing jobs and templates
+ * @param basePath - Base path for resolving local child pipeline files
+ * @param trackedChildPipelines - Optional map of child pipelines from ConfigBuilder state
+ * @returns Array of child pipeline information
+ */
+export function extractChildPipelinesSync(
+  graph: Map<string, ExtendsGraphNode>,
+  basePath?: string,
+  trackedChildPipelines?: ReadonlyMap<string, TrackedChildPipeline>
+): ChildPipelineInfo[] {
   const childPipelines: ChildPipelineInfo[] = []
   const pendingLoads: { name: string; include: unknown }[] = []
 
@@ -214,41 +275,23 @@ export async function extractChildPipelines(
     pendingLoads.push({ name, include: node.trigger.include })
   }
 
-  // Load all child pipeline configs in parallel
-  const loadResults = await Promise.all(
-    pendingLoads.map(({ include }) =>
-      loadChildPipelineConfig(include, basePath)
-    )
-  )
-
-  for (let i = 0; i < pendingLoads.length; i += 1) {
-    const childConfig = loadResults[i]
+  // Load all child pipeline configs
+  for (const pending of pendingLoads) {
+    const childConfig = loadChildPipelineConfig(pending.include, basePath)
     if (!childConfig) {
       continue
     }
 
-    const pending = pendingLoads[i]
-    if (!pending) {
-      continue
-    }
     const { name } = pending
 
     // Build graph for child pipeline
-    const jobs = childConfig.config.jobs as Record<
-      string,
-      JobDefinitionNormalized
-    >
-    const templates = childConfig.config.templates as Record<
-      string,
-      JobDefinitionNormalized
-    >
-    const { jobOptionsMap } = childConfig.config
+    const { jobs, templates, jobOptionsMap } = childConfig.config
 
     const childGraph = buildExtendsGraph(jobs, templates, jobOptionsMap)
 
     const resolvedConfig = {
       jobs: jobs as Record<string, { stage?: string }>,
-      stages: [...childConfig.config.getStages()],
+      stages: [...childConfig.config.stages],
     }
 
     childPipelines.push({

@@ -1,6 +1,6 @@
 // oxlint-disable vitest/max-expects
 import { vol } from "memfs"
-import { beforeEach, describe, expect, test } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
 import { PipelineSimulator } from "../../src/simulation/pipeline-simulator"
@@ -13,7 +13,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
   })
 
   describe("Job Detection", () => {
-    test("should include jobs with trigger (child pipeline)", () => {
+    it("should include jobs with trigger (child pipeline)", () => {
       const config = new ConfigBuilder().stages("deploy").job("trigger-child", {
         stage: "deploy",
         trigger: {
@@ -30,7 +30,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       expect(result.jobs[0]?.shouldRun).toBeFalsy() // No rules means default behavior
     })
 
-    test("should include jobs with release", () => {
+    it("should include jobs with release", () => {
       const config = new ConfigBuilder()
         .stages("release")
         .job("create-release", {
@@ -49,7 +49,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       expect(result.jobs[0]?.name).toBe("create-release")
     })
 
-    test("should include jobs with pages", () => {
+    it("should include jobs with pages", () => {
       const config = new ConfigBuilder().stages("deploy").job("pages", {
         stage: "deploy",
         pages: {
@@ -65,7 +65,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       expect(result.jobs[0]?.name).toBe("pages")
     })
 
-    test("should include jobs with needs containing pipeline trigger", () => {
+    it("should include jobs with needs containing pipeline trigger", () => {
       const config = new ConfigBuilder().stages("test").job("downstream-test", {
         stage: "test",
         script: "test.sh",
@@ -84,7 +84,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       expect(result.jobs[0]?.name).toBe("downstream-test")
     })
 
-    test("should exclude template jobs without script or content", () => {
+    it("should exclude template jobs without script or content", () => {
       const config = new ConfigBuilder().stages("test").job(".template", {
         stage: "test",
         tags: ["docker"],
@@ -97,7 +97,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       expect(result.totalJobs).toBe(0)
     })
 
-    test("should include jobs with custom stage and configuration", () => {
+    it("should include jobs with custom stage and configuration", () => {
       const config = new ConfigBuilder().stages("custom").job("custom-job", {
         stage: "custom",
         variables: {
@@ -113,7 +113,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       expect(result.jobs[0]?.name).toBe("custom-job")
     })
 
-    test("should include jobs with rules even without script", () => {
+    it("should include jobs with rules even without script", () => {
       const config = new ConfigBuilder().stages("deploy").job("deploy-job", {
         stage: "deploy",
         rules: [{ if: '$CI_COMMIT_BRANCH == "main"' }],
@@ -130,7 +130,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       expect(result.jobs[0]?.shouldRun).toBeFalsy() // Rules without script don't auto-run
     })
 
-    test("should include jobs with image configuration", () => {
+    it("should include jobs with image configuration", () => {
       const config = new ConfigBuilder().stages("build").job("test-alpine", {
         stage: "build", // Use non-default stage
         image: "alpine:latest",
@@ -144,7 +144,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       expect(result.totalJobs).toBe(1)
     })
 
-    test("should include jobs with before_script", () => {
+    it("should include jobs with before_script", () => {
       const config = new ConfigBuilder()
         .stages("build")
         .job("build-with-setup", {
@@ -159,7 +159,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       expect(result.totalJobs).toBe(1)
     })
 
-    test("should include jobs with after_script", () => {
+    it("should include jobs with after_script", () => {
       const config = new ConfigBuilder()
         .stages("deploy")
         .job("test-with-cleanup", {
@@ -174,7 +174,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       expect(result.totalJobs).toBe(1)
     })
 
-    test("should include jobs with only clause", () => {
+    it("should include jobs with only clause", () => {
       const config = new ConfigBuilder().stages("deploy").job("deploy-prod", {
         stage: "deploy",
         only: ["main"],
@@ -187,7 +187,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       expect(result.totalJobs).toBe(1)
     })
 
-    test("should include jobs with except clause", () => {
+    it("should include jobs with except clause", () => {
       const config = new ConfigBuilder().stages("build").job("test-not-main", {
         stage: "build", // Use non-default stage
         except: ["main"],
@@ -202,7 +202,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
   })
 
   describe("Stage Processing", () => {
-    test("should process jobs in stage order", () => {
+    it("should process jobs in stage order", () => {
       const config = new ConfigBuilder()
         .stages("build", "test", "deploy")
         .job("deploy-job", {
@@ -231,7 +231,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       expect(result.jobs[2]?.stage).toBe("deploy")
     })
 
-    test("should group jobs by stage in summary", () => {
+    it("should group jobs by stage in summary", () => {
       const config = new ConfigBuilder()
         .stages("build", "test")
         .job("build-1", {
@@ -257,7 +257,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
   })
 
   describe("Job Variables", () => {
-    test("should merge job variables with context variables", () => {
+    it("should merge job variables with context variables", () => {
       const config = new ConfigBuilder().stages("test").job("test-vars", {
         stage: "test",
         script: "test.sh",
@@ -277,7 +277,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       expect(result.jobs[0]?.shouldRun).toBeTruthy()
     })
 
-    test("should prioritize job variables over context variables", () => {
+    it("should prioritize job variables over context variables", () => {
       const config = new ConfigBuilder().stages("test").job("test-priority", {
         stage: "test",
         script: "test.sh",
@@ -299,7 +299,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
   })
 
   describe("Empty Pipeline", () => {
-    test("should handle pipeline with no jobs", () => {
+    it("should handle pipeline with no jobs", () => {
       const config = new ConfigBuilder().stages("test")
 
       const simulator = new PipelineSimulator()
@@ -312,7 +312,7 @@ describe("Pipeline Simulator - Edge Cases", () => {
       expect(result.jobs).toStrictEqual([])
     })
 
-    test("should handle pipeline with only template jobs", () => {
+    it("should handle pipeline with only template jobs", () => {
       const config = new ConfigBuilder()
         .stages("test")
         .job(".template-1", {

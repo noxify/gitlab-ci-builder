@@ -105,7 +105,7 @@ const server = setupServer(...restHandlers)
 
 describe("Pipeline Simulation - Integration Tests", () => {
   beforeAll(() => {
-    server.listen({ onUnhandledRequest: "error" })
+    server.listen({ onUnhandledFrame: "error" })
   })
 
   afterEach(() => {

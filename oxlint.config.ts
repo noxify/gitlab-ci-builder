@@ -32,6 +32,9 @@ export default defineConfig({
         "src/resolver/index.ts",
         "src/resolution/index.ts",
         "src/schema/index.ts",
+        "src/serializer/index.ts",
+        "src/merge/index.ts",
+        "src/model/index.ts",
       ],
       rules: {
         "oxc/no-barrel-file": "off",

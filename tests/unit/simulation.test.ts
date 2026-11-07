@@ -1,6 +1,6 @@
 // oxlint-disable vitest/max-expects
 import { vol } from "memfs"
-import { beforeEach, describe, expect, test } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 
 import { ConfigBuilder } from "../../src"
 import { PipelineSimulator } from "../../src/simulation/pipeline-simulator"
@@ -17,7 +17,7 @@ describe("Pipeline Simulation", () => {
     })
   })
 
-  test("should simulate jobs with rules", () => {
+  it("should simulate jobs with rules", () => {
     const config = new ConfigBuilder()
       .stages("build", "test")
       .job("build-job", {
@@ -75,7 +75,7 @@ describe("Pipeline Simulation", () => {
     expect(testJobDevelop?.shouldRun).toBeTruthy()
   })
 
-  test("should simulate jobs with regex rules", () => {
+  it("should simulate jobs with regex rules", () => {
     const config = new ConfigBuilder().job("deploy-staging", {
       script: "deploy.sh",
       rules: [{ if: "$CI_COMMIT_BRANCH =~ /^feature-.+/", when: "manual" }],
@@ -109,7 +109,7 @@ describe("Pipeline Simulation", () => {
     expect(mainJob?.shouldRun).toBeFalsy()
   })
 
-  test("should simulate jobs without rules (default behavior)", () => {
+  it("should simulate jobs without rules (default behavior)", () => {
     const config = new ConfigBuilder().job("simple-job", {
       script: "echo hello",
     })
@@ -127,7 +127,7 @@ describe("Pipeline Simulation", () => {
     expect(job?.when).toBe("on_success")
   })
 
-  test("should handle when: never rule", () => {
+  it("should handle when: never rule", () => {
     const config = new ConfigBuilder().job("disabled-job", {
       script: "echo disabled",
       rules: [{ if: '$DISABLED == "true"', when: "never" }, { when: "always" }],
@@ -160,7 +160,7 @@ describe("Pipeline Simulation", () => {
     expect(enabledJob?.when).toBe("always")
   })
 
-  test("should respect stage order", () => {
+  it("should respect stage order", () => {
     const config = new ConfigBuilder()
       .stages("build", "test", "deploy")
       .job("deploy-job", { stage: "deploy", script: "deploy.sh" })
@@ -177,7 +177,7 @@ describe("Pipeline Simulation", () => {
     expect(result.jobs[2]?.name).toBe("deploy-job")
   })
 
-  test("should simulate complex rules with multiple conditions", () => {
+  it("should simulate complex rules with multiple conditions", () => {
     const config = new ConfigBuilder().job("complex-job", {
       script: "complex.sh",
       rules: [
@@ -209,7 +209,7 @@ describe("Pipeline Simulation", () => {
     expect(disabledResult.jobs[0]?.shouldRun).toBeFalsy()
   })
 
-  test("should merge job variables with context variables", () => {
+  it("should merge job variables with context variables", () => {
     const config = new ConfigBuilder().job("test-job", {
       script: "test.sh",
       variables: {
@@ -239,7 +239,7 @@ describe("Pipeline Simulation", () => {
     expect(result.jobs[0]?.when).toBe("never")
   })
 
-  test("should evaluate exists rule when file exists", () => {
+  it("should evaluate exists rule when file exists", () => {
     const config = new ConfigBuilder()
       .stages("build")
       .job("build-with-source", {
@@ -263,7 +263,7 @@ describe("Pipeline Simulation", () => {
     expect(job?.name).toBe("build-with-source")
   })
 
-  test("should skip job when exists rule file does not exist", () => {
+  it("should skip job when exists rule file does not exist", () => {
     const config = new ConfigBuilder()
       .stages("build")
       .job("build-with-dockerfile", {
@@ -287,7 +287,7 @@ describe("Pipeline Simulation", () => {
     expect(job?.when).toBe("never")
   })
 
-  test("should interpolate variables in exists paths", () => {
+  it("should interpolate variables in exists paths", () => {
     const config = new ConfigBuilder().stages("build").job("build-app", {
       stage: "build",
       script: "build.sh",
@@ -312,7 +312,7 @@ describe("Pipeline Simulation", () => {
     expect(job?.shouldRun).toBeTruthy()
   })
 
-  test("should handle exists with multiple file patterns", () => {
+  it("should handle exists with multiple file patterns", () => {
     const config = new ConfigBuilder().stages("build").job("build-any", {
       stage: "build",
       script: "build.sh",
@@ -336,7 +336,7 @@ describe("Pipeline Simulation", () => {
     expect(job?.shouldRun).toBeTruthy()
   })
 
-  test("should skip exists rule when no basePath provided", () => {
+  it("should skip exists rule when no basePath provided", () => {
     const config = new ConfigBuilder()
       .stages("build")
       .job("build-with-dockerfile", {
@@ -360,7 +360,7 @@ describe("Pipeline Simulation", () => {
     expect(job?.when).toBe("always")
   })
 
-  test("should combine exists with if condition", () => {
+  it("should combine exists with if condition", () => {
     const config = new ConfigBuilder().stages("build").job("build-main", {
       stage: "build",
       script: "docker build .",
@@ -392,7 +392,7 @@ describe("Pipeline Simulation", () => {
     expect(mainResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
-  test("should handle != (not equals) operator in rules", () => {
+  it("should handle != (not equals) operator in rules", () => {
     const config = new ConfigBuilder().stages("deploy").job("deploy-prod", {
       stage: "deploy",
       script: "deploy.sh",
@@ -416,7 +416,7 @@ describe("Pipeline Simulation", () => {
     expect(prodResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
-  test("should handle !~ (regex not match) operator in rules", () => {
+  it("should handle !~ (regex not match) operator in rules", () => {
     const config = new ConfigBuilder().stages("test").job("test-prod", {
       stage: "test",
       script: "test.sh",
@@ -440,7 +440,7 @@ describe("Pipeline Simulation", () => {
     expect(mainResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
-  test("should handle variable existence check in rules", () => {
+  it("should handle variable existence check in rules", () => {
     const config = new ConfigBuilder().stages("build").job("build-custom", {
       stage: "build",
       script: "build.sh",
@@ -485,7 +485,7 @@ describe("Pipeline Simulation", () => {
     expect(truthyResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
-  test("should handle $CI_COMMIT_BRANCH special variable", () => {
+  it("should handle $CI_COMMIT_BRANCH special variable", () => {
     const config = new ConfigBuilder().stages("build").job("build-branch", {
       stage: "build",
       script: "build.sh",
@@ -510,7 +510,7 @@ describe("Pipeline Simulation", () => {
     expect(branchResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
-  test("should handle $CI_COMMIT_TAG special variable", () => {
+  it("should handle $CI_COMMIT_TAG special variable", () => {
     const config = new ConfigBuilder().stages("release").job("release-tag", {
       stage: "release",
       script: "release.sh",
@@ -535,7 +535,7 @@ describe("Pipeline Simulation", () => {
     expect(tagResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
-  test("should handle $CI_MERGE_REQUEST_ID special variable", () => {
+  it("should handle $CI_MERGE_REQUEST_ID special variable", () => {
     const config = new ConfigBuilder().stages("test").job("test-mr", {
       stage: "test",
       script: "test.sh",
@@ -560,7 +560,7 @@ describe("Pipeline Simulation", () => {
     expect(mrResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
-  test("should handle $CI_PIPELINE_SOURCE with merge_request_event", () => {
+  it("should handle $CI_PIPELINE_SOURCE with merge_request_event", () => {
     const config = new ConfigBuilder().stages("test").job("test-mr-pipeline", {
       stage: "test",
       script: "test.sh",
@@ -585,7 +585,7 @@ describe("Pipeline Simulation", () => {
     expect(mrResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
-  test("should handle $CI_PIPELINE_SOURCE with other values", () => {
+  it("should handle $CI_PIPELINE_SOURCE with other values", () => {
     const config = new ConfigBuilder().stages("deploy").job("deploy-push", {
       stage: "deploy",
       script: "deploy.sh",
@@ -602,7 +602,7 @@ describe("Pipeline Simulation", () => {
     expect(result.jobs[0]?.shouldRun).toBeFalsy()
   })
 
-  test("should handle case-insensitive regex flags", () => {
+  it("should handle case-insensitive regex flags", () => {
     const config = new ConfigBuilder().stages("build").job("build-feature", {
       stage: "build",
       script: "build.sh",
@@ -619,7 +619,7 @@ describe("Pipeline Simulation", () => {
     expect(result.jobs[0]?.shouldRun).toBeTruthy()
   })
 
-  test("should handle undefined/empty condition edge cases", () => {
+  it("should handle undefined/empty condition edge cases", () => {
     const config = new ConfigBuilder().stages("build").job("build-fallback", {
       stage: "build",
       script: "build.sh",
@@ -640,7 +640,7 @@ describe("Pipeline Simulation", () => {
     expect(result.jobs[0]?.when).toBe("always")
   })
 
-  test("should handle negation operator in rules", () => {
+  it("should handle negation operator in rules", () => {
     const config = new ConfigBuilder().stages("test").job("test-prod", {
       stage: "test",
       script: "test.sh",
@@ -664,7 +664,7 @@ describe("Pipeline Simulation", () => {
     expect(mainResult.jobs[0]?.shouldRun).toBeTruthy()
   })
 
-  test("should handle when: manual in rules", () => {
+  it("should handle when: manual in rules", () => {
     const config = new ConfigBuilder().stages("deploy").job("deploy-manual", {
       stage: "deploy",
       script: "deploy.sh",

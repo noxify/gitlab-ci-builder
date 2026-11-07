@@ -10,6 +10,7 @@ export const referenceTag = defineSequenceTag<unknown[], string>("!reference", {
     carrier.push(item)
   },
   finalize: (carrier) => `!reference [${carrier.join(", ")}]`,
+  identify: () => false,
 })
 
 /**
@@ -28,4 +29,5 @@ export const referenceTagResolvable = defineSequenceTag<
     kind: "reference",
     path: carrier,
   }),
+  identify: () => false,
 })

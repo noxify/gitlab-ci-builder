@@ -21,7 +21,7 @@ vi.mock("fs", () => fs)
 
 // Setup MSW server for mocking HTTP requests
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: "warn" })
+  server.listen({ onUnhandledFrame: "warn" })
 })
 
 afterEach(() => {

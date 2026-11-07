@@ -1,14 +1,9 @@
 import { ClimtTable } from "climt"
 import { AsciiTree } from "oo-ascii-tree"
 
-import type { ConfigBuilder } from "../builder/config-builder"
-import { parseYaml } from "../importer/parser"
-import type { Stage } from "../schema/base"
-import type { IncludeInput } from "../schema/include"
-import type { BaseJob, JobDefinitionInput } from "../schema/job"
-import type { Workflow } from "../schema/workflow"
+import type { BaseJob } from "../schema/job"
 import type { ChildPipelineInfo, TrackedChildPipeline } from "./child-pipeline"
-import { extractChildPipelines } from "./child-pipeline"
+import { extractChildPipelinesSync } from "./child-pipeline"
 import type { ExtendsGraphNode } from "./graph"
 
 /**
@@ -34,19 +29,6 @@ export interface VisualizeOptions {
   gitlabToken?: string
   /** GitLab host URL for project/template includes (default: https://gitlab.com) */
   gitlabUrl?: string
-}
-
-interface VisualizationConfigBuilder {
-  include: (include: IncludeInput | IncludeInput[]) => this
-  stages: (...stages: Stage[]) => this
-  variables: (variables: Record<string, string | number | boolean>) => this
-  workflow: (workflow: Workflow) => this
-  template: (name: string, definition: JobDefinitionInput) => this
-  job: (name: string, definition: JobDefinitionInput) => this
-  getExtendsGraph: () => Map<string, ExtendsGraphNode>
-  getPlainObject: (options?: {
-    skipValidation?: boolean
-  }) => ResolvedPipelineConfig
 }
 
 /**
@@ -96,225 +78,6 @@ export interface VisualizationParams {
   options?: VisualizationOptions
   /** Tracked child pipelines from ConfigBuilder state */
   trackedChildPipelines?: ReadonlyMap<string, TrackedChildPipeline>
-}
-
-/**
- * Generate visualizations from a GitLab CI YAML content
- *
- * @param yamlContent - The YAML content as string
- * @param options - Visualization options
- * @returns Object containing the requested visualization formats
- *
- * @example
- * ```ts
- * const yaml = `
- * stages: [build, test]
- * build:
- *   stage: build
- *   script: npm run build
- * `
- * const result = await visualizeYaml(yaml, { format: 'ascii' })
- * console.log(result.ascii)
- * ```
- */
-export async function visualizeYaml(
-  yamlContent: string,
-  options: VisualizeOptions = {}
-): Promise<VisualizationResult> {
-  const format = options.format ?? "all"
-  const parsed = parseYaml(yamlContent)
-  const { ConfigBuilder } = await import("../builder/config-builder")
-  const config = new ConfigBuilder()
-
-  const unresolvedExtends = captureUnresolvedExtends(parsed)
-  addConfigStages(config, parsed)
-  await resolveIncludesIfPresent(config, parsed, options)
-  addConfigVariables(config, parsed)
-  addConfigWorkflow(config, parsed)
-  addJobsAndTemplates(config, parsed)
-
-  const graph = config.getExtendsGraph()
-  mergeUnresolvedExtends(graph, unresolvedExtends)
-
-  const resolvedConfig = config.getPlainObject({ skipValidation: true })
-  const vizOptions = {
-    showStages: options.showStages,
-    showRemotes: options.showRemotes,
-  }
-
-  return generateVisualizations(graph, resolvedConfig, vizOptions, format)
-}
-
-function captureUnresolvedExtends(
-  parsed: Record<string, unknown>
-): Map<string, string[]> {
-  const unresolvedExtends = new Map<string, string[]>()
-  for (const [name, definition] of Object.entries(parsed)) {
-    if (
-      typeof definition === "object" &&
-      definition !== null &&
-      ![
-        "stages",
-        "variables",
-        "workflow",
-        "include",
-        "default",
-        "spec",
-      ].includes(name)
-    ) {
-      const def = definition as Record<string, unknown>
-      if (def.extends) {
-        const extendsValue = Array.isArray(def.extends)
-          ? def.extends
-          : [def.extends]
-        unresolvedExtends.set(name, extendsValue as string[])
-      }
-    }
-  }
-  return unresolvedExtends
-}
-
-function addConfigStages(
-  config: VisualizationConfigBuilder,
-  parsed: Record<string, unknown>
-): void {
-  if (parsed.stages) {
-    config.stages(
-      ...((Array.isArray(parsed.stages)
-        ? parsed.stages
-        : [parsed.stages]) as Stage[])
-    )
-  }
-}
-
-async function resolveIncludesIfPresent(
-  config: VisualizationConfigBuilder,
-  parsed: Record<string, unknown>,
-  options: VisualizeOptions
-): Promise<void> {
-  if (!parsed.include) {
-    return
-  }
-
-  config.include(parsed.include as IncludeInput | IncludeInput[])
-
-  const { resolveIncludes } = await import("../resolver/cli")
-  const { failedIncludes } = await resolveIncludes(
-    config as unknown as ConfigBuilder,
-    {
-      gitlabToken: options.gitlabToken,
-      gitlabUrl: options.gitlabUrl,
-      resolveReferences: true,
-    }
-  )
-
-  if (failedIncludes.length > 0) {
-    // eslint-disable-next-line no-console
-    console.warn(
-      `⚠️  Warning: ${failedIncludes.length} include(s) could not be loaded. Visualization may be incomplete.`
-    )
-  }
-}
-
-function addConfigVariables(
-  config: VisualizationConfigBuilder,
-  parsed: Record<string, unknown>
-): void {
-  if (parsed.variables && typeof parsed.variables === "object") {
-    config.variables(
-      parsed.variables as Record<string, string | number | boolean>
-    )
-  }
-}
-
-function addConfigWorkflow(
-  config: VisualizationConfigBuilder,
-  parsed: Record<string, unknown>
-): void {
-  if (parsed.workflow && typeof parsed.workflow === "object") {
-    try {
-      config.workflow(parsed.workflow as Workflow)
-    } catch {
-      // Ignore validation errors
-    }
-  }
-}
-
-function addJobsAndTemplates(
-  config: VisualizationConfigBuilder,
-  parsed: Record<string, unknown>
-): void {
-  for (const [name, definition] of Object.entries(parsed)) {
-    if (
-      typeof definition === "object" &&
-      definition !== null &&
-      ![
-        "stages",
-        "variables",
-        "workflow",
-        "include",
-        "default",
-        "spec",
-      ].includes(name)
-    ) {
-      try {
-        if (name.startsWith(".")) {
-          config.template(name, definition)
-        } else {
-          config.job(name, definition)
-        }
-      } catch {
-        // Silently skip jobs with validation errors
-      }
-    }
-  }
-}
-
-function mergeUnresolvedExtends(
-  graph: Map<string, ExtendsGraphNode>,
-  unresolvedExtends: Map<string, string[]>
-): void {
-  for (const [name, node] of graph.entries()) {
-    const unresolved = unresolvedExtends.get(name)
-    if (unresolved) {
-      node.unresolvedExtends = unresolved
-    }
-  }
-}
-
-function generateVisualizations(
-  graph: Map<string, ExtendsGraphNode>,
-  resolvedConfig: ResolvedPipelineConfig,
-  vizOptions: VisualizationOptions,
-  format: VisualizationFormat = "all"
-): VisualizationResult {
-  const result: VisualizationResult = {}
-
-  if (format === "all" || format === "mermaid") {
-    result.mermaid = generateMermaidDiagram({
-      graph,
-      resolvedConfig,
-      options: vizOptions,
-    })
-  }
-
-  if (format === "all" || format === "ascii") {
-    result.ascii = generateAsciiTree({
-      graph,
-      resolvedConfig,
-      options: vizOptions,
-    })
-  }
-
-  if (format === "all" || format === "table") {
-    result.table = generateStageTable({
-      graph,
-      resolvedConfig,
-      options: vizOptions,
-    })
-  }
-
-  return result
 }
 
 export function generateMermaidDiagram({
@@ -460,7 +223,7 @@ function addMermaidNode(
     nodeClass = ":::remote"
   } else if (node?.isTemplate) {
     nodeClass = ":::template"
-  } else if (stage) {
+  } else {
     nodeClass = ":::job"
   }
 
@@ -500,23 +263,57 @@ function addMermaidEdges(
         lines.push(`  ${nodeId} --> ${targetId}`)
       }
     }
+
+    addMermaidUnresolvedEdges(lines, name, node, nodeId, nodeIds)
   }
 }
 
-async function addMermaidChildPipelines(
+function addMermaidUnresolvedEdges(
+  lines: string[],
+  name: string,
+  node: ExtendsGraphNode,
+  nodeId: string,
+  nodeIds: Map<string, string>
+): void {
+  if (!node.unresolvedExtends || node.unresolvedExtends.length === 0) {
+    return
+  }
+
+  const unresolvedDiff = node.unresolvedExtends.filter(
+    (u) => !node.extends.includes(u)
+  )
+
+  for (const original of unresolvedDiff) {
+    let targetId = nodeIds.get(original)
+    if (!targetId) {
+      targetId = `n_original_${name.replaceAll(/[^a-zA-Z0-9_]/gu, "_")}_${original.replaceAll(/[^a-zA-Z0-9_]/gu, "_")}`
+      nodeIds.set(`__original__${original}`, targetId)
+
+      const label = original.replaceAll('"', '\\"')
+      lines.push(
+        `  ${targetId}["${label}"]:::template`,
+        `  style ${targetId} stroke-dasharray: 5 5`
+      )
+    }
+
+    lines.push(`  ${nodeId} -.->|"original"| ${targetId}`)
+  }
+}
+
+function addMermaidChildPipelines(
   lines: string[],
   graph: Map<string, ExtendsGraphNode>,
   nodeIds: Map<string, string>,
   options: VisualizationOptions,
   trackedChildPipelines: ReadonlyMap<string, TrackedChildPipeline> | undefined
-): Promise<void> {
+): void {
   if (!options.showChildPipelines) {
     return
   }
 
   lines.push("  classDef childPipeline fill:#e1ffe8,stroke:#22c55e")
 
-  const childPipelines = await extractChildPipelines(
+  const childPipelines = extractChildPipelinesSync(
     graph,
     options.basePath,
     trackedChildPipelines
@@ -702,13 +499,13 @@ function buildAsciiNode(
   return treeNode
 }
 
-async function addAsciiChildPipelines(
+function addAsciiChildPipelines(
   root: AsciiTree,
   graph: Map<string, ExtendsGraphNode>,
   options: VisualizationOptions,
   trackedChildPipelines: ReadonlyMap<string, TrackedChildPipeline> | undefined
-): Promise<void> {
-  const childPipelines = await extractChildPipelines(
+): void {
+  const childPipelines = extractChildPipelinesSync(
     graph,
     options.basePath,
     trackedChildPipelines
@@ -841,7 +638,7 @@ function groupJobsByStage(
 
     if (jobsByStage.has(stage)) {
       const node = graph.get(name)
-      const jobLabel = buildJobLabel(name, node, options)
+      const jobLabel = buildJobLabel(name, node, options, graph)
       const stageJobs = jobsByStage.get(stage)
       if (stageJobs) {
         stageJobs.push(jobLabel)
@@ -855,7 +652,8 @@ function groupJobsByStage(
 function buildJobLabel(
   name: string,
   node: ExtendsGraphNode | undefined,
-  options: VisualizationOptions
+  options: VisualizationOptions,
+  graph?: Map<string, ExtendsGraphNode>
 ): string {
   const remote = options.showRemote && node?.isRemote ? " 🌐" : ""
   const template = node?.isTemplate ? " [T]" : ""
@@ -863,20 +661,63 @@ function buildJobLabel(
 
   let extendsChain = ""
   if (node?.extends && node.extends.length > 0) {
-    const uniqueChain = [...new Set(node.extends)]
-    extendsChain = ` ← ${uniqueChain.join(" ← ")}`
+    const chain = graph
+      ? resolveExtendsChain(name, graph)
+      : [...new Set(node.extends)]
+    if (chain.length > 0) {
+      extendsChain = ` ← ${chain.join(" ← ")}`
+    }
   }
 
   return `${name}${template}${remote}${trigger}${extendsChain}`
 }
 
-async function addChildPipelinesToTable(
+/**
+ * Walk the full (transitive) extends chain for a node, following each extends
+ * target through the graph. Produces a flat, de-duplicated list in traversal
+ * order, e.g. ["\.build", "\.base"] for build:app → .build → .base.
+ */
+function resolveExtendsChain(
+  name: string,
+  graph: Map<string, ExtendsGraphNode>
+): string[] {
+  const chain: string[] = []
+  const seen = new Set<string>([name])
+
+  const walk = (current: string): void => {
+    const node = graph.get(current)
+    if (!node) {
+      return
+    }
+
+    for (const extendName of node.extends) {
+      const targetName = graph.has(extendName) ? extendName : `.${extendName}`
+
+      if (seen.has(targetName) || seen.has(extendName)) {
+        continue
+      }
+      seen.add(targetName)
+      seen.add(extendName)
+
+      chain.push(extendName)
+
+      if (graph.has(targetName)) {
+        walk(targetName)
+      }
+    }
+  }
+
+  walk(name)
+  return chain
+}
+
+function addChildPipelinesToTable(
   tableData: { stage: string; job: string }[],
   graph: Map<string, ExtendsGraphNode>,
   options: VisualizationOptions,
   trackedChildPipelines: ReadonlyMap<string, TrackedChildPipeline> | undefined
-): Promise<void> {
-  const childPipelines = await extractChildPipelines(
+): void {
+  const childPipelines = extractChildPipelinesSync(
     graph,
     options.basePath,
     trackedChildPipelines

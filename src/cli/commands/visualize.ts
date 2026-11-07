@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises"
 import { Command } from "@commander-js/extra-typings"
 
 import type { VisualizationFormat } from "../../resolution/visualization"
-import { visualizeYaml } from "../../resolution/visualization"
+import { visualizeYaml } from "../../resolution/visualize-yaml"
 
 export default function visualizeCommand() {
   const program = new Command()

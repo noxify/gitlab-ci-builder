@@ -153,7 +153,7 @@ const restHandlers = [
 const server = setupServer(...restHandlers)
 
 describe("visualizeYaml with remote includes", () => {
-  beforeAll(() => server.listen({ onUnhandledRequest: "error" }))
+  beforeAll(() => server.listen({ onUnhandledFrame: "error" }))
   afterEach(() => server.resetHandlers())
 
   afterAll(() => server.close())
